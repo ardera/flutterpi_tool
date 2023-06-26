@@ -7,7 +7,8 @@ environment:
   sdk: ^3.0.5
 
 executables:
-  flutterpi-tool: build_bundle
+  # TODO(ardera): Maybe add an alias `flutterpi-tool` here?
+  flutterpi_tool: flutterpi_tool
 
 # Add regular dependencies here.
 dependencies:
