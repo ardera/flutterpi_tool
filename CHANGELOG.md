@@ -1,3 +1,7 @@
+## 0.0.4
+
+- update readme for new build option
+
 ## 0.0.3
 
 - remove some logging
