@@ -33,6 +33,10 @@ Runtime mode options (Defaults to debug. At most one can be specified)
     --release                    Build for release mode.
     --debug-unoptimized          Build for debug mode and use unoptimized engine. (For stepping through engine code)
 
+Build options
+    --[no-]tree-shake-icons      Tree shake icon fonts so that only glyphs used by the application remain.
+                                 (defaults to on)
+
 Target options
     --arch=<target arch>         The target architecture to build for.
 
