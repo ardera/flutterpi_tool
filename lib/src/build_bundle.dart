@@ -322,9 +322,7 @@ abstract class FlutterpiEngineCIArtifact extends EngineCachedArtifact {
         operatingSystemUtils.chmod(file, 'a+r,a+x');
       }
 
-      print('file.basename ${file.basename}');
       if (file.basename.startsWith('gen_snapshot_')) {
-        print('chmod');
         operatingSystemUtils.chmod(file, 'a+r,a+x');
       }
     }
