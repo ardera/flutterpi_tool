@@ -936,6 +936,8 @@ class BuildCommand extends Command<int> {
         negatable: false,
         help: 'Build for debug mode and use unoptimized engine. (For stepping through engine code)',
       )
+      ..addSeparator('Build options')
+      ..addFlag('tree-shake-icons', help: 'Tree shake icon fonts so that only glyphs used by the application remain.', defaultsTo: true)
       ..addSeparator('Target options')
       ..addOption(
         'arch',
@@ -983,7 +985,7 @@ class BuildCommand extends Command<int> {
     return exitCode;
   }
 
-  ({BuildMode buildMode, FPiTargetPlatform targetPlatform, bool unoptimized, bool verbose}) parse() {
+  ({BuildMode buildMode, FPiTargetPlatform targetPlatform, bool unoptimized, bool treeShakeIcons, bool verbose}) parse() {
     final results = argResults!;
 
     final target = switch ((results['arch'], results['cpu'])) {
@@ -1018,12 +1020,15 @@ class BuildCommand extends Command<int> {
         )
     };
 
-    final verbose = globalResults!['verbose'];
+    final treeShakeIcons = results['tree-shake-icons'] as bool;
+
+    final verbose = globalResults!['verbose'] as bool;
 
     return (
       buildMode: buildMode,
       targetPlatform: target,
       unoptimized: unoptimized,
+      treeShakeIcons: treeShakeIcons,
       verbose: verbose,
     );
   }
@@ -1049,9 +1054,22 @@ class BuildCommand extends Command<int> {
           await buildFlutterpiBundle(
             flutterpiTargetPlatform: parsed.targetPlatform,
             buildInfo: switch (parsed.buildMode) {
-              BuildMode.debug => BuildInfo.debug,
-              BuildMode.profile => BuildInfo.profile,
-              BuildMode.release => BuildInfo.release,
+              BuildMode.debug => BuildInfo(
+                BuildMode.debug,
+                null,
+                trackWidgetCreation: true,
+                treeShakeIcons: parsed.treeShakeIcons,
+              ),
+              BuildMode.profile => BuildInfo(
+                BuildMode.profile,
+                null,
+                treeShakeIcons: parsed.treeShakeIcons,
+              ),
+              BuildMode.release => BuildInfo(
+                BuildMode.release,
+                null,
+                treeShakeIcons: parsed.treeShakeIcons,
+              ),
               _ => throw UnsupportedError('Build mode ${parsed.buildMode} is not supported.'),
             },
 
