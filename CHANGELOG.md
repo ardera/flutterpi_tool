@@ -1,3 +1,7 @@
+## 0.0.5
+
+- add `precache` command
+
 ## 0.0.4
 
 - update readme for new build option

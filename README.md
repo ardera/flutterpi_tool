@@ -52,6 +52,16 @@ Target options
 Run "flutterpi_tool help" to see global options.
 ```
 
+```
+$ flutterpi_tool help precache
+Populate the flutterpi_tool's cache of binary artifacts.
+
+Usage: flutterpi_tool precache [arguments]
+-h, --help    Print this usage information.
+
+Run "flutterpi_tool help" to see global options.
+```
+
 ## Example usage
 ```
 $ flutter create hello_world
