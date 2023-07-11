@@ -29,7 +29,7 @@ import 'package:package_config/package_config.dart';
 import 'package:file/file.dart';
 import 'package:path/path.dart' as path;
 
-enum FPiTargetPlatform {
+enum FlutterpiTargetPlatform {
   genericArmV7('generic-armv7'),
   genericAArch64('generic-aarch64'),
   pi3('pi3'),
@@ -37,7 +37,7 @@ enum FPiTargetPlatform {
   pi4('pi4'),
   pi4_64('pi4-64');
 
-  const FPiTargetPlatform(this.shortName);
+  const FlutterpiTargetPlatform(this.shortName);
 
   final String shortName;
 }
@@ -49,9 +49,9 @@ class FlutterpiCache extends FlutterCache {
     required Platform platform,
     required OperatingSystemUtils osUtils,
     required super.projectFactory,
-    Set<FPiTargetPlatform> flutterpiPlatforms = const {
-      FPiTargetPlatform.genericArmV7,
-      FPiTargetPlatform.genericAArch64
+    Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {
+      FlutterpiTargetPlatform.genericArmV7,
+      FlutterpiTargetPlatform.genericAArch64
     },
   })  : _logger = logger,
         _fileSystem = fileSystem,
@@ -129,14 +129,14 @@ class FlutterpiCache extends FlutterCache {
 }
 
 class FlutterpiArtifactPaths {
-  String getTargetDirName(FPiTargetPlatform target) {
+  String getTargetDirName(FlutterpiTargetPlatform target) {
     return switch (target) {
-      FPiTargetPlatform.genericArmV7 => 'flutterpi-armv7-generic',
-      FPiTargetPlatform.genericAArch64 => 'flutterpi-aarch64-generic',
-      FPiTargetPlatform.pi3 => 'flutterpi-pi3',
-      FPiTargetPlatform.pi3_64 => 'flutterpi-pi3-64',
-      FPiTargetPlatform.pi4 => 'flutterpi-pi4',
-      FPiTargetPlatform.pi4_64 => 'flutterpi-pi4-64',
+      FlutterpiTargetPlatform.genericArmV7 => 'flutterpi-armv7-generic',
+      FlutterpiTargetPlatform.genericAArch64 => 'flutterpi-aarch64-generic',
+      FlutterpiTargetPlatform.pi3 => 'flutterpi-pi3',
+      FlutterpiTargetPlatform.pi3_64 => 'flutterpi-pi3-64',
+      FlutterpiTargetPlatform.pi4 => 'flutterpi-pi4',
+      FlutterpiTargetPlatform.pi4_64 => 'flutterpi-pi4-64',
     };
   }
 
@@ -168,7 +168,7 @@ class FlutterpiArtifactPaths {
   File getEngine({
     required Directory engineCacheDir,
     required HostPlatform hostPlatform,
-    required FPiTargetPlatform flutterpiTargetPlatform,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
     required BuildMode buildMode,
     bool unoptimized = false,
   }) {
@@ -181,7 +181,7 @@ class FlutterpiArtifactPaths {
   File getGenSnapshot({
     required Directory engineCacheDir,
     required HostPlatform hostPlatform,
-    required FPiTargetPlatform flutterpiTargetPlatform,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
     required BuildMode buildMode,
     bool unoptimized = false,
   }) {
@@ -194,7 +194,7 @@ class FlutterpiArtifactPaths {
   Source getEngineSource({
     String artifactSubDir = 'engine',
     required HostPlatform hostPlatform,
-    required FPiTargetPlatform flutterpiTargetPlatform,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
     required BuildMode buildMode,
     bool unoptimized = false,
   }) {
@@ -333,7 +333,7 @@ class FlutterpiEngineBinaries extends FlutterpiEngineCIArtifact {
   FlutterpiEngineBinaries(
     FlutterpiCache cache, {
     required Platform platform,
-    this.flutterpiPlatforms = const {FPiTargetPlatform.genericArmV7, FPiTargetPlatform.genericAArch64},
+    this.flutterpiPlatforms = const {FlutterpiTargetPlatform.genericArmV7, FlutterpiTargetPlatform.genericAArch64},
   })  : _platform = platform,
         super(
           'flutterpi-engine-binaries',
@@ -343,7 +343,7 @@ class FlutterpiEngineBinaries extends FlutterpiEngineCIArtifact {
 
   final Platform _platform;
 
-  final Set<FPiTargetPlatform> flutterpiPlatforms;
+  final Set<FlutterpiTargetPlatform> flutterpiPlatforms;
 
   @override
   List<String> getPackageDirs() => const <String>[];
@@ -355,14 +355,14 @@ class FlutterpiEngineBinaries extends FlutterpiEngineCIArtifact {
     }
 
     return [
-      if (flutterpiPlatforms.contains(FPiTargetPlatform.genericAArch64))
+      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.genericAArch64))
         ['flutterpi-aarch64-generic/linux-x64', 'aarch64-generic.tar.xz'],
-      if (flutterpiPlatforms.contains(FPiTargetPlatform.genericArmV7))
+      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.genericArmV7))
         ['flutterpi-armv7-generic/linux-x64', 'armv7-generic.tar.xz'],
-      if (flutterpiPlatforms.contains(FPiTargetPlatform.pi3)) ['flutterpi-pi3/linux-x64', 'pi3.tar.xz'],
-      if (flutterpiPlatforms.contains(FPiTargetPlatform.pi3_64)) ['flutterpi-pi3-64/linux-x64', 'pi3-64.tar.xz'],
-      if (flutterpiPlatforms.contains(FPiTargetPlatform.pi4)) ['flutterpi-pi4/linux-x64', 'pi4.tar.xz'],
-      if (flutterpiPlatforms.contains(FPiTargetPlatform.pi4_64)) ['flutterpi-pi4-64/linux-x64', 'pi4-64.tar.xz'],
+      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi3)) ['flutterpi-pi3/linux-x64', 'pi3.tar.xz'],
+      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi3_64)) ['flutterpi-pi3-64/linux-x64', 'pi3-64.tar.xz'],
+      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi4)) ['flutterpi-pi4/linux-x64', 'pi4.tar.xz'],
+      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi4_64)) ['flutterpi-pi4-64/linux-x64', 'pi4-64.tar.xz'],
     ];
   }
 
@@ -489,7 +489,7 @@ class CopyFlutterpiEngine extends Target {
         _unoptimized = unoptimized,
         _artifactPaths = artifactPaths;
 
-  final FPiTargetPlatform flutterpiTargetPlatform;
+  final FlutterpiTargetPlatform flutterpiTargetPlatform;
   final BuildMode _buildMode;
   final HostPlatform _hostPlatform;
   final bool _unoptimized;
@@ -580,7 +580,7 @@ class DebugBundleFlutterpiAssets extends CompositeTarget {
           ),
         ]);
 
-  final FPiTargetPlatform flutterpiTargetPlatform;
+  final FlutterpiTargetPlatform flutterpiTargetPlatform;
 
   @override
   String get name => 'debug_bundle_flutterpi_assets';
@@ -603,7 +603,7 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
           const FlutterpiAppElf(AotElfProfile(TargetPlatform.linux_arm64)),
         ]);
 
-  final FPiTargetPlatform flutterpiTargetPlatform;
+  final FlutterpiTargetPlatform flutterpiTargetPlatform;
 
   @override
   String get name => 'profile_bundle_flutterpi_${flutterpiTargetPlatform.shortName}_assets';
@@ -626,7 +626,7 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
           const FlutterpiAppElf(AotElfRelease(TargetPlatform.linux_arm64)),
         ]);
 
-  final FPiTargetPlatform flutterpiTargetPlatform;
+  final FlutterpiTargetPlatform flutterpiTargetPlatform;
 
   @override
   String get name => 'release_bundle_flutterpi_${flutterpiTargetPlatform.shortName}_assets';
@@ -641,7 +641,7 @@ class FlutterpiCachedGenSnapshotArtifacts implements Artifacts {
   /// [parent] must be provided.
   FlutterpiCachedGenSnapshotArtifacts({
     required this.parent,
-    required FPiTargetPlatform flutterpiTargetPlatform,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
     required FileSystem fileSystem,
     required Platform platform,
     required Cache cache,
@@ -654,7 +654,7 @@ class FlutterpiCachedGenSnapshotArtifacts implements Artifacts {
   final FileSystem _fileSystem;
   final Cache _cache;
   final OperatingSystemUtils _operatingSystemUtils;
-  final FPiTargetPlatform _flutterpiTargetPlatform;
+  final FlutterpiTargetPlatform _flutterpiTargetPlatform;
   final Artifacts parent;
 
   @override
@@ -665,20 +665,31 @@ class FlutterpiCachedGenSnapshotArtifacts implements Artifacts {
 
     final hostPlatform = _operatingSystemUtils.hostPlatform;
 
+    // Just some shorthands so the formatting doesn't look totally weird below.
+    const genericArmv7 = FlutterpiTargetPlatform.genericArmV7;
+    const genericAArch64 = FlutterpiTargetPlatform.genericAArch64;
+    const pi3 = FlutterpiTargetPlatform.pi3;
+    const pi3_64 = FlutterpiTargetPlatform.pi3_64;
+    const pi4 = FlutterpiTargetPlatform.pi4;
+    const pi4_64 = FlutterpiTargetPlatform.pi4_64;
+
+    // ignore: constant_identifier_names
+    const linux_x64 = HostPlatform.linux_x64;
+
     final subdir = switch ((_flutterpiTargetPlatform, hostPlatform)) {
-      (FPiTargetPlatform.genericArmV7, HostPlatform.linux_x64) => const ['flutterpi-armv7-generic', 'linux-x64'],
-      (FPiTargetPlatform.genericAArch64, HostPlatform.linux_x64) => const ['flutterpi-aarch64-generic', 'linux-x64'],
-      (FPiTargetPlatform.pi3, HostPlatform.linux_x64) => const ['flutterpi-pi3', 'linux-x64'],
-      (FPiTargetPlatform.pi3_64, HostPlatform.linux_x64) => const ['flutterpi-pi3-64', 'linux-x64'],
-      (FPiTargetPlatform.pi4, HostPlatform.linux_x64) => const ['flutterpi-pi4', 'linux-x64'],
-      (FPiTargetPlatform.pi4_64, HostPlatform.linux_x64) => const ['flutterpi-pi4-64', 'linux-x64'],
+      (genericArmv7, linux_x64) => const ['flutterpi-armv7-generic', 'linux-x64'],
+      (genericAArch64, linux_x64) => const ['flutterpi-aarch64-generic', 'linux-x64'],
+      (pi3, linux_x64) => const ['flutterpi-pi3', 'linux-x64'],
+      (pi3_64, linux_x64) => const ['flutterpi-pi3-64', 'linux-x64'],
+      (pi4, linux_x64) => const ['flutterpi-pi4', 'linux-x64'],
+      (pi4_64, linux_x64) => const ['flutterpi-pi4-64', 'linux-x64'],
       _ => throw UnsupportedError(
           'Unsupported target platform & host platform combination: $_flutterpiTargetPlatform, $hostPlatform'),
     };
 
     final genSnapshotFilename = switch ((_operatingSystemUtils.hostPlatform, buildMode)) {
-      (HostPlatform.linux_x64, BuildMode.profile) => 'gen_snapshot_linux_x64_profile',
-      (HostPlatform.linux_x64, BuildMode.release) => 'gen_snapshot_linux_x64_release',
+      (linux_x64, BuildMode.profile) => 'gen_snapshot_linux_x64_profile',
+      (linux_x64, BuildMode.release) => 'gen_snapshot_linux_x64_release',
       _ => throw UnsupportedError('Unsupported host platform & build mode combinations: $hostPlatform, $buildMode'),
     };
 
@@ -727,7 +738,7 @@ Future<String> getFlutterRoot() async {
 }
 
 Future<void> buildFlutterpiBundle({
-  required FPiTargetPlatform flutterpiTargetPlatform,
+  required FlutterpiTargetPlatform flutterpiTargetPlatform,
   required BuildInfo buildInfo,
   FlutterpiArtifactPaths? artifactPaths,
   FlutterProject? project,
@@ -823,8 +834,8 @@ Future<void> buildFlutterpiBundle({
 
 Future<T> runInContext<T>({
   required FutureOr<T> Function() runner,
-  FPiTargetPlatform? targetPlatform,
-  Set<FPiTargetPlatform>? targetPlatforms,
+  FlutterpiTargetPlatform? targetPlatform,
+  Set<FlutterpiTargetPlatform>? targetPlatforms,
   bool verbose = false,
 }) async {
   Logger Function() loggerFactory = () => globals.platform.isWindows
@@ -845,7 +856,7 @@ Future<T> runInContext<T>({
   }
 
   targetPlatforms ??= targetPlatform != null ? {targetPlatform} : null;
-  targetPlatforms ??= FPiTargetPlatform.values.toSet();
+  targetPlatforms ??= FlutterpiTargetPlatform.values.toSet();
 
   Artifacts Function() artifactsGenerator;
   if (targetPlatform != null) {
@@ -1002,7 +1013,7 @@ class BuildCommand extends Command<int> {
 
   ({
     BuildMode buildMode,
-    FPiTargetPlatform targetPlatform,
+    FlutterpiTargetPlatform targetPlatform,
     bool unoptimized,
     bool treeShakeIcons,
     bool verbose,
@@ -1010,12 +1021,12 @@ class BuildCommand extends Command<int> {
     final results = argResults!;
 
     final target = switch ((results['arch'], results['cpu'])) {
-      ('arm', 'generic') => FPiTargetPlatform.genericArmV7,
-      ('arm', 'pi3') => FPiTargetPlatform.pi3,
-      ('arm', 'pi4') => FPiTargetPlatform.pi4,
-      ('arm64', 'generic') => FPiTargetPlatform.genericAArch64,
-      ('arm64', 'pi3') => FPiTargetPlatform.pi3_64,
-      ('arm64', 'pi4') => FPiTargetPlatform.pi4_64,
+      ('arm', 'generic') => FlutterpiTargetPlatform.genericArmV7,
+      ('arm', 'pi3') => FlutterpiTargetPlatform.pi3,
+      ('arm', 'pi4') => FlutterpiTargetPlatform.pi4,
+      ('arm64', 'generic') => FlutterpiTargetPlatform.genericAArch64,
+      ('arm64', 'pi3') => FlutterpiTargetPlatform.pi3_64,
+      ('arm64', 'pi4') => FlutterpiTargetPlatform.pi4_64,
       (final arch, final cpu) => throw UnsupportedError('Unsupported target arch & cpu combination: $arch, $cpu'),
     };
 
