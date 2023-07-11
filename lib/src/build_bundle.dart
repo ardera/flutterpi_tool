@@ -1127,7 +1127,7 @@ class PrecacheCommand extends Command<int> {
   String get name => 'precache';
 
   @override
-  String get description => 'Precache flutter engine artifacts.';
+  String get description => 'Populate the flutterpi_tool\'s cache of binary artifacts.';
 
   @override
   Future<int> run() async {
