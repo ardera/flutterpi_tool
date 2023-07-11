@@ -823,7 +823,8 @@ Future<void> buildFlutterpiBundle({
 
 Future<T> runInContext<T>({
   required FutureOr<T> Function() runner,
-  required FPiTargetPlatform flutterpiTargetPlatform,
+  FPiTargetPlatform? targetPlatform,
+  Set<FPiTargetPlatform>? targetPlatforms,
   bool verbose = false,
 }) async {
   Logger Function() loggerFactory = () => globals.platform.isWindows
@@ -843,6 +844,33 @@ Future<T> runInContext<T>({
     loggerFactory = () => VerboseLogger(oldLoggerFactory());
   }
 
+  targetPlatforms ??= targetPlatform != null ? {targetPlatform} : null;
+  targetPlatforms ??= FPiTargetPlatform.values.toSet();
+
+  Artifacts Function() artifactsGenerator;
+  if (targetPlatform != null) {
+    artifactsGenerator = () => FlutterpiCachedGenSnapshotArtifacts(
+          parent: CachedArtifacts(
+            fileSystem: globals.fs,
+            cache: globals.cache,
+            platform: globals.platform,
+            operatingSystemUtils: globals.os,
+          ),
+          flutterpiTargetPlatform: targetPlatform,
+          fileSystem: globals.fs,
+          platform: globals.platform,
+          cache: globals.cache,
+          operatingSystemUtils: globals.os,
+        );
+  } else {
+    artifactsGenerator = () => CachedArtifacts(
+          fileSystem: globals.fs,
+          cache: globals.cache,
+          platform: globals.platform,
+          operatingSystemUtils: globals.os,
+        );
+  }
+
   return context_runner.runInContext(
     runner,
     overrides: {
@@ -853,9 +881,7 @@ Future<T> runInContext<T>({
             platform: globals.platform,
             osUtils: globals.os,
             projectFactory: globals.projectFactory,
-            flutterpiPlatforms: {
-              flutterpiTargetPlatform,
-            },
+            flutterpiPlatforms: targetPlatforms!,
           ),
       OperatingSystemUtils: () => TarXzCompatibleOsUtils(
             os: OperatingSystemUtils(
@@ -870,19 +896,7 @@ Future<T> runInContext<T>({
             ),
           ),
       Logger: loggerFactory,
-      Artifacts: () => FlutterpiCachedGenSnapshotArtifacts(
-            parent: CachedArtifacts(
-              fileSystem: globals.fs,
-              cache: globals.cache,
-              platform: globals.platform,
-              operatingSystemUtils: globals.os,
-            ),
-            flutterpiTargetPlatform: flutterpiTargetPlatform,
-            fileSystem: globals.fs,
-            platform: globals.platform,
-            cache: globals.cache,
-            operatingSystemUtils: globals.os,
-          )
+      Artifacts: artifactsGenerator,
     },
   );
 }
@@ -937,7 +951,8 @@ class BuildCommand extends Command<int> {
         help: 'Build for debug mode and use unoptimized engine. (For stepping through engine code)',
       )
       ..addSeparator('Build options')
-      ..addFlag('tree-shake-icons', help: 'Tree shake icon fonts so that only glyphs used by the application remain.', defaultsTo: true)
+      ..addFlag('tree-shake-icons',
+          help: 'Tree shake icon fonts so that only glyphs used by the application remain.', defaultsTo: true)
       ..addSeparator('Target options')
       ..addOption(
         'arch',
@@ -985,7 +1000,13 @@ class BuildCommand extends Command<int> {
     return exitCode;
   }
 
-  ({BuildMode buildMode, FPiTargetPlatform targetPlatform, bool unoptimized, bool treeShakeIcons, bool verbose}) parse() {
+  ({
+    BuildMode buildMode,
+    FPiTargetPlatform targetPlatform,
+    bool unoptimized,
+    bool treeShakeIcons,
+    bool verbose,
+  }) parse() {
     final results = argResults!;
 
     final target = switch ((results['arch'], results['cpu'])) {
@@ -1040,7 +1061,7 @@ class BuildCommand extends Command<int> {
     Cache.flutterRoot = await getFlutterRoot();
 
     await runInContext(
-      flutterpiTargetPlatform: parsed.targetPlatform,
+      targetPlatform: parsed.targetPlatform,
       verbose: parsed.verbose,
       runner: () async {
         try {
@@ -1055,26 +1076,60 @@ class BuildCommand extends Command<int> {
             flutterpiTargetPlatform: parsed.targetPlatform,
             buildInfo: switch (parsed.buildMode) {
               BuildMode.debug => BuildInfo(
-                BuildMode.debug,
-                null,
-                trackWidgetCreation: true,
-                treeShakeIcons: parsed.treeShakeIcons,
-              ),
+                  BuildMode.debug,
+                  null,
+                  trackWidgetCreation: true,
+                  treeShakeIcons: parsed.treeShakeIcons,
+                ),
               BuildMode.profile => BuildInfo(
-                BuildMode.profile,
-                null,
-                treeShakeIcons: parsed.treeShakeIcons,
-              ),
+                  BuildMode.profile,
+                  null,
+                  treeShakeIcons: parsed.treeShakeIcons,
+                ),
               BuildMode.release => BuildInfo(
-                BuildMode.release,
-                null,
-                treeShakeIcons: parsed.treeShakeIcons,
-              ),
+                  BuildMode.release,
+                  null,
+                  treeShakeIcons: parsed.treeShakeIcons,
+                ),
               _ => throw UnsupportedError('Build mode ${parsed.buildMode} is not supported.'),
             },
 
             // for `--debug-unoptimized` build mode
             unoptimized: parsed.unoptimized,
+          );
+        } on ToolExit catch (e) {
+          if (e.message != null) {
+            globals.printError(e.message!);
+          }
+
+          return exitWithHooks(e.exitCode ?? 1, shutdownHooks: globals.shutdownHooks);
+        }
+      },
+    );
+
+    return 0;
+  }
+}
+
+class PrecacheCommand extends Command<int> {
+  @override
+  String get name => 'precache';
+
+  @override
+  String get description => 'Precache flutter engine artifacts.';
+
+  @override
+  Future<int> run() async {
+    Cache.flutterRoot = await getFlutterRoot();
+
+    await runInContext(
+      verbose: globalResults!['verbose'],
+      runner: () async {
+        try {
+          // update the cached flutter-pi artifacts
+          await globals.cache.updateAll(
+            const {DevelopmentArtifact.universal},
+            offline: false,
           );
         } on ToolExit catch (e) {
           if (e.message != null) {
@@ -1098,6 +1153,7 @@ Future<void> main(List<String> args) async {
   );
 
   runner.addCommand(BuildCommand());
+  runner.addCommand(PrecacheCommand());
 
   runner.argParser
     ..addSeparator('Other options')
