@@ -1,3 +1,7 @@
+## 0.1.1
+
+- update `flutterpi_tool build help` in readme
+
 ## 0.1.0
 
 - add x64 support with `--arch=x64` (and `--cpu=generic`)
