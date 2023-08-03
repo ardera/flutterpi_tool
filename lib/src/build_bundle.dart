@@ -833,6 +833,16 @@ Future<void> buildFlutterpiBundle({
       kTargetFile: mainPath,
       kDeferredComponents: 'false',
       ...buildInfo.toBuildSystemEnvironment(),
+
+      // The flutter_tool computes the `.dart_tool/` subdir name from the
+      // build environment hash.
+      // Adding a flutterpi-target entry here forces different subdirs for
+      // different target platforms.
+      //
+      // If we don't have this, the flutter tool will happily reuse as much as
+      // it can, and it determines it can reuse the `app.so` from (for example)
+      // an arm build with an arm64 build, leading to errors.
+      'flutterpi-target': flutterpiTargetPlatform.shortName,
     },
     artifacts: artifacts,
     fileSystem: globals.fs,
