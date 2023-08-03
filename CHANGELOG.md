@@ -1,3 +1,10 @@
+## 0.1.0
+
+- add x64 support with `--arch=x64` (and `--cpu=generic`)
+- fix stale `app.so` when switching architectures (or cpus)
+- fix `--tree-shake-icons` defaults
+- fix inconsistent cached artifact versions 
+
 ## 0.0.5
 
 - add `precache` command
