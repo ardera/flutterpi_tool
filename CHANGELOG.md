@@ -1,3 +1,7 @@
+## 0.1.2
+
+- update `flutterpi_tool --help` in readme
+
 ## 0.1.1
 
 - update `flutterpi_tool build help` in readme
