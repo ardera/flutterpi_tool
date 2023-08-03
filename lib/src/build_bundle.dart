@@ -34,6 +34,7 @@ FlutterpiCache get flutterpiCache => globals.cache as FlutterpiCache;
 enum FlutterpiTargetPlatform {
   genericArmV7('generic-armv7'),
   genericAArch64('generic-aarch64'),
+  genericX64('generic-x64'),
   pi3('pi3'),
   pi3_64('pi3-64'),
   pi4('pi4'),
@@ -113,14 +114,16 @@ class FlutterpiCache extends FlutterCache {
     bool offline = false,
     Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {
       FlutterpiTargetPlatform.genericArmV7,
-      FlutterpiTargetPlatform.genericAArch64
+      FlutterpiTargetPlatform.genericAArch64,
+      FlutterpiTargetPlatform.genericX64,
     },
   }) async {
     for (final ArtifactSet artifact in _artifacts) {
       final required = switch (artifact) {
         FlutterpiEngineCIArtifact _ => switch (artifact) {
             FlutterpiEngineBinariesGeneric _ => flutterpiPlatforms.contains(FlutterpiTargetPlatform.genericAArch64) ||
-                flutterpiPlatforms.contains(FlutterpiTargetPlatform.genericArmV7),
+                flutterpiPlatforms.contains(FlutterpiTargetPlatform.genericArmV7) ||
+                flutterpiPlatforms.contains(FlutterpiTargetPlatform.genericX64),
             FlutterpiEngineBinariesPi3 _ => flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi3) ||
                 flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi3_64),
             FlutterpiEngineBinariesPi4 _ => flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi4) ||
@@ -154,6 +157,7 @@ class FlutterpiArtifactPaths {
     return switch (target) {
       FlutterpiTargetPlatform.genericArmV7 => 'flutterpi-armv7-generic',
       FlutterpiTargetPlatform.genericAArch64 => 'flutterpi-aarch64-generic',
+      FlutterpiTargetPlatform.genericX64 => 'flutterpi-x64-generic',
       FlutterpiTargetPlatform.pi3 => 'flutterpi-pi3',
       FlutterpiTargetPlatform.pi3_64 => 'flutterpi-pi3-64',
       FlutterpiTargetPlatform.pi4 => 'flutterpi-pi4',
@@ -378,6 +382,7 @@ class FlutterpiEngineBinariesGeneric extends FlutterpiEngineCIArtifact {
     return [
       ('flutterpi-aarch64-generic/linux-x64', 'aarch64-generic.tar.xz'),
       ('flutterpi-armv7-generic/linux-x64', 'armv7-generic.tar.xz'),
+      ('flutterpi-x64-generic/linux-x64', 'x64-generic.tar.xz'),
     ];
   }
 
@@ -735,6 +740,7 @@ class FlutterpiCachedGenSnapshotArtifacts implements Artifacts {
     // Just some shorthands so the formatting doesn't look totally weird below.
     const genericArmv7 = FlutterpiTargetPlatform.genericArmV7;
     const genericAArch64 = FlutterpiTargetPlatform.genericAArch64;
+    const genericX64 = FlutterpiTargetPlatform.genericX64;
     const pi3 = FlutterpiTargetPlatform.pi3;
     const pi3_64 = FlutterpiTargetPlatform.pi3_64;
     const pi4 = FlutterpiTargetPlatform.pi4;
@@ -746,6 +752,7 @@ class FlutterpiCachedGenSnapshotArtifacts implements Artifacts {
     final subdir = switch ((_flutterpiTargetPlatform, hostPlatform)) {
       (genericArmv7, linux_x64) => const ['flutterpi-armv7-generic', 'linux-x64'],
       (genericAArch64, linux_x64) => const ['flutterpi-aarch64-generic', 'linux-x64'],
+      (genericX64, linux_x64) => const ['flutterpi-x64-generic', 'linux-x64'],
       (pi3, linux_x64) => const ['flutterpi-pi3', 'linux-x64'],
       (pi3_64, linux_x64) => const ['flutterpi-pi3-64', 'linux-x64'],
       (pi4, linux_x64) => const ['flutterpi-pi4', 'linux-x64'],
@@ -1022,7 +1029,7 @@ Never exitWithUsage(ArgParser parser, {String? errorMessage, int exitCode = 1}) 
 }
 
 class BuildCommand extends Command<int> {
-  static const archs = ['arm', 'arm64'];
+  static const archs = ['arm', 'arm64', 'x64'];
 
   static const cpus = ['generic', 'pi3', 'pi4'];
 
@@ -1052,6 +1059,7 @@ class BuildCommand extends Command<int> {
         allowedHelp: {
           'arm': 'Build for 32-bit ARM. (armv7-linux-gnueabihf)',
           'arm64': 'Build for 64-bit ARM. (aarch64-linux-gnu)',
+          'x64': 'Build for x86-64. (x86_64-linux-gnu)',
         },
       )
       ..addOption(
@@ -1064,8 +1072,10 @@ class BuildCommand extends Command<int> {
         allowedHelp: {
           'generic':
               'Don\'t use a tuned engine. The generic engine will work on all CPUs of the specified architecture.',
-          'pi3': 'Use a Raspberry Pi 3 tuned engine. (-mcpu=cortex-a53 -mtune=cortex-a53)',
-          'pi4': 'Use a Raspberry Pi 4 tuned engine. (-mcpu=cortex-a72+nocrypto -mtune=cortex-a72)',
+          'pi3':
+              'Use a Raspberry Pi 3 tuned engine. Compatible with arm and arm64. (-mcpu=cortex-a53 -mtune=cortex-a53)',
+          'pi4':
+              'Use a Raspberry Pi 4 tuned engine. Compatible with arm and arm64. (-mcpu=cortex-a72+nocrypto -mtune=cortex-a72)',
         },
       );
   }
@@ -1105,7 +1115,11 @@ class BuildCommand extends Command<int> {
       ('arm64', 'generic') => FlutterpiTargetPlatform.genericAArch64,
       ('arm64', 'pi3') => FlutterpiTargetPlatform.pi3_64,
       ('arm64', 'pi4') => FlutterpiTargetPlatform.pi4_64,
-      (final arch, final cpu) => throw UnsupportedError('Unsupported target arch & cpu combination: $arch, $cpu'),
+      ('x64', 'generic') => FlutterpiTargetPlatform.genericX64,
+      (final arch, final cpu) => throw UsageException(
+          'Unsupported target arch & cpu combination: architecture "$arch" is not supported for cpu "$cpu"',
+          usage,
+        ),
     };
 
     final (buildMode, unoptimized) = switch ((
