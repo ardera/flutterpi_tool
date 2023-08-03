@@ -29,6 +29,8 @@ import 'package:package_config/package_config.dart';
 import 'package:file/file.dart';
 import 'package:path/path.dart' as path;
 
+FlutterpiCache get flutterpiCache => globals.cache as FlutterpiCache;
+
 enum FlutterpiTargetPlatform {
   genericArmV7('generic-armv7'),
   genericAArch64('generic-aarch64'),
@@ -59,7 +61,15 @@ class FlutterpiCache extends FlutterCache {
           fileSystem: fileSystem,
           osUtils: osUtils,
         ) {
-    registerArtifact(FlutterpiEngineBinaries(
+    registerArtifact(FlutterpiEngineBinariesGeneric(
+      this,
+      platform: platform,
+    ));
+    registerArtifact(FlutterpiEngineBinariesPi3(
+      this,
+      platform: platform,
+    ));
+    registerArtifact(FlutterpiEngineBinariesPi4(
       this,
       platform: platform,
     ));
@@ -101,9 +111,25 @@ class FlutterpiCache extends FlutterCache {
   Future<void> updateAll(
     Set<DevelopmentArtifact> requiredArtifacts, {
     bool offline = false,
+    Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {
+      FlutterpiTargetPlatform.genericArmV7,
+      FlutterpiTargetPlatform.genericAArch64
+    },
   }) async {
     for (final ArtifactSet artifact in _artifacts) {
-      if (!requiredArtifacts.contains(artifact.developmentArtifact)) {
+      final required = switch (artifact) {
+        FlutterpiEngineCIArtifact _ => switch (artifact) {
+            FlutterpiEngineBinariesGeneric _ => flutterpiPlatforms.contains(FlutterpiTargetPlatform.genericAArch64) ||
+                flutterpiPlatforms.contains(FlutterpiTargetPlatform.genericArmV7),
+            FlutterpiEngineBinariesPi3 _ => flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi3) ||
+                flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi3_64),
+            FlutterpiEngineBinariesPi4 _ => flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi4) ||
+                flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi4_64),
+          },
+        _ => requiredArtifacts.contains(artifact.developmentArtifact),
+      };
+
+      if (!required) {
         _logger.printTrace('Artifact $artifact is not required, skipping update.');
         continue;
       }
@@ -201,7 +227,7 @@ class FlutterpiArtifactPaths {
   }
 }
 
-abstract class FlutterpiEngineCIArtifact extends EngineCachedArtifact {
+sealed class FlutterpiEngineCIArtifact extends EngineCachedArtifact {
   FlutterpiEngineCIArtifact(
     String stampName,
     FlutterpiCache cache,
@@ -210,6 +236,14 @@ abstract class FlutterpiEngineCIArtifact extends EngineCachedArtifact {
 
   @override
   FlutterpiCache get cache => super.cache as FlutterpiCache;
+
+  @override
+  List<String> getPackageDirs() => const <String>[];
+
+  @override
+  List<String> getLicenseDirs() {
+    return <String>[];
+  }
 
   @override
   bool isUpToDateInner(FileSystem fileSystem) {
@@ -312,13 +346,13 @@ abstract class FlutterpiEngineCIArtifact extends EngineCachedArtifact {
   }
 }
 
-class FlutterpiEngineBinaries extends FlutterpiEngineCIArtifact {
-  FlutterpiEngineBinaries(
+class FlutterpiEngineBinariesGeneric extends FlutterpiEngineCIArtifact {
+  FlutterpiEngineBinariesGeneric(
     FlutterpiCache cache, {
     required Platform platform,
   })  : _platform = platform,
         super(
-          'flutterpi-engine-binaries',
+          'flutterpi-engine-binaries-generic',
           cache,
           DevelopmentArtifact.universal,
         );
@@ -337,16 +371,64 @@ class FlutterpiEngineBinaries extends FlutterpiEngineCIArtifact {
     return [
       ['flutterpi-aarch64-generic/linux-x64', 'aarch64-generic.tar.xz'],
       ['flutterpi-armv7-generic/linux-x64', 'armv7-generic.tar.xz'],
-      ['flutterpi-pi3/linux-x64', 'pi3.tar.xz'],
-      ['flutterpi-pi3-64/linux-x64', 'pi3-64.tar.xz'],
-      ['flutterpi-pi4/linux-x64', 'pi4.tar.xz'],
-      ['flutterpi-pi4-64/linux-x64', 'pi4-64.tar.xz'],
     ];
   }
 
   @override
   List<String> getLicenseDirs() {
     return <String>[];
+  }
+}
+
+class FlutterpiEngineBinariesPi3 extends FlutterpiEngineCIArtifact {
+  FlutterpiEngineBinariesPi3(
+    FlutterpiCache cache, {
+    required Platform platform,
+  })  : _platform = platform,
+        super(
+          'flutterpi-engine-binaries-pi3',
+          cache,
+          DevelopmentArtifact.universal,
+        );
+
+  final Platform _platform;
+
+  @override
+  List<List<String>> getBinaryDirs() {
+    if (!_platform.isLinux) {
+      return [];
+    }
+
+    return [
+      ['flutterpi-pi3/linux-x64', 'pi3.tar.xz'],
+      ['flutterpi-pi3-64/linux-x64', 'pi3-64.tar.xz'],
+    ];
+  }
+}
+
+class FlutterpiEngineBinariesPi4 extends FlutterpiEngineCIArtifact {
+  FlutterpiEngineBinariesPi4(
+    FlutterpiCache cache, {
+    required Platform platform,
+  })  : _platform = platform,
+        super(
+          'flutterpi-engine-binaries-pi4',
+          cache,
+          DevelopmentArtifact.universal,
+        );
+
+  final Platform _platform;
+
+  @override
+  List<List<String>> getBinaryDirs() {
+    if (!_platform.isLinux) {
+      return [];
+    }
+
+    return [
+      ['flutterpi-pi4/linux-x64', 'pi4.tar.xz'],
+      ['flutterpi-pi4-64/linux-x64', 'pi4-64.tar.xz'],
+    ];
   }
 }
 
@@ -1054,9 +1136,10 @@ class BuildCommand extends Command<int> {
       runner: () async {
         try {
           // update the cached flutter-pi artifacts
-          await globals.cache.updateAll(
+          await flutterpiCache.updateAll(
             const {DevelopmentArtifact.universal},
             offline: false,
+            flutterpiPlatforms: {parsed.targetPlatform},
           );
 
           // actually build the flutter bundle
@@ -1115,9 +1198,10 @@ class PrecacheCommand extends Command<int> {
       runner: () async {
         try {
           // update the cached flutter-pi artifacts
-          await globals.cache.updateAll(
+          await flutterpiCache.updateAll(
             const {DevelopmentArtifact.universal},
             offline: false,
+            flutterpiPlatforms: FlutterpiTargetPlatform.values.toSet(),
           );
         } on ToolExit catch (e) {
           if (e.message != null) {
