@@ -49,10 +49,6 @@ class FlutterpiCache extends FlutterCache {
     required Platform platform,
     required OperatingSystemUtils osUtils,
     required super.projectFactory,
-    Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {
-      FlutterpiTargetPlatform.genericArmV7,
-      FlutterpiTargetPlatform.genericAArch64
-    },
   })  : _logger = logger,
         _fileSystem = fileSystem,
         _platform = platform,
@@ -66,7 +62,6 @@ class FlutterpiCache extends FlutterCache {
     registerArtifact(FlutterpiEngineBinaries(
       this,
       platform: platform,
-      flutterpiPlatforms: flutterpiPlatforms,
     ));
   }
 
@@ -321,7 +316,6 @@ class FlutterpiEngineBinaries extends FlutterpiEngineCIArtifact {
   FlutterpiEngineBinaries(
     FlutterpiCache cache, {
     required Platform platform,
-    this.flutterpiPlatforms = const {FlutterpiTargetPlatform.genericArmV7, FlutterpiTargetPlatform.genericAArch64},
   })  : _platform = platform,
         super(
           'flutterpi-engine-binaries',
@@ -330,8 +324,6 @@ class FlutterpiEngineBinaries extends FlutterpiEngineCIArtifact {
         );
 
   final Platform _platform;
-
-  final Set<FlutterpiTargetPlatform> flutterpiPlatforms;
 
   @override
   List<String> getPackageDirs() => const <String>[];
@@ -343,14 +335,12 @@ class FlutterpiEngineBinaries extends FlutterpiEngineCIArtifact {
     }
 
     return [
-      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.genericAArch64))
-        ['flutterpi-aarch64-generic/linux-x64', 'aarch64-generic.tar.xz'],
-      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.genericArmV7))
-        ['flutterpi-armv7-generic/linux-x64', 'armv7-generic.tar.xz'],
-      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi3)) ['flutterpi-pi3/linux-x64', 'pi3.tar.xz'],
-      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi3_64)) ['flutterpi-pi3-64/linux-x64', 'pi3-64.tar.xz'],
-      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi4)) ['flutterpi-pi4/linux-x64', 'pi4.tar.xz'],
-      if (flutterpiPlatforms.contains(FlutterpiTargetPlatform.pi4_64)) ['flutterpi-pi4-64/linux-x64', 'pi4-64.tar.xz'],
+      ['flutterpi-aarch64-generic/linux-x64', 'aarch64-generic.tar.xz'],
+      ['flutterpi-armv7-generic/linux-x64', 'armv7-generic.tar.xz'],
+      ['flutterpi-pi3/linux-x64', 'pi3.tar.xz'],
+      ['flutterpi-pi3-64/linux-x64', 'pi3-64.tar.xz'],
+      ['flutterpi-pi4/linux-x64', 'pi4.tar.xz'],
+      ['flutterpi-pi4-64/linux-x64', 'pi4-64.tar.xz'],
     ];
   }
 
@@ -880,7 +870,6 @@ Future<T> runInContext<T>({
             platform: globals.platform,
             osUtils: globals.os,
             projectFactory: globals.projectFactory,
-            flutterpiPlatforms: targetPlatforms!,
           ),
       OperatingSystemUtils: () => TarXzCompatibleOsUtils(
             os: OperatingSystemUtils(
