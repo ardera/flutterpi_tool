@@ -1021,8 +1021,10 @@ class BuildCommand extends Command<int> {
         help: 'Build for debug mode and use unoptimized engine. (For stepping through engine code)',
       )
       ..addSeparator('Build options')
-      ..addFlag('tree-shake-icons',
-          help: 'Tree shake icon fonts so that only glyphs used by the application remain.', defaultsTo: true)
+      ..addFlag(
+        'tree-shake-icons',
+        help: 'Tree shake icon fonts so that only glyphs used by the application remain.',
+      )
       ..addSeparator('Target options')
       ..addOption(
         'arch',
@@ -1074,7 +1076,7 @@ class BuildCommand extends Command<int> {
     BuildMode buildMode,
     FlutterpiTargetPlatform targetPlatform,
     bool unoptimized,
-    bool treeShakeIcons,
+    bool? treeShakeIcons,
     bool verbose,
   }) parse() {
     final results = argResults!;
@@ -1111,7 +1113,7 @@ class BuildCommand extends Command<int> {
         )
     };
 
-    final treeShakeIcons = results['tree-shake-icons'] as bool;
+    final treeShakeIcons = results['tree-shake-icons'] as bool?;
 
     final verbose = globalResults!['verbose'] as bool;
 
@@ -1150,17 +1152,17 @@ class BuildCommand extends Command<int> {
                   BuildMode.debug,
                   null,
                   trackWidgetCreation: true,
-                  treeShakeIcons: parsed.treeShakeIcons,
+                  treeShakeIcons: parsed.treeShakeIcons ?? BuildInfo.debug.treeShakeIcons,
                 ),
               BuildMode.profile => BuildInfo(
                   BuildMode.profile,
                   null,
-                  treeShakeIcons: parsed.treeShakeIcons,
+                  treeShakeIcons: parsed.treeShakeIcons ?? BuildInfo.profile.treeShakeIcons,
                 ),
               BuildMode.release => BuildInfo(
                   BuildMode.release,
                   null,
-                  treeShakeIcons: parsed.treeShakeIcons,
+                  treeShakeIcons: parsed.treeShakeIcons ?? BuildInfo.release.treeShakeIcons,
                 ),
               _ => throw UnsupportedError('Build mode ${parsed.buildMode} is not supported.'),
             },
