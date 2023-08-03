@@ -15,7 +15,8 @@ Other options
     --verbose    Enable verbose logging.
 
 Available commands:
-  build   Builds a flutter-pi asset bundle.
+  build      Builds a flutter-pi asset bundle.
+  precache   Populate the flutterpi_tool's cache of binary artifacts.
 
 Run "flutterpi_tool help <command>" for more information about a command.
 ```
