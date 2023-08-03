@@ -213,20 +213,8 @@ abstract class FlutterpiEngineCIArtifact extends EngineCachedArtifact {
     DevelopmentArtifact developmentArtifact,
   ) : super(stampName, cache, developmentArtifact);
 
-  // @override
-  // final String stampName;
-
   @override
   FlutterpiCache get cache => super.cache as FlutterpiCache;
-
-  /// Return a list of (directory path, download URL path) tuples.
-  // List<List<String>> getBinaryDirs();
-
-  /// A list of cache directory paths to which the LICENSE file should be copied.
-  // List<String> getLicenseDirs();
-
-  /// A list of the dart package directories to download.
-  // List<String> getPackageDirs();
 
   @override
   bool isUpToDateInner(FileSystem fileSystem) {
