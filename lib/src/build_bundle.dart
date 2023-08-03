@@ -238,11 +238,18 @@ sealed class FlutterpiEngineCIArtifact extends EngineCachedArtifact {
   FlutterpiCache get cache => super.cache as FlutterpiCache;
 
   @override
-  List<String> getPackageDirs() => const <String>[];
+  List<String> getPackageDirs() => const [];
 
   @override
-  List<String> getLicenseDirs() {
-    return <String>[];
+  List<String> getLicenseDirs() => const [];
+
+  List<(String, String)> getBinaryDirTuples();
+
+  @override
+  List<List<String>> getBinaryDirs() {
+    return [
+      for (final (path, name) in getBinaryDirTuples()) [path, name],
+    ];
   }
 
   @override
@@ -363,14 +370,14 @@ class FlutterpiEngineBinariesGeneric extends FlutterpiEngineCIArtifact {
   List<String> getPackageDirs() => const <String>[];
 
   @override
-  List<List<String>> getBinaryDirs() {
+  List<(String, String)> getBinaryDirTuples() {
     if (!_platform.isLinux) {
       return [];
     }
 
     return [
-      ['flutterpi-aarch64-generic/linux-x64', 'aarch64-generic.tar.xz'],
-      ['flutterpi-armv7-generic/linux-x64', 'armv7-generic.tar.xz'],
+      ('flutterpi-aarch64-generic/linux-x64', 'aarch64-generic.tar.xz'),
+      ('flutterpi-armv7-generic/linux-x64', 'armv7-generic.tar.xz'),
     ];
   }
 
@@ -394,14 +401,14 @@ class FlutterpiEngineBinariesPi3 extends FlutterpiEngineCIArtifact {
   final Platform _platform;
 
   @override
-  List<List<String>> getBinaryDirs() {
+  List<(String, String)> getBinaryDirTuples() {
     if (!_platform.isLinux) {
       return [];
     }
 
     return [
-      ['flutterpi-pi3/linux-x64', 'pi3.tar.xz'],
-      ['flutterpi-pi3-64/linux-x64', 'pi3-64.tar.xz'],
+      ('flutterpi-pi3/linux-x64', 'pi3.tar.xz'),
+      ('flutterpi-pi3-64/linux-x64', 'pi3-64.tar.xz'),
     ];
   }
 }
@@ -420,14 +427,14 @@ class FlutterpiEngineBinariesPi4 extends FlutterpiEngineCIArtifact {
   final Platform _platform;
 
   @override
-  List<List<String>> getBinaryDirs() {
+  List<(String, String)> getBinaryDirTuples() {
     if (!_platform.isLinux) {
       return [];
     }
 
     return [
-      ['flutterpi-pi4/linux-x64', 'pi4.tar.xz'],
-      ['flutterpi-pi4-64/linux-x64', 'pi4-64.tar.xz'],
+      ('flutterpi-pi4/linux-x64', 'pi4.tar.xz'),
+      ('flutterpi-pi4-64/linux-x64', 'pi4-64.tar.xz'),
     ];
   }
 }
