@@ -152,7 +152,33 @@ class FlutterpiCache extends FlutterCache {
   }
 }
 
-class FlutterpiArtifactPaths {
+abstract class FlutterpiArtifactPaths {
+  File getEngine({
+    required Directory engineCacheDir,
+    required HostPlatform hostPlatform,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
+    required BuildMode buildMode,
+    bool unoptimized = false,
+  });
+
+  File getGenSnapshot({
+    required Directory engineCacheDir,
+    required HostPlatform hostPlatform,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
+    required BuildMode buildMode,
+    bool unoptimized = false,
+  });
+
+  Source getEngineSource({
+    String artifactSubDir = 'engine',
+    required HostPlatform hostPlatform,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
+    required BuildMode buildMode,
+    bool unoptimized = false,
+  });
+}
+
+class FlutterpiArtifactPathsV1 extends FlutterpiArtifactPaths {
   String getTargetDirName(FlutterpiTargetPlatform target) {
     return switch (target) {
       FlutterpiTargetPlatform.genericArmV7 => 'flutterpi-armv7-generic',
@@ -190,6 +216,7 @@ class FlutterpiArtifactPaths {
     };
   }
 
+  @override
   File getEngine({
     required Directory engineCacheDir,
     required HostPlatform hostPlatform,
@@ -203,6 +230,7 @@ class FlutterpiArtifactPaths {
         .childFile(getEngineFilename(buildMode, unoptimized: unoptimized));
   }
 
+  @override
   File getGenSnapshot({
     required Directory engineCacheDir,
     required HostPlatform hostPlatform,
@@ -216,6 +244,7 @@ class FlutterpiArtifactPaths {
         .childFile(getGenSnapshotFilename(hostPlatform, buildMode));
   }
 
+  @override
   Source getEngineSource({
     String artifactSubDir = 'engine',
     required HostPlatform hostPlatform,
@@ -231,12 +260,123 @@ class FlutterpiArtifactPaths {
   }
 }
 
+class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
+  FlutterpiTargetPlatform _getGenericFor(FlutterpiTargetPlatform platform) {
+    switch (platform) {
+      case FlutterpiTargetPlatform.pi3:
+      case FlutterpiTargetPlatform.pi4:
+        return FlutterpiTargetPlatform.genericArmV7;
+
+      case FlutterpiTargetPlatform.pi3_64:
+      case FlutterpiTargetPlatform.pi4_64:
+        return FlutterpiTargetPlatform.genericAArch64;
+
+      // Explicitly switch over the generic targets instead of using a default:
+      // case here so we get an error when adding a new non-generic target.
+      case FlutterpiTargetPlatform.genericArmV7:
+      case FlutterpiTargetPlatform.genericAArch64:
+      case FlutterpiTargetPlatform.genericX64:
+        return platform;
+    }
+  }
+
+  String _getHostString(HostPlatform hostPlatform) {
+    return switch (hostPlatform) {
+      HostPlatform.linux_x64 => 'linux-x64',
+      HostPlatform.darwin_x64 => 'macos-x64',
+      _ => throw UnsupportedError('Unsupported host platform: $hostPlatform'),
+    };
+  }
+
+  String _getTargetString({required BuildMode buildMode, required FlutterpiTargetPlatform target}) {
+    // for debug and debug_unopt, we don't have architecture-specific engines.
+    if (buildMode == BuildMode.debug) {
+      target = _getGenericFor(target);
+    }
+
+    return switch (target) {
+      FlutterpiTargetPlatform.genericArmV7 => 'armv7-generic',
+      FlutterpiTargetPlatform.genericAArch64 => 'aarch64-generic',
+      FlutterpiTargetPlatform.genericX64 => 'x64-generic',
+      FlutterpiTargetPlatform.pi3 => 'pi3',
+      FlutterpiTargetPlatform.pi3_64 => 'pi3-64',
+      FlutterpiTargetPlatform.pi4 => 'pi4',
+      FlutterpiTargetPlatform.pi4_64 => 'pi4-64',
+    };
+  }
+
+  String _getFlavorString({required BuildMode buildMode, required bool unoptimized}) {
+    return switch ((buildMode, unoptimized)) {
+      (BuildMode.debug, true) => 'debug_unopt',
+      (BuildMode.debug, false) => 'debug',
+      (BuildMode.profile, false) => 'profile',
+      (BuildMode.release, false) => 'release',
+      _ => throw ArgumentError('Unsupported build flavor: $buildMode, unoptimized: $unoptimized'),
+    };
+  }
+
+  @override
+  File getEngine({
+    required Directory engineCacheDir,
+    required HostPlatform hostPlatform,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
+    required BuildMode buildMode,
+    bool unoptimized = false,
+  }) {
+    final target = _getTargetString(buildMode: buildMode, target: flutterpiTargetPlatform);
+    final flavor = _getFlavorString(buildMode: buildMode, unoptimized: unoptimized);
+    return engineCacheDir.childDirectory('flutterpi-engine-$target-$flavor').childFile('libflutter_engine.so');
+  }
+
+  File getEngineDbgsyms({
+    required Directory engineCacheDir,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
+    required BuildMode buildMode,
+    bool unoptimized = false,
+  }) {
+    final target = _getTargetString(buildMode: buildMode, target: flutterpiTargetPlatform);
+    final flavor = _getFlavorString(buildMode: buildMode, unoptimized: unoptimized);
+    return engineCacheDir
+        .childDirectory('flutterpi-engine-dbgsyms-$target-$flavor')
+        .childFile('libflutter_engine.dbgsyms');
+  }
+
+  @override
+  File getGenSnapshot({
+    required Directory engineCacheDir,
+    required HostPlatform hostPlatform,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
+    required BuildMode buildMode,
+    bool unoptimized = false,
+  }) {
+    final host = _getHostString(hostPlatform);
+    final target = _getTargetString(buildMode: buildMode, target: flutterpiTargetPlatform);
+    final flavor = _getFlavorString(buildMode: buildMode, unoptimized: unoptimized);
+    return engineCacheDir.childDirectory('flutterpi-gen-snapshot-$host-$target-$flavor').childFile('gen_snapshot');
+  }
+
+  @override
+  Source getEngineSource({
+    String artifactSubDir = 'engine',
+    required HostPlatform hostPlatform,
+    required FlutterpiTargetPlatform flutterpiTargetPlatform,
+    required BuildMode buildMode,
+    bool unoptimized = false,
+  }) {
+    final target = _getTargetString(buildMode: buildMode, target: flutterpiTargetPlatform);
+    final flavor = _getFlavorString(buildMode: buildMode, unoptimized: unoptimized);
+
+    return Source.pattern(
+        '{CACHE_DIR}/artifacts/$artifactSubDir/flutterpi-engine-$target-$flavor/libflutter_engine.so');
+  }
+}
+
 sealed class FlutterpiEngineCIArtifact extends EngineCachedArtifact {
-  FlutterpiEngineCIArtifact(
-    String stampName,
-    FlutterpiCache cache,
-    DevelopmentArtifact developmentArtifact,
-  ) : super(stampName, cache, developmentArtifact);
+  FlutterpiEngineCIArtifact({
+    required String stampName,
+    required FlutterpiCache cache,
+    DevelopmentArtifact developmentArtifact = DevelopmentArtifact.universal,
+  }) : super(stampName, cache, developmentArtifact);
 
   @override
   FlutterpiCache get cache => super.cache as FlutterpiCache;
@@ -441,6 +581,246 @@ class FlutterpiEngineBinariesPi4 extends FlutterpiEngineCIArtifact {
       ('flutterpi-pi4/linux-x64', 'pi4.tar.xz'),
       ('flutterpi-pi4-64/linux-x64', 'pi4-64.tar.xz'),
     ];
+  }
+}
+
+final class FlutterpiCIArtifact {
+  const FlutterpiCIArtifact.engine(
+    this.name,
+    FlutterpiTargetPlatform this.target,
+    (BuildMode, bool unoptimized) this.engineFlavor,
+  )   : hostPlatform = null,
+        runtimeMode = null,
+        includeDebugSymbols = null;
+
+  const FlutterpiCIArtifact.engineDebugSymbols(
+    this.name,
+    FlutterpiTargetPlatform this.target,
+    (BuildMode, bool unoptimized) this.engineFlavor,
+  )   : hostPlatform = null,
+        runtimeMode = null,
+        includeDebugSymbols = true;
+
+  const FlutterpiCIArtifact.genSnapshot(
+    this.name,
+    HostPlatform this.hostPlatform,
+    FlutterpiTargetPlatform this.target,
+    BuildMode this.runtimeMode,
+  )   : engineFlavor = null,
+        includeDebugSymbols = null;
+
+  const FlutterpiCIArtifact.universal(this.name)
+      : hostPlatform = null,
+        target = null,
+        engineFlavor = null,
+        runtimeMode = null,
+        includeDebugSymbols = null;
+
+  final String name;
+  final HostPlatform? hostPlatform;
+  final FlutterpiTargetPlatform? target;
+  final (BuildMode, bool unoptimized)? engineFlavor;
+  final BuildMode? runtimeMode;
+  final bool? includeDebugSymbols;
+}
+
+class FlutterpiGithubArtifactsV2 {
+  static const _debugUnopt = (BuildMode.debug, true);
+  static const _debug = (BuildMode.debug, false);
+  static const _profile = (BuildMode.profile, false);
+  static const _release = (BuildMode.release, false);
+
+  static Set<FlutterpiCIArtifact> _generateAllArtifacts() {
+    bool isGeneric(FlutterpiTargetPlatform target) {
+      return switch (target) {
+        FlutterpiTargetPlatform.genericArmV7 => true,
+        FlutterpiTargetPlatform.genericAArch64 => true,
+        FlutterpiTargetPlatform.genericX64 => true,
+        FlutterpiTargetPlatform.pi3 => false,
+        FlutterpiTargetPlatform.pi3_64 => false,
+        FlutterpiTargetPlatform.pi4 => false,
+        FlutterpiTargetPlatform.pi4_64 => false,
+      };
+    }
+
+    String getTargetString(FlutterpiTargetPlatform target) {
+      return switch (target) {
+        FlutterpiTargetPlatform.genericArmV7 => 'armv7-generic',
+        FlutterpiTargetPlatform.genericAArch64 => 'aarch64-generic',
+        FlutterpiTargetPlatform.genericX64 => 'x64-generic',
+        FlutterpiTargetPlatform.pi3 => 'pi3',
+        FlutterpiTargetPlatform.pi3_64 => 'pi3-64',
+        FlutterpiTargetPlatform.pi4 => 'pi4',
+        FlutterpiTargetPlatform.pi4_64 => 'pi4-64',
+      };
+    }
+
+    String getFlavorStr((BuildMode, bool) flavor) {
+      return switch (flavor) {
+        (BuildMode.debug, true) => 'debug_unopt',
+        (BuildMode.debug, false) => 'debug',
+        (BuildMode.profile, false) => 'profile',
+        (BuildMode.release, false) => 'release',
+        _ => throw UnsupportedError('Unsupported engine flavor: $flavor'),
+      };
+    }
+
+    final allPlatforms = FlutterpiTargetPlatform.values.toSet();
+    final genericPlatforms = allPlatforms.where(isGeneric).toSet();
+    final specificPlatforms = allPlatforms.where((t) => !isGeneric(t)).toSet();
+
+    final artifacts = <FlutterpiCIArtifact>{};
+
+    final engineBuilds = {
+      for (final target in genericPlatforms)
+        for (final engineFlavor in {_debugUnopt, _debug, _profile, _release})
+          (
+            target,
+            engineFlavor,
+          ),
+      for (final target in specificPlatforms)
+        for (final engineFlavor in {_profile, _release})
+          (
+            target,
+            engineFlavor,
+          ),
+    };
+
+    final genSnapshotBuilds = {
+      for (final host in {HostPlatform.linux_x64, HostPlatform.darwin_x64})
+        for (final target in genericPlatforms)
+          for (final (runtimeMode, _) in {_debugUnopt, _debug, _profile, _release})
+            (
+              host,
+              target,
+              runtimeMode,
+            ),
+    };
+
+    for (final (target, flavor) in engineBuilds) {
+      final targetStr = getTargetString(target);
+      final flavorStr = getFlavorStr(flavor);
+
+      artifacts.addAll([
+        FlutterpiCIArtifact.engine('engine-$targetStr-$flavorStr.tar.xz', target, flavor),
+        FlutterpiCIArtifact.engineDebugSymbols('engine-dbgsyms-$targetStr-$flavorStr.tar.xz', target, flavor),
+      ]);
+    }
+
+    for (final (host, target, runtimeMode) in genSnapshotBuilds) {
+      final hostStr = switch (host) {
+        HostPlatform.linux_x64 => 'linux-x64',
+        HostPlatform.darwin_x64 => 'macos-x64',
+        _ => throw UnsupportedError('Unsupported host platform: $host'),
+      };
+      final targetStr = getTargetString(target);
+      final runtimeModeStr = getFlavorStr((runtimeMode, false));
+
+      artifacts.add(FlutterpiCIArtifact.genSnapshot(
+        'gen-snapshot-$hostStr-$targetStr-$runtimeModeStr.tar.xz',
+        host,
+        target,
+        runtimeMode,
+      ));
+    }
+
+    artifacts.add(FlutterpiCIArtifact.universal('universal.tar.xz'));
+
+    return artifacts;
+  }
+
+  final _artifacts = _generateAllArtifacts();
+
+  Iterable<String> _select({
+    HostPlatform? hostPlatform,
+    FlutterpiTargetPlatform? target,
+    (BuildMode, bool unoptimized)? engineFlavor,
+    BuildMode? runtimeMode,
+    bool? includeDebugSymbols,
+  }) {
+    return _artifacts.where((artifact) {
+      return (artifact.target == target || artifact.target == null) &&
+          (artifact.hostPlatform == artifact.hostPlatform || artifact.hostPlatform == null) &&
+          (artifact.engineFlavor == engineFlavor || artifact.engineFlavor == null) &&
+          (artifact.runtimeMode == runtimeMode || artifact.runtimeMode == null) &&
+          (artifact.includeDebugSymbols == includeDebugSymbols || artifact.includeDebugSymbols == null);
+    }).map((artifact) => artifact.name);
+  }
+
+  Iterable<String> getArtifactsFor({
+    Set<HostPlatform> hostPlatforms = const {},
+    Set<FlutterpiTargetPlatform> targets = const {},
+    Set<(BuildMode, bool unoptimized)> engineFlavors = const {},
+    Set<BuildMode> runtimeModes = const {},
+    bool includeDebugSymbols = false,
+  }) {
+    return {
+      for (final host in <HostPlatform?>[null].followedBy(hostPlatforms))
+        for (final target in <FlutterpiTargetPlatform?>[null].followedBy(targets))
+          for (final engineFlavor in <(BuildMode, bool unoptimized)?>[null].followedBy(engineFlavors))
+            for (final runtimeMode in <BuildMode?>[null].followedBy(runtimeModes))
+              ..._select(
+                hostPlatform: host,
+                target: target,
+                engineFlavor: engineFlavor,
+                runtimeMode: runtimeMode,
+                includeDebugSymbols: includeDebugSymbols,
+              ),
+    };
+  }
+}
+
+class FlutterpiEngine extends FlutterpiEngineCIArtifact {
+  FlutterpiEngine({
+    required this.target,
+    required super.cache,
+    bool debugUnopt = false,
+  }) : super(stampName: 'flutterpi-engine-$target${debugUnopt ? '-debug-unopt' : ''}');
+
+  final FlutterpiTargetPlatform target;
+
+  @override
+  List<(String, String)> getBinaryDirTuples() {
+    final target = '${this.target}';
+
+    return [
+      ('flutterpi-engine-aarch64-generic-debug', 'engine-aarch64-generic-debug.tar.xz'),
+      ('flutterpi-engine-aarch64-generic-profile', 'engine-aarch64-generic-profile.tar.xz'),
+      ('flutterpi-engine-aarch64-generic-release', 'engine-aarch64-generic-release.tar.xz'),
+      ('flutterpi-armv7-generic', 'armv7-generic.tar.xz'),
+      ('flutterpi-x64-generic', 'x64-generic.tar.xz'),
+    ];
+  }
+}
+
+class FlutterpiDebugSymbols extends FlutterpiEngineCIArtifact {
+  FlutterpiDebugSymbols({
+    required this.target,
+    required super.cache,
+    bool debugUnopt = false,
+  }) : super(stampName: 'flutterpi-engine-dbgsyms-$target${debugUnopt ? '-debug-unopt' : ''}');
+
+  final FlutterpiTargetPlatform target;
+
+  @override
+  List<(String, String)> getBinaryDirTuples() {
+    throw UnimplementedError();
+  }
+}
+
+class FlutterpiGenSnapshot extends FlutterpiEngineCIArtifact {
+  FlutterpiGenSnapshot({
+    required this.target,
+    required super.cache,
+    required BuildMode buildMode,
+    bool unoptimized = false,
+  }) : super(stampName: 'flutterpi-gen-snapshot-$target-$buildMode${unoptimized ? '_unopt' : ''}');
+
+  final FlutterpiTargetPlatform target;
+
+  @override
+  List<(String, String)> getBinaryDirTuples() {
+    throw UnimplementedError();
   }
 }
 
@@ -831,7 +1211,7 @@ Future<void> buildFlutterpiBundle({
   assetDirPath ??= getAssetBuildDirectory();
   buildSystem ??= globals.buildSystem;
   artifacts ??= globals.artifacts!;
-  artifactPaths ??= FlutterpiArtifactPaths();
+  artifactPaths ??= FlutterpiArtifactPathsV1();
 
   // If the precompiled flag was not passed, force us into debug mode.
   final environment = Environment(
@@ -1225,6 +1605,16 @@ class PrecacheCommand extends Command<int> {
   @override
   Future<int> run() async {
     Cache.flutterRoot = await getFlutterRoot();
+
+    final ghArtifacts = FlutterpiGithubArtifactsV2();
+
+    {
+      for (final target in FlutterpiTargetPlatform.values)
+        ghArtifacts.getArtifactsFor(
+          hostPlatform: getCurrentHostPlatform(),
+          target: target,
+        );
+    }
 
     await runInContext(
       verbose: globalResults!['verbose'],
