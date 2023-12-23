@@ -19,6 +19,7 @@ import 'package:flutter_tools/src/build_info.dart';
 import 'package:flutter_tools/src/cache.dart';
 import 'package:github/github.dart' as gh;
 import 'package:file/file.dart';
+import 'package:meta/meta.dart';
 
 FlutterpiCache get flutterpiCache => globals.cache as FlutterpiCache;
 
@@ -361,7 +362,7 @@ class FlutterpiV2Artifact extends FlutterpiArtifact {
 
   @override
   bool requiredFor({
-    required HostPlatform host,
+    required HostPlatform? host,
     required Set<FlutterpiTargetPlatform> targets,
     required Set<EngineFlavor> flavors,
     required Set<BuildMode> runtimeModes,
@@ -537,6 +538,28 @@ class FlutterpiCache extends FlutterCache {
       cache: this,
       httpClient: _pkgHttpHttpClient,
     ).checkForArtifacts(engineRevision);
+  }
+
+  @visibleForTesting
+  Set<FlutterpiV2Artifact> requiredV2Artifacts({
+    HostPlatform? host,
+    required Set<FlutterpiTargetPlatform> targets,
+    required Set<BuildMode> runtimeModes,
+    required Set<EngineFlavor> flavors,
+    bool includeDebugSymbols = false,
+  }) {
+    return {
+      for (final artifact in _artifacts)
+        if (artifact is FlutterpiV2Artifact)
+          if (artifact.requiredFor(
+            host: host,
+            targets: targets,
+            flavors: flavors,
+            runtimeModes: runtimeModes,
+            includeDebugSymbols: includeDebugSymbols,
+          ))
+            artifact
+    };
   }
 
   /// Update the cache to contain all `requiredArtifacts`.
