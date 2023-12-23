@@ -36,6 +36,7 @@ Runtime mode options (Defaults to debug. At most one can be specified)
 
 Build options
     --[no-]tree-shake-icons      Tree shake icon fonts so that only glyphs used by the application remain.
+    --[no-]debug-symbols         Include flutter engine debug symbols file.
 
 Target options
     --arch=<target arch>         The target architecture to build for.
