@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:io' as io;
 
+import 'package:flutter_tools/src/runner/flutter_command_runner.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 
 import 'common.dart';
@@ -10,6 +11,8 @@ import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:flutter_tools/src/bundle.dart';
 import 'package:flutter_tools/src/base/common.dart';
+import 'package:flutter_tools/src/runner/flutter_command.dart';
+import 'package:flutter_tools/src/reporting/reporting.dart';
 import 'package:flutter_tools/src/base/os.dart';
 import 'package:flutter_tools/src/base/logger.dart';
 import 'package:flutter_tools/src/base/process.dart';
@@ -357,29 +360,35 @@ Future<void> buildFlutterpiBundle({
     _ => throwToolExit('Unsupported build mode: ${buildInfo.mode}'),
   };
 
-  final result = await buildSystem.build(target, environment);
-  if (!result.success) {
-    for (final measurement in result.exceptions.values) {
-      globals.printError(
-        'Target ${measurement.target} failed: ${measurement.exception}',
-        stackTrace: measurement.fatal ? measurement.stackTrace : null,
-      );
+  final status = globals.logger.startProgress('Building Flutter-Pi bundle...');
+
+  try {
+    final result = await buildSystem.build(target, environment);
+    if (!result.success) {
+      for (final measurement in result.exceptions.values) {
+        globals.printError(
+          'Target ${measurement.target} failed: ${measurement.exception}',
+          stackTrace: measurement.fatal ? measurement.stackTrace : null,
+        );
+      }
+
+      throwToolExit('Failed to build bundle.');
     }
 
-    throwToolExit('Failed to build bundle.');
-  }
+    final depfile = Depfile(result.inputFiles, result.outputFiles);
+    final outputDepfile = globals.fs.file(depfilePath);
+    if (!outputDepfile.parent.existsSync()) {
+      outputDepfile.parent.createSync(recursive: true);
+    }
 
-  final depfile = Depfile(result.inputFiles, result.outputFiles);
-  final outputDepfile = globals.fs.file(depfilePath);
-  if (!outputDepfile.parent.existsSync()) {
-    outputDepfile.parent.createSync(recursive: true);
+    final depfileService = DepfileService(
+      fileSystem: globals.fs,
+      logger: globals.logger,
+    );
+    depfileService.writeToFile(depfile, outputDepfile);
+  } finally {
+    status.cancel();
   }
-
-  final depfileService = DepfileService(
-    fileSystem: globals.fs,
-    logger: globals.logger,
-  );
-  depfileService.writeToFile(depfile, outputDepfile);
 
   return;
 }
@@ -460,6 +469,7 @@ Future<T> runInContext<T>({
           ),
       Logger: loggerFactory,
       Artifacts: artifactsGenerator,
+      Usage: () => DisabledUsage()
     },
   );
 }
@@ -497,7 +507,7 @@ Never exitWithUsage(ArgParser parser, {String? errorMessage, int exitCode = 1}) 
   io.exit(exitCode);
 }
 
-class BuildCommand extends Command<int> {
+class BuildCommand extends FlutterCommand {
   static const archs = ['arm', 'arm64', 'x64'];
 
   static const cpus = ['generic', 'pi3', 'pi4'];
@@ -518,7 +528,13 @@ class BuildCommand extends Command<int> {
         'tree-shake-icons',
         help: 'Tree shake icon fonts so that only glyphs used by the application remain.',
       )
-      ..addFlag('debug-symbols', help: 'Include flutter engine debug symbols file.')
+      ..addFlag('debug-symbols', help: 'Include flutter engine debug symbols file.');
+
+    // add --dart-define, --dart-define-from-file options
+    usesDartDefineOption();
+    usesTargetOption();
+
+    argParser
       ..addSeparator('Target options')
       ..addOption(
         'arch',
@@ -543,7 +559,7 @@ class BuildCommand extends Command<int> {
           'generic':
               'Don\'t use a tuned engine. The generic engine will work on all CPUs of the specified architecture.',
           'pi3':
-              'Use a Raspberry Pi 3 tuned engine. Compatible with arm and arm64. (-mcpu=cortex-a53 -mtune=cortex-a53)',
+              'Use a Raspberry Pi 3 tuned engine. Compatible with arm and arm64. (-mcpu=cortex-a53+nocrypto -mtune=cortex-a53)',
           'pi4':
               'Use a Raspberry Pi 4 tuned engine. Compatible with arm and arm64. (-mcpu=cortex-a72+nocrypto -mtune=cortex-a72)',
         },
@@ -555,6 +571,38 @@ class BuildCommand extends Command<int> {
 
   @override
   String get description => 'Builds a flutter-pi asset bundle.';
+
+  @override
+  FlutterpiToolCommandRunner? get runner => super.runner as FlutterpiToolCommandRunner;
+
+  EngineFlavor get defaultFlavor => EngineFlavor.debug;
+
+  EngineFlavor getEngineFlavor() {
+    final debug = boolArg('debug');
+    final profile = boolArg('profile');
+    final release = boolArg('release');
+    final debugUnopt = boolArg('debug-unoptimized');
+
+    final flags = [debug, profile, release, debugUnopt];
+    if (flags.where((flag) => flag).length > 1) {
+      throw UsageException(
+          'Only one of "--debug", "--profile", "--release", '
+              'or "--debug-unoptimized" can be specified.',
+          '');
+    }
+
+    if (debug) {
+      return EngineFlavor.debug;
+    } else if (profile) {
+      return EngineFlavor.profile;
+    } else if (release) {
+      return EngineFlavor.release;
+    } else if (debugUnopt) {
+      return EngineFlavor.debugUnopt;
+    } else {
+      return defaultFlavor;
+    }
+  }
 
   int exitWithUsage({int exitCode = 1, String? errorMessage, String? usage}) {
     if (errorMessage != null) {
@@ -569,17 +617,17 @@ class BuildCommand extends Command<int> {
     return exitCode;
   }
 
-  ({
-    BuildMode buildMode,
-    FlutterpiTargetPlatform targetPlatform,
-    bool unoptimized,
-    bool debugSymbols,
-    bool? treeShakeIcons,
-    bool verbose,
-  }) parse() {
-    final results = argResults!;
+  @override
+  BuildMode getBuildMode() {
+    return getEngineFlavor().buildMode;
+  }
 
-    final target = switch ((results['arch'], results['cpu'])) {
+  bool getIncludeDebugSymbols() {
+    return boolArg('debug-symbols');
+  }
+
+  FlutterpiTargetPlatform getTargetPlatform() {
+    return switch ((stringArg('arch'), stringArg('cpu'))) {
       ('arm', 'generic') => FlutterpiTargetPlatform.genericArmV7,
       ('arm', 'pi3') => FlutterpiTargetPlatform.pi3,
       ('arm', 'pi4') => FlutterpiTargetPlatform.pi4,
@@ -592,58 +640,25 @@ class BuildCommand extends Command<int> {
           usage,
         ),
     };
-
-    final (buildMode, unoptimized) = switch ((
-      debug: results['debug'],
-      profile: results['profile'],
-      release: results['release'],
-      debugUnopt: results['debug-unoptimized']
-    )) {
-      // single flag was specified.
-      (debug: true, profile: false, release: false, debugUnopt: false) => (BuildMode.debug, false),
-      (debug: false, profile: true, release: false, debugUnopt: false) => (BuildMode.profile, false),
-      (debug: false, profile: false, release: true, debugUnopt: false) => (BuildMode.release, false),
-      (debug: false, profile: false, release: false, debugUnopt: true) => (BuildMode.debug, true),
-
-      // default case if no flags were specified.
-      (debug: false, profile: false, release: false, debugUnopt: false) => (BuildMode.debug, false),
-
-      // more than a single flag has been specified.
-      _ => throw UsageException(
-          'At most one of `--debug`, `--profile`, `--release` or `--debug-unoptimized` can be specified.',
-          usage,
-        )
-    };
-
-    final treeShakeIcons = results['tree-shake-icons'] as bool?;
-
-    final verbose = globalResults!['verbose'] as bool;
-
-    final debugSymbols = results['debug-symbols'] as bool;
-
-    return (
-      buildMode: buildMode,
-      targetPlatform: target,
-      unoptimized: unoptimized,
-      debugSymbols: debugSymbols,
-      treeShakeIcons: treeShakeIcons,
-      verbose: verbose,
-    );
   }
 
   @override
-  Future<int> run() async {
-    final parsed = parse();
-
+  Future<void> run() async {
     Cache.flutterRoot = await getFlutterRoot();
 
     await runInContext(
-      targetPlatform: parsed.targetPlatform,
-      verbose: parsed.verbose,
+      targetPlatform: getTargetPlatform(),
+      verbose: boolArg('verbose', global: true),
       runner: () async {
         try {
-          var targetPlatform = parsed.targetPlatform;
-          if (parsed.buildMode == BuildMode.debug && !parsed.targetPlatform.isGeneric) {
+          final buildMode = getBuildMode();
+          final flavor = getEngineFlavor();
+          final debugSymbols = getIncludeDebugSymbols();
+          final buildInfo = await getBuildInfo();
+
+          var targetPlatform = getTargetPlatform();
+
+          if (buildMode == BuildMode.debug && !targetPlatform.isGeneric) {
             globals.logger.printTrace(
               'Non-generic target platform ($targetPlatform) is not supported '
               'for debug mode, using generic variant '
@@ -657,41 +672,24 @@ class BuildCommand extends Command<int> {
             const {DevelopmentArtifact.universal},
             offline: false,
             flutterpiPlatforms: {targetPlatform},
-            runtimeModes: {parsed.buildMode},
-            engineFlavors: {EngineFlavor(parsed.buildMode, parsed.unoptimized)},
-            includeDebugSymbols: parsed.debugSymbols,
+            runtimeModes: {buildMode},
+            engineFlavors: {flavor},
+            includeDebugSymbols: debugSymbols,
           );
 
-          if (parsed.debugSymbols && flutterpiCache.artifactPaths is! FlutterpiArtifactPathsV2) {
+          if (debugSymbols && flutterpiCache.artifactPaths is! FlutterpiArtifactPathsV2) {
             throwToolExit('Debug symbols are only supported since flutter 3.16.3.');
           }
 
           // actually build the flutter bundle
           await buildFlutterpiBundle(
             flutterpiTargetPlatform: targetPlatform,
-            buildInfo: switch (parsed.buildMode) {
-              BuildMode.debug => BuildInfo(
-                  BuildMode.debug,
-                  null,
-                  trackWidgetCreation: true,
-                  treeShakeIcons: parsed.treeShakeIcons ?? BuildInfo.debug.treeShakeIcons,
-                ),
-              BuildMode.profile => BuildInfo(
-                  BuildMode.profile,
-                  null,
-                  treeShakeIcons: parsed.treeShakeIcons ?? BuildInfo.profile.treeShakeIcons,
-                ),
-              BuildMode.release => BuildInfo(
-                  BuildMode.release,
-                  null,
-                  treeShakeIcons: parsed.treeShakeIcons ?? BuildInfo.release.treeShakeIcons,
-                ),
-              _ => throw UnsupportedError('Build mode ${parsed.buildMode} is not supported.'),
-            },
+            buildInfo: buildInfo,
+            mainPath: targetFile,
 
             // for `--debug-unoptimized` build mode
-            unoptimized: parsed.unoptimized,
-            includeDebugSymbols: parsed.debugSymbols,
+            unoptimized: flavor.unoptimized,
+            includeDebugSymbols: debugSymbols,
           );
         } on ToolExit catch (e) {
           if (e.message != null) {
@@ -702,12 +700,16 @@ class BuildCommand extends Command<int> {
         }
       },
     );
+  }
 
-    return 0;
+  @override
+  Future<FlutterCommandResult> runCommand() {
+    // TODO: implement runCommand
+    throw UnimplementedError();
   }
 }
 
-class PrecacheCommand extends Command<int> {
+class PrecacheCommand extends Command<void> {
   @override
   String get name => 'precache';
 
@@ -744,12 +746,36 @@ class PrecacheCommand extends Command<int> {
   }
 }
 
+class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterCommandRunner {
+  FlutterpiToolCommandRunner({bool verboseHelp = false})
+      : super(
+          'flutterpi_tool',
+          'A tool to make development & distribution of flutter-pi apps easier.',
+          usageLineLength: 120,
+        ) {
+    argParser.addOption(
+      FlutterGlobalOptions.kPackagesOption,
+      hide: !verboseHelp,
+      help: 'Path to your "package_config.json" file.',
+    );
+  }
+
+  @override
+  String get usageFooter => '';
+
+  @override
+  List<Directory> getRepoPackages() {
+    throw UnimplementedError();
+  }
+
+  @override
+  List<String> getRepoRoots() {
+    throw UnimplementedError();
+  }
+}
+
 Future<void> main(List<String> args) async {
-  final runner = CommandRunner<int>(
-    'flutterpi_tool',
-    'A tool to make development & distribution of flutter-pi apps easier.',
-    usageLineLength: 120,
-  );
+  final runner = FlutterpiToolCommandRunner();
 
   runner.addCommand(BuildCommand());
   runner.addCommand(PrecacheCommand());
@@ -758,13 +784,11 @@ Future<void> main(List<String> args) async {
     ..addSeparator('Other options')
     ..addFlag('verbose', negatable: false, help: 'Enable verbose logging.');
 
-  late int exitCode;
   try {
-    exitCode = await runner.run(args) ?? 0;
+    await runner.run(args);
+    io.exitCode = 0;
   } on UsageException catch (e) {
     print(e);
-    exitCode = 1;
+    io.exitCode = 1;
   }
-
-  io.exitCode = exitCode;
 }
