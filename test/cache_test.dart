@@ -1,10 +1,10 @@
-import 'dart:io';
+import 'dart:async';
 
 import 'package:file/memory.dart';
-import 'package:flutter_tools/executable.dart';
 import 'package:flutter_tools/src/base/logger.dart';
 import 'package:flutter_tools/src/base/platform.dart';
 import 'package:flutter_tools/src/base/os.dart';
+import 'package:flutter_tools/src/base/process.dart';
 import 'package:flutter_tools/src/project.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
@@ -13,16 +13,17 @@ import 'package:test/test.dart';
 
 import 'src/fake_process_manager.dart';
 
-Set<String> getArtifactKeysFor({
+Future<Set<String>> getArtifactKeysFor({
   HostPlatform? host,
   Set<FlutterpiTargetPlatform> targets = const {},
   Set<EngineFlavor> flavors = const {},
   Set<BuildMode> runtimeModes = const {},
   bool includeDebugSymbols = false,
-}) {
+}) async {
   final logger = BufferLogger.test();
   final fs = MemoryFileSystem.test();
   final platform = FakePlatform();
+  final hooks = ShutdownHooks();
 
   final cache = FlutterpiCache(
     logger: logger,
@@ -38,9 +39,10 @@ Set<String> getArtifactKeysFor({
       fileSystem: fs,
       logger: logger,
     ),
+    hooks: hooks,
   );
 
-  return cache
+  final result = cache
       .requiredV2Artifacts(
         host: host,
         targets: targets,
@@ -49,11 +51,15 @@ Set<String> getArtifactKeysFor({
       )
       .map((e) => e.artifactFilename)
       .toSet();
+
+  await hooks.runShutdownHooks(logger);
+
+  return result;
 }
 
 void main() {
-  test('universal artifacts', () {
-    final artifacts = getArtifactKeysFor(
+  test('universal artifacts', () async {
+    final artifacts = await getArtifactKeysFor(
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
     );
@@ -66,8 +72,8 @@ void main() {
     );
   });
 
-  test('all engine artifacts', () {
-    final artifacts = getArtifactKeysFor(
+  test('all engine artifacts', () async {
+    final artifacts = await getArtifactKeysFor(
       targets: {
         FlutterpiTargetPlatform.genericAArch64,
         FlutterpiTargetPlatform.genericArmV7,
@@ -109,8 +115,8 @@ void main() {
     );
   });
 
-  test('all linux-x64 gen_snapshots', () {
-    final artifacts = getArtifactKeysFor(
+  test('all linux-x64 gen_snapshots', () async {
+    final artifacts = await getArtifactKeysFor(
       host: HostPlatform.linux_x64,
       targets: {
         FlutterpiTargetPlatform.genericAArch64,
@@ -138,8 +144,8 @@ void main() {
     );
   });
 
-  test('all macos x64 gen_snapshots', () {
-    final artifacts = getArtifactKeysFor(
+  test('all macos x64 gen_snapshots', () async {
+    final artifacts = await getArtifactKeysFor(
       host: HostPlatform.darwin_x64,
       targets: {
         FlutterpiTargetPlatform.genericAArch64,
@@ -168,8 +174,8 @@ void main() {
     );
   });
 
-  test('specific artifact selection', () {
-    final artifacts = getArtifactKeysFor(
+  test('specific artifact selection', () async {
+    final artifacts = await getArtifactKeysFor(
       host: HostPlatform.linux_x64,
       targets: {FlutterpiTargetPlatform.genericArmV7, FlutterpiTargetPlatform.pi3},
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
@@ -188,8 +194,8 @@ void main() {
     );
   });
 
-  test('specific artifact selection', () {
-    final artifacts = getArtifactKeysFor(
+  test('specific artifact selection', () async {
+    final artifacts = await getArtifactKeysFor(
       host: HostPlatform.linux_x64,
       targets: {FlutterpiTargetPlatform.genericArmV7, FlutterpiTargetPlatform.pi3, FlutterpiTargetPlatform.pi4_64},
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
@@ -209,8 +215,8 @@ void main() {
     );
   });
 
-  test('specific artifact selection', () {
-    final artifacts = getArtifactKeysFor(
+  test('specific artifact selection', () async {
+    final artifacts = await getArtifactKeysFor(
       host: HostPlatform.linux_x64,
       targets: {FlutterpiTargetPlatform.genericX64, FlutterpiTargetPlatform.pi3, FlutterpiTargetPlatform.pi4_64},
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},

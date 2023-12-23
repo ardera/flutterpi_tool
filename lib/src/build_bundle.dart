@@ -454,6 +454,7 @@ Future<T> runInContext<T>({
             platform: globals.platform,
             osUtils: globals.os,
             projectFactory: globals.projectFactory,
+            hooks: globals.shutdownHooks,
           ),
       OperatingSystemUtils: () => TarXzCompatibleOsUtils(
             os: OperatingSystemUtils(
@@ -691,6 +692,8 @@ class BuildCommand extends FlutterCommand {
             unoptimized: flavor.unoptimized,
             includeDebugSymbols: debugSymbols,
           );
+
+          await globals.shutdownHooks.runShutdownHooks(globals.logger);
         } on ToolExit catch (e) {
           if (e.message != null) {
             globals.printError(e.message!);
@@ -732,6 +735,8 @@ class PrecacheCommand extends Command<void> {
             engineFlavors: EngineFlavor.values.toSet(),
             includeDebugSymbols: true,
           );
+
+          await globals.shutdownHooks.runShutdownHooks(globals.logger);
         } on ToolExit catch (e) {
           if (e.message != null) {
             globals.printError(e.message!);

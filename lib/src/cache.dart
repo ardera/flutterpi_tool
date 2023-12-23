@@ -422,6 +422,7 @@ class FlutterpiCache extends FlutterCache {
     required Platform platform,
     required OperatingSystemUtils osUtils,
     required super.projectFactory,
+    required ShutdownHooks hooks,
     io.HttpClient? httpClient,
   })  : _logger = logger,
         _fileSystem = fileSystem,
@@ -476,6 +477,11 @@ class FlutterpiCache extends FlutterCache {
     }
 
     registerArtifact(FlutterpiV2Artifact.universal(cache: this, httpClient: _pkgHttpHttpClient));
+
+    hooks.addShutdownHook(() {
+      // this will close the inner dart:io http client.
+      _pkgHttpHttpClient.close();
+    });
   }
 
   final Logger _logger;
@@ -864,14 +870,10 @@ class FlutterpiArtifacts implements Artifacts {
     required OperatingSystemUtils operatingSystemUtils,
     required FlutterpiArtifactPaths paths,
   })  : _flutterpiTargetPlatform = flutterpiTargetPlatform,
-        _fileSystem = fileSystem,
         _cache = cache,
-        _operatingSystemUtils = operatingSystemUtils,
         _paths = paths;
 
-  final FileSystem _fileSystem;
   final Cache _cache;
-  final OperatingSystemUtils _operatingSystemUtils;
   final FlutterpiTargetPlatform _flutterpiTargetPlatform;
   final FlutterpiArtifactPaths _paths;
   final Artifacts parent;
