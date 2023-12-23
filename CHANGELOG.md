@@ -1,3 +1,10 @@
+## 0.2.0
+
+- add macos host support
+- add `--dart-define`, `--dart-define-from-file`, `--target` flags
+- add `--debug-symbols` flag
+- add support for v2 artifact layout
+
 ## 0.1.2
 
 - update `flutterpi_tool --help` in readme

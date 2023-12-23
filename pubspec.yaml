@@ -1,6 +1,6 @@
 name: flutterpi_tool
 description: A tool to make development & distribution of flutter-pi apps easier.
-version: 0.1.2
+version: 0.2.0
 repository: https://github.com/ardera/flutterpi_tool
 
 environment:
