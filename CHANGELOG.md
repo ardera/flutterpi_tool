@@ -1,3 +1,7 @@
+## 0.2.1
+
+- fix gen_snapshot selection
+
 ## 0.2.0
 
 - add macos host support
