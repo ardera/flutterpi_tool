@@ -396,7 +396,6 @@ Future<void> buildFlutterpiBundle({
 Future<T> runInContext<T>({
   required FutureOr<T> Function() runner,
   FlutterpiTargetPlatform? targetPlatform,
-  Set<FlutterpiTargetPlatform>? targetPlatforms,
   bool verbose = false,
 }) async {
   Logger Function() loggerFactory = () => globals.platform.isWindows
@@ -416,9 +415,6 @@ Future<T> runInContext<T>({
     loggerFactory = () => VerboseLogger(oldLoggerFactory());
   }
 
-  targetPlatforms ??= targetPlatform != null ? {targetPlatform} : null;
-  targetPlatforms ??= FlutterpiTargetPlatform.values.toSet();
-
   Artifacts Function() artifactsGenerator;
   if (targetPlatform != null) {
     artifactsGenerator = () => FlutterpiArtifacts(
@@ -428,7 +424,7 @@ Future<T> runInContext<T>({
             platform: globals.platform,
             operatingSystemUtils: globals.os,
           ),
-          flutterpiTargetPlatform: targetPlatform,
+          genSnapshotTarget: targetPlatform.genericVariant,
           fileSystem: globals.fs,
           platform: globals.platform,
           cache: globals.cache,
@@ -672,7 +668,7 @@ class BuildCommand extends FlutterCommand {
           await flutterpiCache.updateAll(
             const {DevelopmentArtifact.universal},
             offline: false,
-            flutterpiPlatforms: {targetPlatform},
+            flutterpiPlatforms: {targetPlatform, targetPlatform.genericVariant},
             runtimeModes: {buildMode},
             engineFlavors: {flavor},
             includeDebugSymbols: debugSymbols,

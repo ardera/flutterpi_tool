@@ -863,18 +863,18 @@ class FlutterpiArtifacts implements Artifacts {
   /// [parent] must be provided.
   FlutterpiArtifacts({
     required this.parent,
-    required FlutterpiTargetPlatform flutterpiTargetPlatform,
+    required FlutterpiTargetPlatform genSnapshotTarget,
     required FileSystem fileSystem,
     required Platform platform,
     required Cache cache,
     required OperatingSystemUtils operatingSystemUtils,
     required FlutterpiArtifactPaths paths,
-  })  : _flutterpiTargetPlatform = flutterpiTargetPlatform,
+  })  : _genSnapshotTarget = genSnapshotTarget,
         _cache = cache,
         _paths = paths;
 
   final Cache _cache;
-  final FlutterpiTargetPlatform _flutterpiTargetPlatform;
+  final FlutterpiTargetPlatform _genSnapshotTarget;
   final FlutterpiArtifactPaths _paths;
   final Artifacts parent;
 
@@ -886,7 +886,7 @@ class FlutterpiArtifacts implements Artifacts {
         .getGenSnapshot(
           engineCacheDir: _cache.getArtifactDirectory('engine'),
           hostPlatform: getCurrentHostPlatform(),
-          target: _flutterpiTargetPlatform,
+          target: _genSnapshotTarget,
           runtimeMode: buildMode,
         )
         .path;
