@@ -2,23 +2,22 @@
 
 import 'dart:io' as io;
 
+import 'package:file/file.dart';
+import 'package:flutter_tools/src/artifacts.dart';
+import 'package:flutter_tools/src/base/common.dart';
+import 'package:flutter_tools/src/base/logger.dart';
+import 'package:flutter_tools/src/base/os.dart';
+import 'package:flutter_tools/src/base/platform.dart';
+import 'package:flutter_tools/src/base/process.dart';
+import 'package:flutter_tools/src/build_info.dart';
+import 'package:flutter_tools/src/build_system/build_system.dart';
+import 'package:flutter_tools/src/cache.dart';
+import 'package:flutter_tools/src/flutter_cache.dart';
+import 'package:flutter_tools/src/globals.dart' as globals;
 import 'package:flutterpi_tool/src/common.dart';
+import 'package:github/github.dart' as gh;
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart' as http;
-
-import 'package:flutter_tools/src/flutter_cache.dart';
-import 'package:flutter_tools/src/base/platform.dart';
-import 'package:flutter_tools/src/globals.dart' as globals;
-import 'package:flutter_tools/src/base/common.dart';
-import 'package:flutter_tools/src/base/os.dart';
-import 'package:flutter_tools/src/base/logger.dart';
-import 'package:flutter_tools/src/base/process.dart';
-import 'package:flutter_tools/src/artifacts.dart';
-import 'package:flutter_tools/src/build_system/build_system.dart';
-import 'package:flutter_tools/src/build_info.dart';
-import 'package:flutter_tools/src/cache.dart';
-import 'package:github/github.dart' as gh;
-import 'package:file/file.dart';
 import 'package:meta/meta.dart';
 
 FlutterpiCache get flutterpiCache => globals.cache as FlutterpiCache;
@@ -854,43 +853,53 @@ class TarXzCompatibleOsUtils implements OperatingSystemUtils {
   }
 }
 
-/// An implementation of [Artifacts] that provides individual overrides.
+/// An implementation of [Artifacts] that allows overriding the gen_snapshot
+/// executable.
 ///
 /// If an artifact is not provided, the lookup delegates to the parent.
-class FlutterpiArtifacts implements Artifacts {
+class OverrideGenSnapshotArtifacts implements Artifacts {
   /// Creates a new [OverrideArtifacts].
   ///
   /// [parent] must be provided.
-  FlutterpiArtifacts({
+  OverrideGenSnapshotArtifacts({
     required this.parent,
-    required FlutterpiTargetPlatform genSnapshotTarget,
-    required FileSystem fileSystem,
-    required Platform platform,
-    required Cache cache,
-    required OperatingSystemUtils operatingSystemUtils,
-    required FlutterpiArtifactPaths paths,
-  })  : _genSnapshotTarget = genSnapshotTarget,
-        _cache = cache,
-        _paths = paths;
+    required this.genSnapshotPathProfile,
+    required this.genSnapshotPathRelease,
+  });
 
-  final Cache _cache;
-  final FlutterpiTargetPlatform _genSnapshotTarget;
-  final FlutterpiArtifactPaths _paths;
+  factory OverrideGenSnapshotArtifacts.fromArtifactPaths({
+    required Artifacts parent,
+    required Directory engineCacheDir,
+    required HostPlatform host,
+    required FlutterpiTargetPlatform target,
+    required FlutterpiArtifactPaths artifactPaths,
+  }) {
+    return OverrideGenSnapshotArtifacts(
+      parent: parent,
+      genSnapshotPathProfile: artifactPaths
+          .getGenSnapshot(
+            engineCacheDir: engineCacheDir,
+            hostPlatform: host,
+            target: target,
+            runtimeMode: BuildMode.profile,
+          )
+          .path,
+      genSnapshotPathRelease: artifactPaths
+          .getGenSnapshot(
+            engineCacheDir: engineCacheDir,
+            hostPlatform: host,
+            target: target,
+            runtimeMode: BuildMode.release,
+          )
+          .path,
+    );
+  }
   final Artifacts parent;
+  final String genSnapshotPathProfile;
+  final String genSnapshotPathRelease;
 
   @override
   LocalEngineInfo? get localEngineInfo => parent.localEngineInfo;
-
-  String _getGenSnapshotPath(BuildMode buildMode) {
-    return _paths
-        .getGenSnapshot(
-          engineCacheDir: _cache.getArtifactDirectory('engine'),
-          hostPlatform: getCurrentHostPlatform(),
-          target: _genSnapshotTarget,
-          runtimeMode: buildMode,
-        )
-        .path;
-  }
 
   @override
   String getArtifactPath(
@@ -899,15 +908,16 @@ class FlutterpiArtifacts implements Artifacts {
     BuildMode? mode,
     EnvironmentType? environmentType,
   }) {
-    if (artifact == Artifact.genSnapshot && (mode == BuildMode.profile || mode == BuildMode.release)) {
-      return _getGenSnapshotPath(mode!);
-    }
-    return parent.getArtifactPath(
-      artifact,
-      platform: platform,
-      mode: mode,
-      environmentType: environmentType,
-    );
+    return switch ((artifact, mode)) {
+      (Artifact.genSnapshot, BuildMode.profile) => genSnapshotPathProfile,
+      (Artifact.genSnapshot, BuildMode.release) => genSnapshotPathRelease,
+      _ => parent.getArtifactPath(
+          artifact,
+          platform: platform,
+          mode: mode,
+          environmentType: environmentType,
+        ),
+    };
   }
 
   @override

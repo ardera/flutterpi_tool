@@ -3,34 +3,34 @@
 import 'dart:async';
 import 'dart:io' as io;
 
-import 'package:flutter_tools/src/runner/flutter_command_runner.dart';
-import 'package:flutterpi_tool/src/cache.dart';
-
-import 'common.dart';
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
-import 'package:flutter_tools/src/bundle.dart';
-import 'package:flutter_tools/src/base/common.dart';
-import 'package:flutter_tools/src/runner/flutter_command.dart';
-import 'package:flutter_tools/src/reporting/reporting.dart';
-import 'package:flutter_tools/src/base/os.dart';
-import 'package:flutter_tools/src/base/logger.dart';
-import 'package:flutter_tools/src/base/process.dart';
+import 'package:file/file.dart';
+import 'package:flutter_tools/executable.dart';
 import 'package:flutter_tools/src/artifacts.dart';
+import 'package:flutter_tools/src/base/common.dart';
+import 'package:flutter_tools/src/base/logger.dart';
+import 'package:flutter_tools/src/base/os.dart';
+import 'package:flutter_tools/src/base/process.dart';
+import 'package:flutter_tools/src/base/template.dart';
+import 'package:flutter_tools/src/build_info.dart';
 import 'package:flutter_tools/src/build_system/build_system.dart';
 import 'package:flutter_tools/src/build_system/depfile.dart';
 import 'package:flutter_tools/src/build_system/targets/common.dart';
-import 'package:flutter_tools/src/build_info.dart';
-import 'package:flutter_tools/src/project.dart';
-import 'package:flutter_tools/src/context_runner.dart' as context_runner;
+import 'package:flutter_tools/src/bundle.dart';
 import 'package:flutter_tools/src/cache.dart';
-import 'package:flutter_tools/src/base/template.dart';
-import 'package:flutter_tools/src/isolated/mustache_template.dart';
+import 'package:flutter_tools/src/context_runner.dart' as fltool;
 import 'package:flutter_tools/src/globals.dart' as globals;
-
+import 'package:flutter_tools/src/isolated/mustache_template.dart';
+import 'package:flutter_tools/src/project.dart';
+import 'package:flutter_tools/src/reporting/reporting.dart';
+import 'package:flutter_tools/src/runner/flutter_command.dart';
+import 'package:flutter_tools/src/runner/flutter_command_runner.dart';
+import 'package:flutterpi_tool/src/cache.dart';
 import 'package:package_config/package_config.dart';
-import 'package:file/file.dart';
 import 'package:path/path.dart' as path;
+
+import 'common.dart';
 
 /// Copies the kernel_blob.bin to the output directory.
 class CopyFlutterAssets extends CopyFlutterBundle {
@@ -269,9 +269,10 @@ Future<String> getFlutterRoot() async {
 }
 
 Future<void> buildFlutterpiBundle({
-  required FlutterpiTargetPlatform flutterpiTargetPlatform,
+  required HostPlatform host,
+  required FlutterpiTargetPlatform target,
   required BuildInfo buildInfo,
-  FlutterpiArtifactPaths? artifactPaths,
+  required FlutterpiArtifactPaths artifactPaths,
   FlutterProject? project,
   String? mainPath,
   String manifestPath = defaultManifestPath,
@@ -288,10 +289,18 @@ Future<void> buildFlutterpiBundle({
   depfilePath ??= defaultDepfilePath;
   assetDirPath ??= getAssetBuildDirectory();
   buildSystem ??= globals.buildSystem;
-  artifacts ??= globals.artifacts!;
-  artifactPaths ??= flutterpiCache.artifactPaths;
 
-  if (!flutterpiTargetPlatform.isGeneric && buildInfo.mode == BuildMode.debug) {
+  artifacts = OverrideGenSnapshotArtifacts.fromArtifactPaths(
+    parent: artifacts ?? globals.artifacts!,
+    engineCacheDir: flutterpiCache.getArtifactDirectory('engine'),
+    host: host,
+    target: target,
+    artifactPaths: artifactPaths,
+  );
+
+  // We can still build debug for non-generic platforms of course, the correct
+  // (generic) target must be chosen in the caller in that case.
+  if (!target.isGeneric && buildInfo.mode == BuildMode.debug) {
     throw ArgumentError.value(
       buildInfo,
       'buildInfo',
@@ -322,7 +331,7 @@ Future<void> buildFlutterpiBundle({
       // If we don't have this, the flutter tool will happily reuse as much as
       // it can, and it determines it can reuse the `app.so` from (for example)
       // an arm build with an arm64 build, leading to errors.
-      'flutterpi-target': flutterpiTargetPlatform.shortName,
+      'flutterpi-target': target.shortName,
       'unoptimized': unoptimized.toString(),
       'debug-symbols': includeDebugSymbols.toString(),
     },
@@ -335,25 +344,23 @@ Future<void> buildFlutterpiBundle({
     generateDartPluginRegistry: true,
   );
 
-  final hostPlatform = getCurrentHostPlatform();
-
-  final target = switch (buildInfo.mode) {
+  final buildTarget = switch (buildInfo.mode) {
     BuildMode.debug => DebugBundleFlutterpiAssets(
-        flutterpiTargetPlatform: flutterpiTargetPlatform,
-        hostPlatform: hostPlatform,
+        flutterpiTargetPlatform: target,
+        hostPlatform: host,
         unoptimized: unoptimized,
         artifactPaths: artifactPaths,
         debugSymbols: includeDebugSymbols,
       ),
     BuildMode.profile => ProfileBundleFlutterpiAssets(
-        flutterpiTargetPlatform: flutterpiTargetPlatform,
-        hostPlatform: hostPlatform,
+        flutterpiTargetPlatform: target,
+        hostPlatform: host,
         artifactPaths: artifactPaths,
         debugSymbols: includeDebugSymbols,
       ),
     BuildMode.release => ReleaseBundleFlutterpiAssets(
-        flutterpiTargetPlatform: flutterpiTargetPlatform,
-        hostPlatform: hostPlatform,
+        flutterpiTargetPlatform: target,
+        hostPlatform: host,
         artifactPaths: artifactPaths,
         debugSymbols: includeDebugSymbols,
       ),
@@ -363,7 +370,7 @@ Future<void> buildFlutterpiBundle({
   final status = globals.logger.startProgress('Building Flutter-Pi bundle...');
 
   try {
-    final result = await buildSystem.build(target, environment);
+    final result = await buildSystem.build(buildTarget, environment);
     if (!result.success) {
       for (final measurement in result.exceptions.values) {
         globals.printError(
@@ -393,54 +400,12 @@ Future<void> buildFlutterpiBundle({
   return;
 }
 
-Future<T> runInContext<T>({
+Future<T> runWithContext<T>({
   required FutureOr<T> Function() runner,
-  FlutterpiTargetPlatform? targetPlatform,
+  FlutterpiTargetPlatform? target,
   bool verbose = false,
 }) async {
-  Logger Function() loggerFactory = () => globals.platform.isWindows
-      ? WindowsStdoutLogger(
-          terminal: globals.terminal,
-          stdio: globals.stdio,
-          outputPreferences: globals.outputPreferences,
-        )
-      : StdoutLogger(
-          terminal: globals.terminal,
-          stdio: globals.stdio,
-          outputPreferences: globals.outputPreferences,
-        );
-
-  if (verbose) {
-    final oldLoggerFactory = loggerFactory;
-    loggerFactory = () => VerboseLogger(oldLoggerFactory());
-  }
-
-  Artifacts Function() artifactsGenerator;
-  if (targetPlatform != null) {
-    artifactsGenerator = () => FlutterpiArtifacts(
-          parent: CachedArtifacts(
-            fileSystem: globals.fs,
-            cache: globals.cache,
-            platform: globals.platform,
-            operatingSystemUtils: globals.os,
-          ),
-          genSnapshotTarget: targetPlatform.genericVariant,
-          fileSystem: globals.fs,
-          platform: globals.platform,
-          cache: globals.cache,
-          operatingSystemUtils: globals.os,
-          paths: flutterpiCache.artifactPaths,
-        );
-  } else {
-    artifactsGenerator = () => CachedArtifacts(
-          fileSystem: globals.fs,
-          cache: globals.cache,
-          platform: globals.platform,
-          operatingSystemUtils: globals.os,
-        );
-  }
-
-  return context_runner.runInContext(
+  return fltool.runInContext(
     runner,
     overrides: {
       TemplateRenderer: () => const MustacheTemplateRenderer(),
@@ -464,8 +429,27 @@ Future<T> runInContext<T>({
               logger: globals.logger,
             ),
           ),
-      Logger: loggerFactory,
-      Artifacts: artifactsGenerator,
+      Logger: () {
+        final factory = LoggerFactory(
+          outputPreferences: globals.outputPreferences,
+          terminal: globals.terminal,
+          stdio: globals.stdio,
+        );
+
+        return factory.createLogger(
+          daemon: false,
+          machine: false,
+          verbose: verbose,
+          prefixedErrors: false,
+          windows: globals.platform.isWindows,
+        );
+      },
+      Artifacts: () => CachedArtifacts(
+            fileSystem: globals.fs,
+            platform: globals.platform,
+            cache: globals.cache,
+            operatingSystemUtils: globals.os,
+          ),
       Usage: () => DisabledUsage()
     },
   );
@@ -643,8 +627,8 @@ class BuildCommand extends FlutterCommand {
   Future<void> run() async {
     Cache.flutterRoot = await getFlutterRoot();
 
-    await runInContext(
-      targetPlatform: getTargetPlatform(),
+    await runWithContext(
+      target: getTargetPlatform(),
       verbose: boolArg('verbose', global: true),
       runner: () async {
         try {
@@ -680,9 +664,11 @@ class BuildCommand extends FlutterCommand {
 
           // actually build the flutter bundle
           await buildFlutterpiBundle(
-            flutterpiTargetPlatform: targetPlatform,
+            host: getCurrentHostPlatform(),
+            target: targetPlatform,
             buildInfo: buildInfo,
             mainPath: targetFile,
+            artifactPaths: flutterpiCache.artifactPaths,
 
             // for `--debug-unoptimized` build mode
             unoptimized: flavor.unoptimized,
@@ -719,7 +705,7 @@ class PrecacheCommand extends Command<void> {
   Future<int> run() async {
     Cache.flutterRoot = await getFlutterRoot();
 
-    await runInContext(
+    await runWithContext(
       verbose: globalResults!['verbose'],
       runner: () async {
         try {

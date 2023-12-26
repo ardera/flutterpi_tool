@@ -2,13 +2,12 @@ import 'dart:async';
 
 import 'package:file/memory.dart';
 import 'package:flutter_tools/src/base/logger.dart';
-import 'package:flutter_tools/src/base/platform.dart';
 import 'package:flutter_tools/src/base/os.dart';
+import 'package:flutter_tools/src/base/platform.dart';
 import 'package:flutter_tools/src/base/process.dart';
 import 'package:flutter_tools/src/project.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
-
 import 'package:test/test.dart';
 
 import 'src/fake_process_manager.dart';

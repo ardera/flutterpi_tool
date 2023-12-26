@@ -2,8 +2,8 @@
 
 import 'package:flutter_tools/src/build_info.dart' show BuildMode;
 
-export 'package:flutter_tools/src/build_info.dart' show BuildMode, getCurrentHostPlatform;
 export 'package:flutter_tools/src/base/os.dart' show HostPlatform, getNameForHostPlatform;
+export 'package:flutter_tools/src/build_info.dart' show BuildMode, getCurrentHostPlatform;
 
 enum FlutterpiTargetPlatform {
   genericArmV7.generic('armv7-generic'),
