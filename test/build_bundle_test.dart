@@ -7,8 +7,26 @@ import 'package:flutter_tools/src/base/logger.dart';
 import 'package:flutter_tools/src/build_info.dart';
 import 'package:flutter_tools/src/context_runner.dart' as context_runner;
 import 'package:flutterpi_tool/src/build_bundle.dart';
+import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
+import 'package:flutterpi_tool/src/flutter_tool.dart' as fltool;
+import 'package:path/path.dart' as pathlib;
+
 import 'package:test/test.dart';
+
+import 'src/fake_process_manager.dart';
+
+class HasPathMatcher extends CustomMatcher {
+  HasPathMatcher(Object? valueOrMatcher) : super('File with path', 'path', valueOrMatcher);
+
+  @override
+  Object? featureValueOf(actual) {
+    final path = (actual as File).path;
+    return pathlib.canonicalize(pathlib.join('/', path));
+  }
+}
+
+Matcher hasPath(Object? matcher) => HasPathMatcher(matcher);
 
 class MockCommandRunner extends FlutterpiToolCommandRunner {}
 
@@ -164,6 +182,96 @@ void main() {
       test: (command) async {
         expect(command.targetFile, 'lib/other_main.dart');
       },
+    );
+  });
+
+  group('building', () {
+    FileSystem fs;
+    fltool.Platform platform;
+    Logger logger;
+    fltool.BuildSystem buildSystem;
+    ProcessManager processManager;
+
+    setUp(() {});
+  });
+
+  test('target path works', () async {
+    final fs = MemoryFileSystem.test();
+    final platform = fltool.FakePlatform();
+    final logger = BufferLogger.test();
+
+    final buildSystem = fltool.FlutterBuildSystem(
+      fileSystem: fs,
+      platform: platform,
+      logger: logger,
+    );
+
+    final os = fltool.OperatingSystemUtils(
+      fileSystem: fs,
+      logger: logger,
+      platform: platform,
+      processManager: FakeProcessManager.any(),
+    );
+
+    final cache = fltool.Cache.test(
+      fileSystem: fs,
+      logger: logger,
+      platform: platform,
+      processManager: FakeProcessManager.any(),
+    );
+
+    final target = FlutterpiTargetPlatform.genericArmV7;
+
+    final artifactPaths = FlutterpiArtifactPathsV2();
+
+    final artifacts = OverrideGenSnapshotArtifacts.fromArtifactPaths(
+      parent: fltool.CachedArtifacts(
+        fileSystem: fs,
+        platform: platform,
+        cache: cache,
+        operatingSystemUtils: os,
+      ),
+      engineCacheDir: cache.getArtifactDirectory('engine'),
+      host: HostPlatform.linux_x64,
+      target: target,
+      artifactPaths: artifactPaths,
+    );
+
+    final buildEnv = fltool.Environment.test(
+      fs.directory('test_build'),
+      cacheDir: cache.getRoot(),
+      fileSystem: fs,
+      logger: logger,
+      platform: platform,
+      artifacts: artifacts,
+      processManager: FakeProcessManager.empty(),
+    );
+
+    final buildTarget = ReleaseBundleFlutterpiAssets(
+      flutterpiTargetPlatform: FlutterpiTargetPlatform.genericArmV7,
+      hostPlatform: HostPlatform.linux_arm64,
+      artifactPaths: artifactPaths,
+    );
+
+    await expectLater(buildSystem.build(buildTarget, buildEnv), completes);
+
+    final fltool.ResolvedFiles inputs = buildTarget.fold<fltool.SourceVisitor>(
+      fltool.SourceVisitor(buildEnv),
+      (visitor, target) {
+        for (final input in target.inputs) {
+          input.accept(visitor);
+        }
+
+        return visitor;
+      },
+    );
+
+    expect(
+      inputs.sources,
+      containsAll([
+        hasPath('/cache/bin/cache/artifacts/engine/flutterpi-engine-armv7-generic-release/libflutter_engine.so'),
+        hasPath('/cache/bin/cache/artifacts/engine/flutterpi-gen-snapshot-linux-x64-armv7-generic-release/gen_snapshot')
+      ]),
     );
   });
 }

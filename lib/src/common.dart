@@ -20,12 +20,17 @@ enum FlutterpiTargetPlatform {
 
   const FlutterpiTargetPlatform.tuned(this.shortName, this._genericVariantStr) : isGeneric = false;
 
+  static final _genericVariants = <FlutterpiTargetPlatform, FlutterpiTargetPlatform>{};
+
   final String shortName;
   final bool isGeneric;
   final String? _genericVariantStr;
   FlutterpiTargetPlatform get genericVariant {
     if (_genericVariantStr != null) {
-      return values.singleWhere((target) => target.shortName == _genericVariantStr);
+      return _genericVariants.putIfAbsent(
+        this,
+        () => values.singleWhere((target) => target.shortName == _genericVariantStr),
+      );
     } else {
       return this;
     }

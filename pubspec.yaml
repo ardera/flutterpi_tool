@@ -23,6 +23,10 @@ dependencies:
   meta: ^1.10.0
   process: ^5.0.0
   unified_analytics: ^5.8.0
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
+  tar: ^1.0.3
+  async: ^2.11.0
 
 dev_dependencies:
   lints: ^2.0.0
