@@ -295,7 +295,7 @@ Future<void> buildFlutterpiBundle({
     parent: artifacts ?? globals.artifacts!,
     engineCacheDir: flutterpiCache.getArtifactDirectory('engine'),
     host: host,
-    target: target,
+    target: target.genericVariant,
     artifactPaths: artifactPaths,
   );
 
