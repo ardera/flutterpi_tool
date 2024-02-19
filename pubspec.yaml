@@ -21,7 +21,8 @@ dependencies:
   args: ^2.4.0
   http: ^0.13.6
   meta: ^1.10.0
-  process: ^4.2.4
+  process: ^5.0.0
+  unified_analytics: ^5.8.0
 
 dev_dependencies:
   lints: ^2.0.0

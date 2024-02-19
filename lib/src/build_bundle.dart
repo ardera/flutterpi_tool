@@ -29,6 +29,7 @@ import 'package:flutter_tools/src/runner/flutter_command_runner.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:package_config/package_config.dart';
 import 'package:path/path.dart' as path;
+import 'package:unified_analytics/unified_analytics.dart';
 
 import 'common.dart';
 
@@ -316,6 +317,7 @@ Future<void> buildFlutterpiBundle({
     cacheDir: globals.cache.getRoot(),
     flutterRootDir: globals.fs.directory(Cache.flutterRoot),
     engineVersion: globals.artifacts!.isLocalEngine ? null : globals.flutterVersion.engineRevision,
+    analytics: NoOpAnalytics(),
     defines: <String, String>{
       // used by the KernelSnapshot target
       kTargetPlatform: getNameForTargetPlatform(TargetPlatform.linux_arm64),
