@@ -1,3 +1,7 @@
+## 0.3.0
+
+- fix for flutter 3.19
+
 ## 0.2.1
 
 - fix gen_snapshot selection
