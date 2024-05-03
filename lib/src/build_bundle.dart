@@ -319,6 +319,8 @@ Future<void> buildFlutterpiBundle({
     engineVersion: globals.artifacts!.isLocalEngine ? null : globals.flutterVersion.engineRevision,
     analytics: NoOpAnalytics(),
     defines: <String, String>{
+      if (includeDebugSymbols) kExtraGenSnapshotOptions: '--no-strip',
+
       // used by the KernelSnapshot target
       kTargetPlatform: getNameForTargetPlatform(TargetPlatform.linux_arm64),
       kTargetFile: mainPath,
@@ -511,7 +513,7 @@ class BuildCommand extends FlutterCommand {
         'tree-shake-icons',
         help: 'Tree shake icon fonts so that only glyphs used by the application remain.',
       )
-      ..addFlag('debug-symbols', help: 'Include flutter engine debug symbols file.');
+      ..addFlag('debug-symbols', help: 'Include flutter engine & app debug symbols.');
 
     // add --dart-define, --dart-define-from-file options
     usesDartDefineOption();
