@@ -300,6 +300,7 @@ class FlutterpiV2Artifact extends FlutterpiArtifact {
       HostPlatform.linux_arm64 => 'Linux-ARM64',
       HostPlatform.linux_x64 => 'Linux-X64',
       HostPlatform.windows_x64 => 'Windows-X64',
+      HostPlatform.windows_arm64 => 'Windows-ARM64',
     };
   }
 
@@ -850,6 +851,11 @@ class TarXzCompatibleOsUtils implements OperatingSystemUtils {
   @override
   List<File> whichAll(String execName) {
     return _os.whichAll(execName);
+  }
+
+  @override
+  int? getDirectorySize(Directory directory) {
+    return _os.getDirectorySize(directory);
   }
 }
 
