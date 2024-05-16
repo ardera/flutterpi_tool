@@ -1,3 +1,7 @@
+## 0.4.0
+
+- fix for flutter 3.22
+
 ## 0.3.0
 
 - fix for flutter 3.19
