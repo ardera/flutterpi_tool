@@ -1,25 +1,57 @@
 // ignore_for_file: implementation_imports
 
-import 'package:flutter_tools/src/build_info.dart' show BuildMode;
+import 'package:flutterpi_tool/src/fltool/common.dart' show BuildMode;
 
-export 'package:flutter_tools/src/base/os.dart' show HostPlatform, getNameForHostPlatform;
-export 'package:flutter_tools/src/build_info.dart' show BuildMode, getCurrentHostPlatform;
+enum Bitness { b32, b64 }
+
+enum FPiHostPlatform {
+  darwinX64.b64('darwin-x64', 'macOS-X64'),
+  darwinARM64.b64('darwin-arm64', 'macOS-ARM64'),
+  linuxX64.b64('linux-x64', 'Linux-X64'),
+  linuxARM.b32('linux-arm', 'Linux-ARM'),
+  linuxARM64.b64('linux-arm64', 'Linux-ARM64'),
+  windowsX64.b64('windows-x64', 'Windows-X64'),
+  windowsARM64.b64('windows-arm64', 'Windows-ARM64');
+
+  const FPiHostPlatform.b32(this.name, this.githubName) : bitness = Bitness.b32;
+  const FPiHostPlatform.b64(this.name, this.githubName) : bitness = Bitness.b64;
+
+  final String name;
+  final String githubName;
+  final Bitness bitness;
+
+  @override
+  String toString() => name;
+}
 
 enum FlutterpiTargetPlatform {
-  genericArmV7.generic('armv7-generic'),
-  genericAArch64.generic('aarch64-generic'),
-  genericX64.generic('x64-generic'),
-  pi3.tuned('pi3', 'armv7-generic'),
-  pi3_64.tuned('pi3-64', 'aarch64-generic'),
-  pi4.tuned('pi4', 'armv7-generic'),
-  pi4_64.tuned('pi4-64', 'aarch64-generic');
+  genericArmV7.generic32('armv7-generic'),
+  genericAArch64.generic64('aarch64-generic'),
+  genericX64.generic64('x64-generic'),
+  pi3.tuned32('pi3', 'armv7-generic'),
+  pi3_64.tuned64('pi3-64', 'aarch64-generic'),
+  pi4.tuned32('pi4', 'armv7-generic'),
+  pi4_64.tuned64('pi4-64', 'aarch64-generic');
 
-  const FlutterpiTargetPlatform.generic(this.shortName)
+  const FlutterpiTargetPlatform.generic64(this.shortName)
       : isGeneric = true,
-        _genericVariantStr = null;
+        _genericVariantStr = null,
+        bitness = Bitness.b64;
 
-  const FlutterpiTargetPlatform.tuned(this.shortName, this._genericVariantStr) : isGeneric = false;
+  const FlutterpiTargetPlatform.generic32(this.shortName)
+      : isGeneric = true,
+        _genericVariantStr = null,
+        bitness = Bitness.b32;
 
+  const FlutterpiTargetPlatform.tuned32(this.shortName, this._genericVariantStr)
+      : isGeneric = false,
+        bitness = Bitness.b32;
+
+  const FlutterpiTargetPlatform.tuned64(this.shortName, this._genericVariantStr)
+      : isGeneric = false,
+        bitness = Bitness.b64;
+
+  final Bitness bitness;
   final String shortName;
   final bool isGeneric;
   final String? _genericVariantStr;
@@ -43,7 +75,7 @@ enum EngineFlavor {
   profile._internal('profile', BuildMode.profile),
   release._internal('release', BuildMode.release);
 
-  const EngineFlavor._internal(this._name, this.buildMode, {this.unoptimized = false});
+  const EngineFlavor._internal(this.name, this.buildMode, {this.unoptimized = false});
 
   factory EngineFlavor(BuildMode mode, bool unoptimized) {
     return switch ((mode, unoptimized)) {
@@ -57,11 +89,11 @@ enum EngineFlavor {
     };
   }
 
-  final String _name;
+  final String name;
 
   final BuildMode buildMode;
   final bool unoptimized;
 
   @override
-  String toString() => _name;
+  String toString() => name;
 }

@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:args/args.dart';
 import 'package:file/file.dart';
 import 'package:file/memory.dart';
-import 'package:flutter_tools/src/base/logger.dart';
-import 'package:flutter_tools/src/build_info.dart';
-import 'package:flutter_tools/src/context_runner.dart' as context_runner;
+
+import 'package:flutterpi_tool/src/fltool/common.dart';
+import 'package:flutterpi_tool/src/fltool/context_runner.dart' as context_runner;
 import 'package:flutterpi_tool/src/build_bundle.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:test/test.dart';

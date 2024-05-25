@@ -1,368 +1,299 @@
 // ignore_for_file: implementation_imports
 
+import 'dart:async';
 import 'dart:io' as io;
 
 import 'package:file/file.dart';
-import 'package:flutter_tools/src/artifacts.dart';
-import 'package:flutter_tools/src/base/common.dart';
-import 'package:flutter_tools/src/base/logger.dart';
-import 'package:flutter_tools/src/base/os.dart';
-import 'package:flutter_tools/src/base/platform.dart';
-import 'package:flutter_tools/src/base/process.dart';
-import 'package:flutter_tools/src/build_info.dart';
-import 'package:flutter_tools/src/build_system/build_system.dart';
-import 'package:flutter_tools/src/cache.dart';
-import 'package:flutter_tools/src/flutter_cache.dart';
-import 'package:flutter_tools/src/globals.dart' as globals;
-import 'package:flutterpi_tool/src/common.dart';
 import 'package:github/github.dart' as gh;
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart' as http;
 import 'package:meta/meta.dart';
 
+import 'package:flutterpi_tool/src/common.dart';
+import 'package:flutterpi_tool/src/fltool/common.dart';
+import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
+import 'package:flutterpi_tool/src/platform.dart';
+
 FlutterpiCache get flutterpiCache => globals.cache as FlutterpiCache;
 
-abstract class FlutterpiArtifact extends EngineCachedArtifact {
-  FlutterpiArtifact({
-    required String stampName,
-    required FlutterpiCache cache,
-    http.Client? httpClient,
-    DevelopmentArtifact developmentArtifact = DevelopmentArtifact.universal,
-  })  : _httpClient = httpClient ?? http.Client(),
-        super(stampName, cache, developmentArtifact);
+@visibleForTesting
+String flattenNameSubdirs(Uri url, FileSystem fileSystem) {
+  final List<String> pieces = <String>[url.host, ...url.pathSegments];
+  final Iterable<String> convertedPieces = pieces.map<String>(_flattenNameNoSubdirs);
+  return fileSystem.path.joinAll(convertedPieces);
+}
 
-  final http.Client _httpClient;
-  late final gh.GitHub _github = gh.GitHub(client: _httpClient);
+String _flattenNameNoSubdirs(String fileName) {
+  final List<int> replacedCodeUnits = <int>[
+    for (final int codeUnit in fileName.codeUnits) ..._flattenNameSubstitutions[codeUnit] ?? <int>[codeUnit],
+  ];
+  return String.fromCharCodes(replacedCodeUnits);
+}
+
+// Copied from the flutter tool cache.dart as well.
+final Map<int, List<int>> _flattenNameSubstitutions = <int, List<int>>{
+  r'@'.codeUnitAt(0): '@@'.codeUnits,
+  r'/'.codeUnitAt(0): '@s@'.codeUnits,
+  r'\'.codeUnitAt(0): '@bs@'.codeUnits,
+  r':'.codeUnitAt(0): '@c@'.codeUnits,
+  r'%'.codeUnitAt(0): '@per@'.codeUnits,
+  r'*'.codeUnitAt(0): '@ast@'.codeUnits,
+  r'<'.codeUnitAt(0): '@lt@'.codeUnits,
+  r'>'.codeUnitAt(0): '@gt@'.codeUnits,
+  r'"'.codeUnitAt(0): '@q@'.codeUnits,
+  r'|'.codeUnitAt(0): '@pip@'.codeUnits,
+  r'?'.codeUnitAt(0): '@ques@'.codeUnits,
+};
+
+extension GithubReleaseFindAsset on gh.Release {
+  gh.ReleaseAsset? findAsset(String name) {
+    return assets!.cast<gh.ReleaseAsset?>().singleWhere(
+          (asset) => asset!.name == name,
+          orElse: () => null,
+        );
+  }
+}
+
+class AuthenticatingArtifactUpdater implements ArtifactUpdater {
+  AuthenticatingArtifactUpdater({
+    required OperatingSystemUtils operatingSystemUtils,
+    required Logger logger,
+    required FileSystem fileSystem,
+    required Directory tempStorage,
+    required io.HttpClient httpClient,
+    required Platform platform,
+    required List<String> allowedBaseUrls,
+  })  : _operatingSystemUtils = operatingSystemUtils,
+        _httpClient = httpClient,
+        _logger = logger,
+        _fileSystem = fileSystem,
+        _tempStorage = tempStorage,
+        _allowedBaseUrls = allowedBaseUrls;
+
+  static const int _kRetryCount = 2;
+
+  final Logger _logger;
+  final OperatingSystemUtils _operatingSystemUtils;
+  final FileSystem _fileSystem;
+  final Directory _tempStorage;
+  final io.HttpClient _httpClient;
+
+  final List<String> _allowedBaseUrls;
 
   @override
-  FlutterpiCache get cache => super.cache as FlutterpiCache;
+  @visibleForTesting
+  final List<File> downloadedFiles = <File>[];
 
-  @override
-  List<String> getPackageDirs() => const [];
-
-  @override
-  List<String> getLicenseDirs() => const [];
-
-  List<(String, String)> getBinaryDirTuples();
-
-  @override
-  List<List<String>> getBinaryDirs() {
-    return [
-      for (final (path, name) in getBinaryDirTuples()) [path, name],
-    ];
+  static const Set<String> _denylistedBasenames = <String>{'entitlements.txt', 'without_entitlements.txt'};
+  void _removeDenylistedFiles(Directory directory) {
+    for (final FileSystemEntity entity in directory.listSync(recursive: true)) {
+      if (entity is! File) {
+        continue;
+      }
+      if (_denylistedBasenames.contains(entity.basename)) {
+        entity.deleteSync();
+      }
+    }
   }
 
   @override
-  bool isUpToDateInner(FileSystem fileSystem) {
-    final Directory pkgDir = cache.getCacheDir('pkg');
-    for (final String pkgName in getPackageDirs()) {
-      final String pkgPath = fileSystem.path.join(pkgDir.path, pkgName);
-      if (!fileSystem.directory(pkgPath).existsSync()) {
-        return false;
-      }
-    }
-
-    for (final List<String> toolsDir in getBinaryDirs()) {
-      final Directory dir = fileSystem.directory(fileSystem.path.join(location.path, toolsDir[0]));
-      if (!dir.existsSync()) {
-        return false;
-      }
-    }
-
-    for (final String licenseDir in getLicenseDirs()) {
-      final File file = fileSystem.file(fileSystem.path.join(location.path, licenseDir, 'LICENSE'));
-      if (!file.existsSync()) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  Future<gh.Release> findGithubReleaseByEngineHash(String hash) async {
-    var tagName = 'engine/$hash';
-
-    return await _github.repositories.getReleaseByTagName(cache.flutterPiEngineCi, tagName);
+  Future<void> downloadZipArchive(
+    String message,
+    Uri url,
+    Directory location, {
+    void Function(io.HttpClientRequest)? authenticate,
+  }) {
+    return _downloadArchive(
+      message,
+      url,
+      location,
+      _operatingSystemUtils.unzip,
+      authenticate: authenticate,
+    );
   }
 
   @override
-  Future<void> updateInner(
-    ArtifactUpdater artifactUpdater,
-    FileSystem fileSystem,
-    OperatingSystemUtils operatingSystemUtils,
-  ) async {
-    late gh.Release ghRelease;
-    try {
-      ghRelease = await findGithubReleaseByEngineHash(version!);
-    } on gh.ReleaseNotFound {
-      throwToolExit('Flutter engine binaries for engine $version are not available.');
-    }
+  Future<void> downloadZippedTarball(
+    String message,
+    Uri url,
+    Directory location, {
+    void Function(io.HttpClientRequest)? authenticate,
+  }) {
+    return _downloadArchive(
+      message,
+      url,
+      location,
+      _operatingSystemUtils.unpack,
+      authenticate: authenticate,
+    );
+  }
 
-    for (final (cacheName, artifactKey) in getBinaryDirTuples()) {
-      final ghAsset = ghRelease.assets!.cast<gh.ReleaseAsset?>().singleWhere(
-            (asset) => asset!.name == artifactKey,
-            orElse: () => null,
+  Future<void> _downloadArchive(
+    String message,
+    Uri url,
+    Directory location,
+    void Function(File, Directory) extractor, {
+    void Function(io.HttpClientRequest)? authenticate,
+  }) async {
+    final downloadPath = flattenNameSubdirs(url, _fileSystem);
+    final tempFile = _createDownloadFile(downloadPath);
+
+    var tries = _kRetryCount;
+    while (tries > 0) {
+      final status = _logger.startProgress(message);
+
+      try {
+        ErrorHandlingFileSystem.deleteIfExists(tempFile);
+        if (!tempFile.parent.existsSync()) {
+          tempFile.parent.createSync(recursive: true);
+        }
+
+        await _download(url, tempFile, status, authenticate: authenticate);
+
+        if (!tempFile.existsSync()) {
+          throw Exception('Did not find downloaded file ${tempFile.path}');
+        }
+      } on Exception catch (err) {
+        _logger.printTrace(err.toString());
+        tries -= 1;
+
+        if (tries == 0) {
+          throwToolExit('Failed to download $url. Ensure you have network connectivity and then try again.\n$err');
+        }
+        continue;
+      } finally {
+        status.stop();
+      }
+
+      final destination = location.childDirectory(tempFile.fileSystem.path.basenameWithoutExtension(tempFile.path));
+
+      ErrorHandlingFileSystem.deleteIfExists(destination, recursive: true);
+      location.createSync(recursive: true);
+
+      try {
+        extractor(tempFile, location);
+      } on Exception catch (err) {
+        tries -= 1;
+        if (tries == 0) {
+          throwToolExit(
+            'Flutter could not download and/or extract $url. Ensure you have '
+            'network connectivity and all of the required dependencies listed at '
+            'flutter.dev/setup.\nThe original exception was: $err.',
           );
-      if (ghAsset == null) {
-        throwToolExit('Flutter engine binaries with version $version and target $artifactKey are not available.');
+        }
+
+        ErrorHandlingFileSystem.deleteIfExists(tempFile);
+        continue;
       }
 
-      final downloadUrl = ghAsset.browserDownloadUrl!;
-
-      final destDir = fileSystem.directory(fileSystem.path.join(location.path, cacheName));
-
-      await artifactUpdater.downloadZippedTarball(
-        'Downloading $artifactKey...',
-        Uri.parse(downloadUrl),
-        destDir,
-      );
-
-      _makeFilesExecutable(destDir, operatingSystemUtils);
+      _removeDenylistedFiles(location);
+      return;
     }
   }
 
-  @override
-  Future<bool> checkForArtifacts(String? engineVersion) async {
-    try {
-      final ghRelease = await findGithubReleaseByEngineHash(version!);
+  Future<void> _download(Uri url, File file, Status status, {void Function(io.HttpClientRequest)? authenticate}) async {
+    final allowed = _allowedBaseUrls.any((baseUrl) => url.toString().startsWith(baseUrl));
 
-      for (final (_, artifactFilename) in getBinaryDirTuples()) {
-        final ghAsset = ghRelease.assets!.cast<gh.ReleaseAsset?>().singleWhere(
-              (asset) => asset!.name == artifactFilename,
-              orElse: () => null,
-            );
-        if (ghAsset == null) {
-          return false;
+    // In tests make this a hard failure.
+    assert(
+      allowed,
+      'URL not allowed: $url\n'
+      'Allowed URLs must be based on one of: ${_allowedBaseUrls.join(', ')}',
+    );
+
+    // In production, issue a warning but allow the download to proceed.
+    if (!allowed) {
+      status.pause();
+      _logger.printWarning(
+          'Downloading an artifact that may not be reachable in some environments (e.g. firewalled environments): $url\n'
+          'This should not have happened. This is likely a Flutter SDK bug. Please file an issue at https://github.com/flutter/flutter/issues/new?template=1_activation.yml');
+      status.resume();
+    }
+
+    final request = await _httpClient.getUrl(url);
+    if (authenticate != null) {
+      authenticate(request);
+    }
+
+    final response = await request.close();
+    if (response.statusCode != io.HttpStatus.ok) {
+      throw Exception(response.statusCode);
+    }
+
+    final handle = file.openSync(mode: FileMode.writeOnly);
+    try {
+      await for (final chunk in response) {
+        handle.writeFromSync(chunk);
+      }
+    } finally {
+      handle.closeSync();
+    }
+  }
+
+  File _createDownloadFile(String name) {
+    final path = _fileSystem.path.join(_tempStorage.path, name);
+    final file = _fileSystem.file(path);
+    downloadedFiles.add(file);
+    return file;
+  }
+
+  @override
+  void removeDownloadedFiles() {
+    for (final file in downloadedFiles) {
+      ErrorHandlingFileSystem.deleteIfExists(file);
+
+      for (var directory = file.parent;
+          directory.absolute.path != _tempStorage.absolute.path;
+          directory = directory.parent) {
+        // Handle race condition when the directory is deleted before this step
+
+        if (directory.existsSync() && directory.listSync().isEmpty) {
+          ErrorHandlingFileSystem.deleteIfExists(directory, recursive: true);
         }
       }
-
-      return true;
-    } on gh.ReleaseNotFound {
-      return false;
     }
-  }
-
-  void _makeFilesExecutable(
-    Directory dir,
-    OperatingSystemUtils operatingSystemUtils,
-  ) {
-    operatingSystemUtils.chmod(dir, 'a+r,a+x');
-
-    for (final file in dir.listSync(recursive: true).whereType<File>()) {
-      final stat = file.statSync();
-
-      final isUserExecutable = ((stat.mode >> 6) & 0x1) == 1;
-      if (file.basename == 'flutter_tester' || isUserExecutable) {
-        // Make the file readable and executable by all users.
-        operatingSystemUtils.chmod(file, 'a+r,a+x');
-      }
-
-      if (file.basename.startsWith('gen_snapshot')) {
-        operatingSystemUtils.chmod(file, 'a+r,a+x');
-      }
-    }
-  }
-
-  bool requiredFor({
-    required HostPlatform host,
-    required Set<FlutterpiTargetPlatform> targets,
-    required Set<EngineFlavor> flavors,
-    required Set<BuildMode> runtimeModes,
-    required bool includeDebugSymbols,
-  });
-
-  String toStringShort() {
-    return toString();
   }
 }
 
-abstract class FlutterpiV1Artifact extends FlutterpiArtifact {
-  FlutterpiV1Artifact({required super.cache, required super.stampName, super.httpClient});
-}
-
-class GenericEngineBinaries extends FlutterpiV1Artifact {
-  GenericEngineBinaries({
-    required super.cache,
-    required Platform platform,
-    super.httpClient,
-  })  : _platform = platform,
-        super(stampName: 'flutterpi-engine-binaries-generic');
-
-  final Platform _platform;
-
-  @override
-  List<String> getPackageDirs() => const <String>[];
-
-  @override
-  List<(String, String)> getBinaryDirTuples() {
-    if (!_platform.isLinux) {
-      return [];
-    }
-
-    return [
-      ('flutterpi-aarch64-generic/linux-x64', 'aarch64-generic.tar.xz'),
-      ('flutterpi-armv7-generic/linux-x64', 'armv7-generic.tar.xz'),
-      ('flutterpi-x64-generic/linux-x64', 'x64-generic.tar.xz'),
-    ];
-  }
-
-  @override
-  List<String> getLicenseDirs() {
-    return <String>[];
-  }
-
-  @override
-  bool requiredFor({
-    required HostPlatform host,
-    required Set<FlutterpiTargetPlatform> targets,
-    required Set<EngineFlavor> flavors,
-    required Set<BuildMode> runtimeModes,
-    required bool includeDebugSymbols,
-  }) {
-    return host == HostPlatform.linux_x64 && targets.any((target) => target.isGeneric);
-  }
-}
-
-class Pi3EngineBinaries extends FlutterpiV1Artifact {
-  Pi3EngineBinaries({
-    required super.cache,
-    required Platform platform,
-    super.httpClient,
-  })  : _platform = platform,
-        super(stampName: 'flutterpi-engine-binaries-pi3');
-
-  final Platform _platform;
-
-  @override
-  List<(String, String)> getBinaryDirTuples() {
-    if (!_platform.isLinux) {
-      return [];
-    }
-
-    return [
-      ('flutterpi-pi3/linux-x64', 'pi3.tar.xz'),
-      ('flutterpi-pi3-64/linux-x64', 'pi3-64.tar.xz'),
-    ];
-  }
-
-  @override
-  bool requiredFor({
-    required HostPlatform host,
-    required Set<FlutterpiTargetPlatform> targets,
-    required Set<EngineFlavor> flavors,
-    required Set<BuildMode> runtimeModes,
-    required bool includeDebugSymbols,
-  }) {
-    return host == HostPlatform.linux_x64 &&
-        (targets.contains(FlutterpiTargetPlatform.pi3) || targets.contains(FlutterpiTargetPlatform.pi3_64));
-  }
-}
-
-class Pi4EngineBinaries extends FlutterpiV1Artifact {
-  Pi4EngineBinaries({
-    required super.cache,
-    required Platform platform,
-    super.httpClient,
-  })  : _platform = platform,
-        super(stampName: 'flutterpi-engine-binaries-pi4');
-
-  final Platform _platform;
-
-  @override
-  List<(String, String)> getBinaryDirTuples() {
-    if (!_platform.isLinux) {
-      return [];
-    }
-
-    return [
-      ('flutterpi-pi4/linux-x64', 'pi4.tar.xz'),
-      ('flutterpi-pi4-64/linux-x64', 'pi4-64.tar.xz'),
-    ];
-  }
-
-  @override
-  bool requiredFor({
-    required HostPlatform host,
-    required Set<FlutterpiTargetPlatform> targets,
-    required Set<EngineFlavor> flavors,
-    required Set<BuildMode> runtimeModes,
-    required bool includeDebugSymbols,
-  }) {
-    return host == HostPlatform.linux_x64 &&
-        (targets.contains(FlutterpiTargetPlatform.pi3) || targets.contains(FlutterpiTargetPlatform.pi3_64));
-  }
-}
-
-class FlutterpiV2Artifact extends FlutterpiArtifact {
-  static String _hostPlatformGithubName(HostPlatform host) {
-    return switch (host) {
-      HostPlatform.darwin_arm64 => 'macOS-ARM64',
-      HostPlatform.darwin_x64 => 'macOS-X64',
-      HostPlatform.linux_arm64 => 'Linux-ARM64',
-      HostPlatform.linux_x64 => 'Linux-X64',
-      HostPlatform.windows_x64 => 'Windows-X64',
-      HostPlatform.windows_arm64 => 'Windows-ARM64',
-    };
-  }
-
-  FlutterpiV2Artifact.engine(
+class ArtifactDescription {
+  ArtifactDescription.target(
     FlutterpiTargetPlatform this.target,
     EngineFlavor this.flavor, {
-    required super.cache,
-    super.httpClient,
-  })  : cacheKey = 'flutterpi-engine-$target-$flavor',
-        artifactFilename = 'engine-$target-$flavor.tar.xz',
-        host = null,
-        runtimeMode = null,
-        includeDebugSymbols = null,
-        super(stampName: 'flutterpi-engine-$target-$flavor');
+    required this.prefix,
+    required this.cacheKey,
+    this.includeDebugSymbols,
+  })  : host = null,
+        runtimeMode = null;
 
-  FlutterpiV2Artifact.engineDebugSymbols(
-    FlutterpiTargetPlatform this.target,
-    EngineFlavor this.flavor, {
-    required super.cache,
-    super.httpClient,
-  })  : cacheKey = 'flutterpi-engine-dbgsyms-$target-$flavor',
-        artifactFilename = 'engine-dbgsyms-$target-$flavor.tar.xz',
-        host = null,
-        runtimeMode = null,
-        includeDebugSymbols = true,
-        super(stampName: 'flutterpi-engine-dbgsyms-$target-$flavor');
-
-  FlutterpiV2Artifact.genSnapshot(
-    HostPlatform this.host,
+  ArtifactDescription.hostTarget(
+    FPiHostPlatform this.host,
     FlutterpiTargetPlatform this.target,
     BuildMode this.runtimeMode, {
-    required super.cache,
-    super.httpClient,
-  })  : cacheKey = 'flutterpi-gen-snapshot-${getNameForHostPlatform(host)}-$target-$runtimeMode',
-        artifactFilename = 'gen-snapshot-${_hostPlatformGithubName(host)}-$target-$runtimeMode.tar.xz',
-        flavor = null,
-        includeDebugSymbols = null,
-        super(stampName: 'flutterpi-gen-snapshot-${getNameForHostPlatform(host)}-$target-$runtimeMode');
+    required this.prefix,
+    required this.cacheKey,
+  })  : flavor = null,
+        includeDebugSymbols = null;
 
-  FlutterpiV2Artifact.universal({
-    required super.cache,
-    super.httpClient,
-  })  : cacheKey = 'flutterpi-universal',
-        artifactFilename = 'universal.tar.xz',
-        host = null,
+  ArtifactDescription.universal({
+    required this.prefix,
+    required this.cacheKey,
+  })  : host = null,
         target = null,
         flavor = null,
         runtimeMode = null,
-        includeDebugSymbols = null,
-        super(stampName: 'flutterpi-universal');
+        includeDebugSymbols = null;
 
+  final String prefix;
   final String cacheKey;
-  final String artifactFilename;
-  final HostPlatform? host;
+
+  final FPiHostPlatform? host;
   final FlutterpiTargetPlatform? target;
   final EngineFlavor? flavor;
   final BuildMode? runtimeMode;
   final bool? includeDebugSymbols;
 
-  @override
   bool requiredFor({
-    required HostPlatform? host,
+    required FPiHostPlatform? host,
     required Set<FlutterpiTargetPlatform> targets,
     required Set<EngineFlavor> flavors,
     required Set<BuildMode> runtimeModes,
@@ -376,187 +307,440 @@ class FlutterpiV2Artifact extends FlutterpiArtifact {
   }
 
   @override
-  List<(String, String)> getBinaryDirTuples() {
+  String toString() {
+    return 'ArtifactDescription(host: $host, target: $target, flavor: $flavor, runtime mode: $runtimeMode, includes debug symbols: $includeDebugSymbols)';
+  }
+
+  String toStringShort() {
+    return '\'$cacheKey\'';
+  }
+}
+
+abstract class FlutterpiArtifact extends EngineCachedArtifact {
+  FlutterpiArtifact(String cacheKey, {required Cache cache}) : super(cacheKey, cache, DevelopmentArtifact.universal);
+
+  String get storageKey;
+
+  @override
+  List<List<String>> getBinaryDirs() {
     return [
-      (cacheKey, artifactFilename),
+      [
+        stampName,
+        storageKey,
+      ],
     ];
   }
 
   @override
-  String toString() {
-    return 'FlutterpiV2Artifact(filename: $artifactFilename, host: $host, target: $target, flavor: $flavor, runtime mode: $runtimeMode, includes debug symbols: $includeDebugSymbols)';
+  List<String> getLicenseDirs() {
+    return [];
   }
 
   @override
-  String toStringShort() {
-    return '\'$artifactFilename\' (v2)';
+  List<String> getPackageDirs() {
+    return [];
+  }
+
+  @visibleForTesting
+  bool requiredFor({
+    required FPiHostPlatform? host,
+    required Set<FlutterpiTargetPlatform> targets,
+    required Set<EngineFlavor> flavors,
+    required Set<BuildMode> runtimeModes,
+    required bool includeDebugSymbols,
+  });
+
+  @protected
+  void makeFilesExecutable(Directory dir, OperatingSystemUtils os) {
+    final genSnapshot = dir.childFile('gen_snapshot');
+    if (genSnapshot.existsSync()) {
+      os.chmod(genSnapshot, '755');
+    }
+
+    final libflutterEngine = dir.childFile('libflutter_engine.so');
+    if (libflutterEngine.existsSync()) {
+      os.chmod(libflutterEngine, '755');
+    }
   }
 }
 
-class FlutterpiCache extends FlutterCache {
-  static final _allPlatforms = FlutterpiTargetPlatform.values.toSet();
-  static final _genericPlatforms = _allPlatforms.where((t) => t.isGeneric).toSet();
-  static final _tunedPlatforms = _allPlatforms.where((t) => !t.isGeneric).toSet();
+class GithubWorkflowRunArtifact extends FlutterpiArtifact {
+  GithubWorkflowRunArtifact({
+    required this.httpClient,
+    gh.RepositorySlug? repo,
+    gh.Authentication? auth,
+    required this.runId,
+    this.availableEngineVersion,
+    required super.cache,
+    required this.artifactDescription,
+  })  : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci'),
+        auth = auth ?? const gh.Authentication.anonymous(),
+        storageKey = _getStorageKeyForArtifact(artifactDescription),
+        super(artifactDescription.cacheKey);
 
-  static final _v2engineBuilds = {
-    for (final target in _genericPlatforms)
-      for (final engineFlavor in EngineFlavor.values) (target, engineFlavor),
-    for (final target in _tunedPlatforms)
-      for (final engineFlavor in {EngineFlavor.profile, EngineFlavor.release}) (target, engineFlavor),
-  };
+  @override
+  final String storageKey;
 
-  static final _v2genSnapshotBuilds = {
-    for (final host in {HostPlatform.linux_x64, HostPlatform.darwin_x64})
-      for (final target in _genericPlatforms)
-        for (final runtimeMode in {BuildMode.profile, BuildMode.release})
-          (
-            host,
-            target,
-            runtimeMode,
-          ),
-  };
+  final ArtifactDescription artifactDescription;
 
+  final http.Client httpClient;
+  late final gh.GitHub github = gh.GitHub(client: httpClient, auth: auth);
+  final gh.RepositorySlug repo;
+  final gh.Authentication auth;
+  final String runId;
+  final String? availableEngineVersion;
+
+  static String _getStorageKeyForArtifact(ArtifactDescription description) {
+    return [
+      description.prefix,
+      if (description.host case FPiHostPlatform host) host.githubName,
+      if (description.target case FlutterpiTargetPlatform target) target,
+      if (description.flavor case EngineFlavor flavor) flavor.name,
+      if (description.runtimeMode case BuildMode runtimeMode) runtimeMode.name,
+    ].join('-');
+  }
+
+  Future<Uri?> _findArtifact(String name, String version) async {
+    if (availableEngineVersion != null && version != availableEngineVersion) {
+      return null;
+    }
+
+    final response = await github.getJSON(
+      '/repos/${repo.fullName}/actions/runs/$runId/artifacts',
+      params: {'name': name},
+    );
+
+    switch (response['total_count']) {
+      case 1:
+        break;
+      case _:
+        // 0 or more than 1 artifacts found.
+        return null;
+    }
+
+    switch (response['artifacts'][0]['archive_download_url']) {
+      case String url:
+        return Uri.tryParse(url);
+      case _:
+        return null;
+    }
+  }
+
+  @override
+  Future<void> updateInner(
+    ArtifactUpdater artifactUpdater,
+    FileSystem fileSystem,
+    OperatingSystemUtils operatingSystemUtils,
+  ) async {
+    assert(artifactUpdater is AuthenticatingArtifactUpdater);
+
+    final updater = artifactUpdater as AuthenticatingArtifactUpdater;
+
+    final dir = fileSystem.directory(fileSystem.path.join(location.path, artifactDescription.cacheKey));
+    final url = await _findArtifact(storageKey, version!);
+
+    if (url == null) {
+      throwToolExit('Failed to find artifact $storageKey in run $runId of repo ${repo.fullName}');
+    }
+
+    // Avoid printing things like 'Downloading linux-x64 tools...' multiple times.
+    await updater.downloadZipArchive('Downloading $storageKey...', url, dir, authenticate: _authenticate);
+
+    makeFilesExecutable(dir, operatingSystemUtils);
+  }
+
+  void _authenticate(io.HttpClientRequest request) {
+    if (auth.authorizationHeaderValue() case String header) {
+      request.headers.add('Authorization', header);
+    }
+  }
+
+  @override
+  bool requiredFor({
+    required FPiHostPlatform? host,
+    required Set<FlutterpiTargetPlatform> targets,
+    required Set<EngineFlavor> flavors,
+    required Set<BuildMode> runtimeModes,
+    required bool includeDebugSymbols,
+  }) {
+    return artifactDescription.requiredFor(
+      host: host,
+      targets: targets,
+      flavors: flavors,
+      runtimeModes: runtimeModes,
+      includeDebugSymbols: includeDebugSymbols,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'GithubWorkflowRunArtifact($storageKey, repo: ${repo.fullName}, runId: $runId)';
+  }
+}
+
+class GithubReleaseArtifact extends FlutterpiArtifact {
+  GithubReleaseArtifact({
+    required this.httpClient,
+    gh.RepositorySlug? repo,
+    gh.Authentication? auth,
+    required super.cache,
+    required this.artifactDescription,
+  })  : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci'),
+        auth = auth ?? const gh.Authentication.anonymous(),
+        storageKey = _getStorageKeyForArtifact(artifactDescription),
+        super(artifactDescription.cacheKey);
+
+  @override
+  final String storageKey;
+
+  final ArtifactDescription artifactDescription;
+
+  final http.Client httpClient;
+  late final gh.GitHub github = gh.GitHub(client: httpClient, auth: auth);
+  final gh.RepositorySlug repo;
+  final gh.Authentication auth;
+
+  static String _getStorageKeyForArtifact(ArtifactDescription artifact) {
+    final basename = [
+      artifact.prefix,
+      if (artifact.host != null) artifact.host!.githubName,
+      if (artifact.target != null) artifact.target!,
+      if (artifact.flavor != null) artifact.flavor!.name,
+      if (artifact.runtimeMode != null) artifact.runtimeMode!.name,
+    ].join('-');
+    return '$basename.tar.xz';
+  }
+
+  final Map<String, gh.Release> _releaseCache = {};
+
+  Future<gh.Release> _findRelease(String hash) async {
+    if (_releaseCache.containsKey(hash)) {
+      return _releaseCache[hash]!;
+    }
+
+    final tagName = 'engine/$hash';
+    final release = await github.repositories.getReleaseByTagName(repo, tagName);
+
+    _releaseCache[hash] = release;
+    return release;
+  }
+
+  Future<gh.ReleaseAsset?> _findReleaseAsset(String name, String version) async {
+    final release = await _findRelease(version);
+    return release.findAsset(name);
+  }
+
+  @override
+  Future<void> updateInner(
+    ArtifactUpdater artifactUpdater,
+    FileSystem fileSystem,
+    OperatingSystemUtils operatingSystemUtils,
+  ) async {
+    assert(artifactUpdater is AuthenticatingArtifactUpdater);
+
+    final updater = artifactUpdater as AuthenticatingArtifactUpdater;
+
+    final dir = fileSystem.directory(fileSystem.path.join(location.path, artifactDescription.cacheKey));
+
+    final asset = await _findReleaseAsset(storageKey, version!);
+
+    final url = switch (asset?.browserDownloadUrl) {
+      String url => Uri.tryParse(url),
+      _ => null,
+    };
+    if (url == null) {
+      throwToolExit('Failed to find artifact $storageKey in release $version');
+    }
+
+    await updater.downloadZippedTarball('Downloading $storageKey...', url, dir, authenticate: _authenticate);
+
+    makeFilesExecutable(dir, operatingSystemUtils);
+  }
+
+  void _authenticate(io.HttpClientRequest request) {
+    if (auth.authorizationHeaderValue() case String header) {
+      request.headers.add('Authorization', header);
+      print('Authorization header added: $header');
+    }
+  }
+
+  @override
+  bool requiredFor({
+    required FPiHostPlatform? host,
+    required Set<FlutterpiTargetPlatform> targets,
+    required Set<EngineFlavor> flavors,
+    required Set<BuildMode> runtimeModes,
+    required bool includeDebugSymbols,
+  }) {
+    return artifactDescription.requiredFor(
+      host: host,
+      targets: targets,
+      flavors: flavors,
+      runtimeModes: runtimeModes,
+      includeDebugSymbols: includeDebugSymbols,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'GithubReleaseArtifact($storageKey, repo: ${repo.fullName})';
+  }
+}
+
+abstract class FlutterpiCache extends FlutterCache {
   FlutterpiCache({
-    required Logger logger,
-    required FileSystem fileSystem,
-    required Platform platform,
-    required OperatingSystemUtils osUtils,
+    required this.logger,
+    required this.fileSystem,
+    required this.platform,
+    required this.osUtils,
     required super.projectFactory,
     required ShutdownHooks hooks,
     io.HttpClient? httpClient,
-  })  : _logger = logger,
-        _fileSystem = fileSystem,
-        _platform = platform,
-        _osUtils = osUtils,
-        _httpClient = httpClient ?? io.HttpClient(),
+  })  : httpClient = httpClient ?? io.HttpClient(),
         super(
           logger: logger,
           platform: platform,
           fileSystem: fileSystem,
           osUtils: osUtils,
         ) {
-    registerArtifact(GenericEngineBinaries(
-      cache: this,
-      platform: platform,
-      httpClient: _pkgHttpHttpClient,
-    ));
-    registerArtifact(Pi3EngineBinaries(
-      cache: this,
-      platform: platform,
-      httpClient: _pkgHttpHttpClient,
-    ));
-    registerArtifact(Pi4EngineBinaries(
-      cache: this,
-      platform: platform,
-      httpClient: _pkgHttpHttpClient,
-    ));
-
-    for (final (target, flavor) in _v2engineBuilds) {
-      registerArtifact(FlutterpiV2Artifact.engine(
-        target,
-        flavor,
-        cache: this,
-        httpClient: _pkgHttpHttpClient,
-      ));
-      registerArtifact(FlutterpiV2Artifact.engineDebugSymbols(
-        target,
-        flavor,
-        cache: this,
-        httpClient: _pkgHttpHttpClient,
-      ));
-    }
-
-    for (final (host, target, runtimeMode) in _v2genSnapshotBuilds) {
-      registerArtifact(FlutterpiV2Artifact.genSnapshot(
-        host,
-        target,
-        runtimeMode,
-        cache: this,
-        httpClient: _pkgHttpHttpClient,
-      ));
-    }
-
-    registerArtifact(FlutterpiV2Artifact.universal(cache: this, httpClient: _pkgHttpHttpClient));
-
     hooks.addShutdownHook(() {
       // this will close the inner dart:io http client.
-      _pkgHttpHttpClient.close();
+      pkgHttpHttpClient.close();
     });
   }
 
-  final Logger _logger;
-  final FileSystem _fileSystem;
-  final Platform _platform;
-  final OperatingSystemUtils _osUtils;
-  final List<ArtifactSet> _artifacts = [];
-  final io.HttpClient _httpClient;
-  late final http.Client _pkgHttpHttpClient = http.IOClient(_httpClient);
+  @protected
+  final Logger logger;
+  @protected
+  final FileSystem fileSystem;
+  @protected
+  final Platform platform;
+  @protected
+  final FPiOperatingSystemUtils osUtils;
+  @protected
+  final io.HttpClient httpClient;
+  @protected
+  late final http.Client pkgHttpHttpClient = http.IOClient(httpClient);
+
+  @protected
+  final List<ArtifactSet> artifacts = [];
 
   @override
   void registerArtifact(ArtifactSet artifactSet) {
-    _artifacts.add(artifactSet);
     super.registerArtifact(artifactSet);
+    artifacts.add(artifactSet);
   }
 
-  final flutterPiEngineCi = gh.RepositorySlug('ardera', 'flutter-ci');
+  @protected
+  List<ArtifactDescription> generateDescriptions() {
+    final hosts = {
+      FPiHostPlatform.darwinX64,
+      FPiHostPlatform.linuxARM,
+      FPiHostPlatform.linuxARM64,
+      FPiHostPlatform.linuxX64,
+      FPiHostPlatform.windowsX64,
+    };
 
-  late final ArtifactUpdater _artifactUpdater = _createUpdater();
+    final targets = FlutterpiTargetPlatform.values;
+    final flavors = EngineFlavor.values;
+    final aotRuntimeModes = [
+      BuildMode.profile,
+      BuildMode.release,
+    ];
 
-  static const flutterpiCiBaseUrl = 'https://github.com/ardera/flutter-ci/';
+    final descriptions = <ArtifactDescription>[];
 
-  FlutterpiArtifactPaths? _artifactPaths;
+    for (final target in targets) {
+      for (final flavor in flavors) {
+        if (flavor.buildMode == BuildMode.debug && !target.isGeneric) {
+          // We don't enable CPU-specific optimizations for debug builds.
+          continue;
+        }
 
-  FlutterpiArtifactPaths get artifactPaths {
-    assert(FlutterpiV2Artifact.universal(cache: this).stampName == 'flutterpi-universal');
+        descriptions.add(ArtifactDescription.target(
+          target,
+          flavor,
+          prefix: 'engine',
+          cacheKey: 'flutterpi-engine-$target-$flavor',
+        ));
 
-    if (_artifactPaths == null) {
-      if (getStampFor('flutterpi-universal') != null) {
-        _logger.printTrace('Artifact stamp for "flutterpi-universal" exists, using V2 artifacts.');
-        _artifactPaths = FlutterpiArtifactPathsV2();
-      } else {
-        _logger.printTrace('Artifact stamp for "flutterpi-universal" does not exist, using V1 artifacts.');
-        _artifactPaths = FlutterpiArtifactPathsV1();
+        descriptions.add(ArtifactDescription.target(
+          target,
+          flavor,
+          prefix: 'engine-dbgsyms',
+          cacheKey: 'flutterpi-engine-dbgsyms-$target-$flavor',
+          includeDebugSymbols: true,
+        ));
       }
     }
 
-    return _artifactPaths!;
+    for (final host in hosts) {
+      for (final target in targets) {
+        if (host.bitness == Bitness.b32 && target.bitness != Bitness.b32) {
+          // 32-bit machines can only build for other 32-bit targets.
+          continue;
+        }
+
+        if (!target.isGeneric) {
+          // gen_snapshot can only target generic CPUs,
+          // so we can't build it for any of the specific targets.
+          continue;
+        }
+
+        for (final runtimeMode in aotRuntimeModes) {
+          descriptions.add(ArtifactDescription.hostTarget(
+            host,
+            target,
+            runtimeMode,
+            prefix: 'gen-snapshot',
+            cacheKey: 'flutterpi-gen-snapshot-$host-$target-$runtimeMode',
+          ));
+        }
+      }
+    }
+
+    descriptions.add(ArtifactDescription.universal(
+      prefix: 'universal',
+      cacheKey: 'flutterpi-universal',
+    ));
+
+    return descriptions;
   }
 
+  late final ArtifactUpdater _updater = createUpdater();
+
+  FlutterpiArtifactPaths artifactPaths = FlutterpiArtifactPathsV2();
+
+  List<String> get allowedBaseUrls => [
+        cipdBaseUrl,
+        storageBaseUrl,
+      ];
+
   /// This has to be lazy because it requires FLUTTER_ROOT to be initialized.
-  ArtifactUpdater _createUpdater() {
-    return ArtifactUpdater(
-      operatingSystemUtils: _osUtils,
-      logger: _logger,
-      fileSystem: _fileSystem,
+  @protected
+  ArtifactUpdater createUpdater() {
+    return AuthenticatingArtifactUpdater(
+      operatingSystemUtils: osUtils,
+      logger: logger,
+      fileSystem: fileSystem,
       tempStorage: getDownloadDir(),
-      platform: _platform,
-      httpClient: _httpClient,
-      allowedBaseUrls: <String>[storageBaseUrl, cipdBaseUrl, flutterpiCiBaseUrl],
+      httpClient: httpClient,
+      platform: platform,
+      allowedBaseUrls: allowedBaseUrls,
     );
   }
 
-  /// Returns true if Artifact Layout v2 is available for the given engine hash.
-  ///
-  /// More precisely, check if the engine/$version release of the https://github.com/ardera/flutter-ci repo
-  /// has a universal.tar.xz artifact.
-  Future<bool> v2ArtifactsAvailable(String version) async {
-    return FlutterpiV2Artifact.universal(
-      cache: this,
-      httpClient: _pkgHttpHttpClient,
-    ).checkForArtifacts(engineRevision);
-  }
-
   @visibleForTesting
-  Set<FlutterpiV2Artifact> requiredV2Artifacts({
-    HostPlatform? host,
+  Set<FlutterpiArtifact> requiredArtifacts({
+    FPiHostPlatform? host,
     required Set<FlutterpiTargetPlatform> targets,
     required Set<BuildMode> runtimeModes,
     required Set<EngineFlavor> flavors,
     bool includeDebugSymbols = false,
   }) {
     return {
-      for (final artifact in _artifacts)
-        if (artifact is FlutterpiV2Artifact)
+      for (final artifact in artifacts)
+        if (artifact is FlutterpiArtifact)
           if (artifact.requiredFor(
             host: host,
             targets: targets,
@@ -568,11 +752,11 @@ class FlutterpiCache extends FlutterCache {
     };
   }
 
-  /// Update the cache to contain all `requiredArtifacts`.
   @override
   Future<void> updateAll(
     Set<DevelopmentArtifact> requiredArtifacts, {
     bool offline = false,
+    FPiHostPlatform? host,
     Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {
       FlutterpiTargetPlatform.genericArmV7,
       FlutterpiTargetPlatform.genericAArch64,
@@ -590,22 +774,12 @@ class FlutterpiCache extends FlutterCache {
     },
     bool includeDebugSymbols = false,
   }) async {
-    final v2Available = await v2ArtifactsAvailable(engineRevision);
-    _logger.printTrace(
-      'flutter-pi CI v2 artifacts for engine '
-      '${engineRevision.substring(0, 8)}... available: ${v2Available ? 'yes' : 'no'}',
-    );
+    host ??= osUtils.fpiHostPlatform;
 
-    for (final artifact in _artifacts) {
-      if (artifact is FlutterpiV2Artifact && !v2Available) {
-        continue;
-      } else if (artifact is FlutterpiV1Artifact && v2Available) {
-        continue;
-      }
-
+    for (final artifact in artifacts) {
       final required = switch (artifact) {
         FlutterpiArtifact artifact => artifact.requiredFor(
-            host: getCurrentHostPlatform(),
+            host: host,
             targets: flutterpiPlatforms,
             flavors: engineFlavors,
             runtimeModes: runtimeModes,
@@ -614,123 +788,121 @@ class FlutterpiCache extends FlutterCache {
         _ => requiredArtifacts.contains(artifact.developmentArtifact),
       };
 
-      final short = artifact is FlutterpiArtifact ? artifact.toStringShort() : artifact.toString();
+      final short = artifact.toString();
 
       if (!required) {
-        _logger.printTrace('Artifact $short is not required, skipping update.');
+        logger.printTrace('Artifact $short is not required, skipping update.');
         continue;
       }
 
-      if (await artifact.isUpToDate(_fileSystem)) {
-        _logger.printTrace('Artifact $short is up to date, skipping update.');
+      if (await artifact.isUpToDate(fileSystem)) {
+        logger.printTrace('Artifact $short is up to date, skipping update.');
         continue;
       }
 
       await artifact.update(
-        _artifactUpdater,
-        _logger,
-        _fileSystem,
-        _osUtils,
+        _updater,
+        logger,
+        fileSystem,
+        osUtils,
         offline: offline,
       );
     }
   }
 }
 
+class GithubRepoReleasesFlutterpiCache extends FlutterpiCache {
+  GithubRepoReleasesFlutterpiCache({
+    required super.logger,
+    required super.fileSystem,
+    required super.platform,
+    required super.osUtils,
+    required super.projectFactory,
+    required super.hooks,
+    super.httpClient,
+    gh.RepositorySlug? repo,
+    gh.Authentication? auth,
+  }) : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci') {
+    final pkgHttpHttpClient = http.IOClient(httpClient);
+
+    for (final description in generateDescriptions()) {
+      registerArtifact(GithubReleaseArtifact(
+        httpClient: pkgHttpHttpClient,
+        repo: repo,
+        auth: auth,
+        cache: this,
+        artifactDescription: description,
+      ));
+    }
+  }
+
+  final gh.RepositorySlug repo;
+
+  @override
+  List<String> get allowedBaseUrls => [
+        ...super.allowedBaseUrls,
+        'https://github.com/${repo.fullName}/releases/download',
+      ];
+}
+
+class GithubWorkflowRunFlutterpiCache extends FlutterpiCache {
+  GithubWorkflowRunFlutterpiCache({
+    required super.logger,
+    required super.fileSystem,
+    required super.platform,
+    required super.osUtils,
+    required super.projectFactory,
+    required super.hooks,
+    gh.RepositorySlug? repo,
+    gh.Authentication? auth,
+    required String runId,
+    String? availableEngineVersion,
+    super.httpClient,
+  }) : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci') {
+    final pkgHttpHttpClient = http.IOClient(httpClient);
+    for (final artifact in generateDescriptions()) {
+      registerArtifact(GithubWorkflowRunArtifact(
+        httpClient: pkgHttpHttpClient,
+        repo: repo,
+        auth: auth,
+        runId: runId,
+        availableEngineVersion: availableEngineVersion,
+        cache: this,
+        artifactDescription: artifact,
+      ));
+    }
+  }
+
+  final gh.RepositorySlug repo;
+
+  @override
+  List<String> get allowedBaseUrls => [
+        ...super.allowedBaseUrls,
+        'https://api.github.com/repos/${repo.fullName}/actions/artifacts/',
+      ];
+}
+
 abstract class FlutterpiArtifactPaths {
   File getEngine({
     required Directory engineCacheDir,
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   });
 
   File getGenSnapshot({
     required Directory engineCacheDir,
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required BuildMode runtimeMode,
   });
 
   Source getEngineSource({
     String artifactSubDir = 'engine',
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   });
-}
-
-class FlutterpiArtifactPathsV1 extends FlutterpiArtifactPaths {
-  String getTargetDirName(FlutterpiTargetPlatform target) {
-    return switch (target) {
-      FlutterpiTargetPlatform.genericArmV7 => 'flutterpi-armv7-generic',
-      FlutterpiTargetPlatform.genericAArch64 => 'flutterpi-aarch64-generic',
-      FlutterpiTargetPlatform.genericX64 => 'flutterpi-x64-generic',
-      FlutterpiTargetPlatform.pi3 => 'flutterpi-pi3',
-      FlutterpiTargetPlatform.pi3_64 => 'flutterpi-pi3-64',
-      FlutterpiTargetPlatform.pi4 => 'flutterpi-pi4',
-      FlutterpiTargetPlatform.pi4_64 => 'flutterpi-pi4-64',
-    };
-  }
-
-  String getHostDirName(HostPlatform hostPlatform) {
-    return switch (hostPlatform) {
-      HostPlatform.linux_x64 => 'linux-x64',
-      _ => throw UnsupportedError('Unsupported host platform: $hostPlatform'),
-    };
-  }
-
-  String getGenSnapshotFilename(HostPlatform hostPlatform, BuildMode buildMode) {
-    return switch ((hostPlatform, buildMode)) {
-      (HostPlatform.linux_x64, BuildMode.profile) => 'gen_snapshot_linux_x64_profile',
-      (HostPlatform.linux_x64, BuildMode.release) => 'gen_snapshot_linux_x64_release',
-      _ => throw UnsupportedError('Unsupported host platform & build mode combinations: $hostPlatform, $buildMode'),
-    };
-  }
-
-  String getEngineFilename(EngineFlavor flavor) {
-    return 'libflutter_engine.so.${flavor.name}';
-  }
-
-  @override
-  File getEngine({
-    required Directory engineCacheDir,
-    required HostPlatform hostPlatform,
-    required FlutterpiTargetPlatform target,
-    required EngineFlavor flavor,
-  }) {
-    return engineCacheDir
-        .childDirectory(getTargetDirName(target))
-        .childDirectory(getHostDirName(hostPlatform))
-        .childFile(getEngineFilename(flavor));
-  }
-
-  @override
-  File getGenSnapshot({
-    required Directory engineCacheDir,
-    required HostPlatform hostPlatform,
-    required FlutterpiTargetPlatform target,
-    required BuildMode runtimeMode,
-  }) {
-    return engineCacheDir
-        .childDirectory(getTargetDirName(target))
-        .childDirectory(getHostDirName(hostPlatform))
-        .childFile(getGenSnapshotFilename(hostPlatform, runtimeMode));
-  }
-
-  @override
-  Source getEngineSource({
-    String artifactSubDir = 'engine',
-    required HostPlatform hostPlatform,
-    required FlutterpiTargetPlatform target,
-    required EngineFlavor flavor,
-  }) {
-    final targetDirName = getTargetDirName(target);
-    final hostDirName = getHostDirName(hostPlatform);
-    final engineFileName = getEngineFilename(flavor);
-
-    return Source.pattern('{CACHE_DIR}/artifacts/$artifactSubDir/$targetDirName/$hostDirName/$engineFileName');
-  }
 }
 
 class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
@@ -739,7 +911,7 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
   @override
   File getEngine({
     required Directory engineCacheDir,
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   }) {
@@ -759,19 +931,19 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
   @override
   File getGenSnapshot({
     required Directory engineCacheDir,
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required BuildMode runtimeMode,
   }) {
     return engineCacheDir
-        .childDirectory('flutterpi-gen-snapshot-${getNameForHostPlatform(hostPlatform)}-$target-$runtimeMode')
+        .childDirectory('flutterpi-gen-snapshot-$hostPlatform-$target-$runtimeMode')
         .childFile('gen_snapshot');
   }
 
   @override
   Source getEngineSource({
     String artifactSubDir = 'engine',
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   }) {
@@ -781,81 +953,12 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
 
   Source getEngineDbgsymsSource({
     String artifactSubDir = 'engine',
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   }) {
     return Source.pattern(
         '{CACHE_DIR}/artifacts/$artifactSubDir/flutterpi-engine-dbgsyms-$target-$flavor/libflutter_engine.dbgsyms');
-  }
-}
-
-class TarXzCompatibleOsUtils implements OperatingSystemUtils {
-  TarXzCompatibleOsUtils({
-    required OperatingSystemUtils os,
-    required ProcessUtils processUtils,
-  })  : _os = os,
-        _processUtils = processUtils;
-
-  final OperatingSystemUtils _os;
-  final ProcessUtils _processUtils;
-
-  @override
-  void chmod(FileSystemEntity entity, String mode) {
-    return _os.chmod(entity, mode);
-  }
-
-  @override
-  Future<int> findFreePort({bool ipv6 = false}) {
-    return _os.findFreePort(ipv6: false);
-  }
-
-  @override
-  Stream<List<int>> gzipLevel1Stream(Stream<List<int>> stream) {
-    return _os.gzipLevel1Stream(stream);
-  }
-
-  @override
-  HostPlatform get hostPlatform => _os.hostPlatform;
-
-  @override
-  void makeExecutable(File file) => _os.makeExecutable(file);
-
-  @override
-  File makePipe(String path) => _os.makePipe(path);
-
-  @override
-  String get name => _os.name;
-
-  @override
-  String get pathVarSeparator => _os.pathVarSeparator;
-
-  @override
-  void unpack(File gzippedTarFile, Directory targetDirectory) {
-    _processUtils.runSync(
-      <String>['tar', '-xf', gzippedTarFile.path, '-C', targetDirectory.path],
-      throwOnError: true,
-    );
-  }
-
-  @override
-  void unzip(File file, Directory targetDirectory) {
-    _os.unzip(file, targetDirectory);
-  }
-
-  @override
-  File? which(String execName) {
-    return _os.which(execName);
-  }
-
-  @override
-  List<File> whichAll(String execName) {
-    return _os.whichAll(execName);
-  }
-
-  @override
-  int? getDirectorySize(Directory directory) {
-    return _os.getDirectorySize(directory);
   }
 }
 
@@ -876,7 +979,7 @@ class OverrideGenSnapshotArtifacts implements Artifacts {
   factory OverrideGenSnapshotArtifacts.fromArtifactPaths({
     required Artifacts parent,
     required Directory engineCacheDir,
-    required HostPlatform host,
+    required FPiHostPlatform host,
     required FlutterpiTargetPlatform target,
     required FlutterpiArtifactPaths artifactPaths,
   }) {
