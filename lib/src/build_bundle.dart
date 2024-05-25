@@ -6,31 +6,17 @@ import 'dart:io' as io;
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
-import 'package:flutter_tools/executable.dart';
-import 'package:flutter_tools/src/artifacts.dart';
-import 'package:flutter_tools/src/base/common.dart';
-import 'package:flutter_tools/src/base/logger.dart';
-import 'package:flutter_tools/src/base/os.dart';
-import 'package:flutter_tools/src/base/process.dart';
-import 'package:flutter_tools/src/base/template.dart';
-import 'package:flutter_tools/src/build_info.dart';
-import 'package:flutter_tools/src/build_system/build_system.dart';
-import 'package:flutter_tools/src/build_system/depfile.dart';
-import 'package:flutter_tools/src/build_system/targets/common.dart';
-import 'package:flutter_tools/src/bundle.dart';
-import 'package:flutter_tools/src/cache.dart';
-import 'package:flutter_tools/src/context_runner.dart' as fltool;
-import 'package:flutter_tools/src/globals.dart' as globals;
-import 'package:flutter_tools/src/isolated/mustache_template.dart';
-import 'package:flutter_tools/src/project.dart';
-import 'package:flutter_tools/src/reporting/reporting.dart';
-import 'package:flutter_tools/src/runner/flutter_command.dart';
-import 'package:flutter_tools/src/runner/flutter_command_runner.dart';
-import 'package:flutterpi_tool/src/cache.dart';
+import 'package:github/github.dart' as gh;
 import 'package:package_config/package_config.dart';
 import 'package:path/path.dart' as path;
 import 'package:unified_analytics/unified_analytics.dart';
 
+import 'package:flutterpi_tool/src/cache.dart';
+import 'package:flutterpi_tool/src/fltool/common.dart';
+import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
+import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
+
+import 'platform.dart';
 import 'common.dart';
 
 /// Copies the kernel_blob.bin to the output directory.
@@ -78,7 +64,7 @@ class CopyFlutterpiEngine extends Target {
   const CopyFlutterpiEngine(
     this.flutterpiTargetPlatform, {
     required BuildMode buildMode,
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     bool unoptimized = false,
     this.includeDebugSymbols = false,
     required FlutterpiArtifactPaths artifactPaths,
@@ -89,7 +75,7 @@ class CopyFlutterpiEngine extends Target {
 
   final FlutterpiTargetPlatform flutterpiTargetPlatform;
   final BuildMode _buildMode;
-  final HostPlatform _hostPlatform;
+  final FPiHostPlatform _hostPlatform;
   final bool _unoptimized;
   final FlutterpiArtifactPaths _artifactPaths;
   final bool includeDebugSymbols;
@@ -187,7 +173,7 @@ class CopyIcudtl extends Target {
 class DebugBundleFlutterpiAssets extends CompositeTarget {
   DebugBundleFlutterpiAssets({
     required this.flutterpiTargetPlatform,
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     bool unoptimized = false,
     bool debugSymbols = false,
     required FlutterpiArtifactPaths artifactPaths,
@@ -213,7 +199,7 @@ class DebugBundleFlutterpiAssets extends CompositeTarget {
 class ProfileBundleFlutterpiAssets extends CompositeTarget {
   ProfileBundleFlutterpiAssets({
     required this.flutterpiTargetPlatform,
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     required FlutterpiArtifactPaths artifactPaths,
     bool debugSymbols = false,
   }) : super([
@@ -238,7 +224,7 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
 class ReleaseBundleFlutterpiAssets extends CompositeTarget {
   ReleaseBundleFlutterpiAssets({
     required this.flutterpiTargetPlatform,
-    required HostPlatform hostPlatform,
+    required FPiHostPlatform hostPlatform,
     required FlutterpiArtifactPaths artifactPaths,
     bool debugSymbols = false,
   }) : super([
@@ -270,7 +256,7 @@ Future<String> getFlutterRoot() async {
 }
 
 Future<void> buildFlutterpiBundle({
-  required HostPlatform host,
+  required FPiHostPlatform host,
   required FlutterpiTargetPlatform target,
   required BuildInfo buildInfo,
   required FlutterpiArtifactPaths artifactPaths,
@@ -407,31 +393,19 @@ Future<void> buildFlutterpiBundle({
 Future<T> runWithContext<T>({
   required FutureOr<T> Function() runner,
   FlutterpiTargetPlatform? target,
+  required FlutterpiCache Function() cacheFactory,
   bool verbose = false,
 }) async {
   return fltool.runInContext(
     runner,
     overrides: {
       TemplateRenderer: () => const MustacheTemplateRenderer(),
-      Cache: () => FlutterpiCache(
-            logger: globals.logger,
+      Cache: cacheFactory,
+      OperatingSystemUtils: () => FPiOperatingSystemUtils(
             fileSystem: globals.fs,
+            logger: globals.logger,
             platform: globals.platform,
-            osUtils: globals.os,
-            projectFactory: globals.projectFactory,
-            hooks: globals.shutdownHooks,
-          ),
-      OperatingSystemUtils: () => TarXzCompatibleOsUtils(
-            os: OperatingSystemUtils(
-              fileSystem: globals.fs,
-              logger: globals.logger,
-              platform: globals.platform,
-              processManager: globals.processManager,
-            ),
-            processUtils: ProcessUtils(
-              processManager: globals.processManager,
-              logger: globals.logger,
-            ),
+            processManager: globals.processManager,
           ),
       Logger: () {
         final factory = LoggerFactory(
@@ -492,12 +466,99 @@ Never exitWithUsage(ArgParser parser, {String? errorMessage, int exitCode = 1}) 
   io.exit(exitCode);
 }
 
-class BuildCommand extends FlutterCommand {
+abstract class FlutterpiCommand extends FlutterCommand {
+  void usesCustomCacheOption({bool verboseHelp = false}) {
+    argParser.addOption(
+      'github-artifacts-repo',
+      help: 'The GitHub repository that provides the engine artifacts. If no '
+          'run-id is specified, the release of this repository with tag '
+          '"engine/<commit-hash>" will be used to look for the engine artifacts.',
+      valueHelp: 'owner/repo',
+      hide: !verboseHelp,
+    );
+
+    argParser.addOption(
+      'github-artifacts-runid',
+      help: 'If this is specified, use the artifacts produced by this GitHub '
+          'Actions workflow run ID to look for the engine artifacts.',
+      valueHelp: 'runID',
+      hide: !verboseHelp,
+    );
+
+    argParser.addOption(
+      'github-artifacts-engine-version',
+      help: 'If a run-id is specified to download engine artifacts from a '
+          'GitHub Actions run, this specifies the version of the engine '
+          'artifacts that were built in the run. Specifying this will make '
+          'sure the flutter SDK tries to use the right engine version. '
+          'If this is not specified, the engine version will not be checked.',
+      valueHelp: 'commit-hash',
+      hide: !verboseHelp,
+    );
+
+    argParser.addOption(
+      'github-artifacts-auth-token',
+      help: 'The GitHub personal access token to use for downloading engine '
+          'artifacts from a private repository. This is required if the '
+          'repository is private.',
+      valueHelp: 'token',
+      hide: !verboseHelp,
+    );
+  }
+
+  FlutterpiCache createCache({
+    required FileSystem fs,
+    required ShutdownHooks shutdownHooks,
+    required Logger logger,
+    required Platform platform,
+    required FPiOperatingSystemUtils os,
+    required FlutterProjectFactory projectFactory,
+  }) {
+    final repo = stringArg('github-artifacts-repo');
+    final runId = stringArg('github-artifacts-runid');
+    final githubEngineHash = stringArg('github-artifacts-engine-version');
+    final token = stringArg('github-artifacts-auth-token');
+
+    if (runId != null) {
+      return GithubWorkflowRunFlutterpiCache(
+        hooks: shutdownHooks,
+        logger: logger,
+        fileSystem: fs,
+        platform: platform,
+        osUtils: os,
+        projectFactory: projectFactory,
+        repo: repo != null ? gh.RepositorySlug.full(repo) : null,
+        runId: runId,
+        auth: token != null ? gh.Authentication.bearerToken(token) : null,
+        availableEngineVersion: githubEngineHash,
+      );
+    } else {
+      return GithubRepoReleasesFlutterpiCache(
+        hooks: shutdownHooks,
+        logger: logger,
+        fileSystem: fs,
+        platform: platform,
+        osUtils: os,
+        projectFactory: projectFactory,
+        repo: repo != null ? gh.RepositorySlug.full(repo) : null,
+        auth: token != null ? gh.Authentication.bearerToken(token) : null,
+      );
+    }
+  }
+
+  @override
+  Future<FlutterCommandResult> runCommand() {
+    // TODO: implement runCommand
+    throw UnimplementedError();
+  }
+}
+
+class BuildCommand extends FlutterpiCommand {
   static const archs = ['arm', 'arm64', 'x64'];
 
   static const cpus = ['generic', 'pi3', 'pi4'];
 
-  BuildCommand() {
+  BuildCommand({bool verboseHelp = false}) {
     argParser
       ..addSeparator('Runtime mode options (Defaults to debug. At most one can be specified)')
       ..addFlag('debug', negatable: false, help: 'Build for debug mode.')
@@ -518,6 +579,7 @@ class BuildCommand extends FlutterCommand {
     // add --dart-define, --dart-define-from-file options
     usesDartDefineOption();
     usesTargetOption();
+    usesCustomCacheOption(verboseHelp: verboseHelp);
 
     argParser
       ..addSeparator('Target options')
@@ -634,12 +696,25 @@ class BuildCommand extends FlutterCommand {
     await runWithContext(
       target: getTargetPlatform(),
       verbose: boolArg('verbose', global: true),
+      cacheFactory: () => createCache(
+        fs: globals.fs,
+        shutdownHooks: globals.shutdownHooks,
+        logger: globals.logger,
+        platform: globals.platform,
+        os: globals.os as FPiOperatingSystemUtils,
+        projectFactory: globals.projectFactory,
+      ),
       runner: () async {
         try {
           final buildMode = getBuildMode();
           final flavor = getEngineFlavor();
           final debugSymbols = getIncludeDebugSymbols();
           final buildInfo = await getBuildInfo();
+
+          final os = globals.os;
+          assert(os is FPiOperatingSystemUtils);
+
+          final host = (os as FPiOperatingSystemUtils).fpiHostPlatform;
 
           var targetPlatform = getTargetPlatform();
 
@@ -655,6 +730,7 @@ class BuildCommand extends FlutterCommand {
           // update the cached flutter-pi artifacts
           await flutterpiCache.updateAll(
             const {DevelopmentArtifact.universal},
+            host: host,
             offline: false,
             flutterpiPlatforms: {targetPlatform, targetPlatform.genericVariant},
             runtimeModes: {buildMode},
@@ -668,7 +744,7 @@ class BuildCommand extends FlutterCommand {
 
           // actually build the flutter bundle
           await buildFlutterpiBundle(
-            host: getCurrentHostPlatform(),
+            host: host,
             target: targetPlatform,
             buildInfo: buildInfo,
             mainPath: targetFile,
@@ -698,7 +774,11 @@ class BuildCommand extends FlutterCommand {
   }
 }
 
-class PrecacheCommand extends Command<void> {
+class PrecacheCommand extends FlutterpiCommand {
+  PrecacheCommand({bool verboseHelp = false}) {
+    usesCustomCacheOption(verboseHelp: verboseHelp);
+  }
+
   @override
   String get name => 'precache';
 
@@ -710,13 +790,27 @@ class PrecacheCommand extends Command<void> {
     Cache.flutterRoot = await getFlutterRoot();
 
     await runWithContext(
-      verbose: globalResults!['verbose'],
+      verbose: boolArg('verbose', global: true),
+      cacheFactory: () => createCache(
+        fs: globals.fs,
+        shutdownHooks: globals.shutdownHooks,
+        logger: globals.logger,
+        platform: globals.platform,
+        os: globals.os as FPiOperatingSystemUtils,
+        projectFactory: globals.projectFactory,
+      ),
       runner: () async {
         try {
+          final os = globals.os;
+          assert(os is FPiOperatingSystemUtils);
+
+          final host = (os as FPiOperatingSystemUtils).fpiHostPlatform;
+
           // update the cached flutter-pi artifacts
           await flutterpiCache.updateAll(
             const {DevelopmentArtifact.universal},
             offline: false,
+            host: host,
             flutterpiPlatforms: FlutterpiTargetPlatform.values.toSet(),
             engineFlavors: EngineFlavor.values.toSet(),
             includeDebugSymbols: true,
@@ -746,7 +840,7 @@ class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterC
         ) {
     argParser.addOption(
       FlutterGlobalOptions.kPackagesOption,
-      hide: !verboseHelp,
+      hide: true,
       help: 'Path to your "package_config.json" file.',
     );
   }
@@ -763,13 +857,34 @@ class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterC
   List<String> getRepoRoots() {
     throw UnimplementedError();
   }
+
+  @override
+  void addCommand(Command<void> command) {
+    if (command.name != 'help' && command is! FlutterpiCommand) {
+      throw ArgumentError('Command is not a FlutterCommand: $command');
+    }
+
+    super.addCommand(command);
+  }
 }
 
 Future<void> main(List<String> args) async {
-  final runner = FlutterpiToolCommandRunner();
+  final verbose = args.contains('-v') || args.contains('--verbose') || args.contains('-vv');
+  final powershellHelpIndex = args.indexOf('-?');
+  if (powershellHelpIndex != -1) {
+    args[powershellHelpIndex] = '-h';
+  }
 
-  runner.addCommand(BuildCommand());
-  runner.addCommand(PrecacheCommand());
+  final help = args.contains('-h') ||
+      args.contains('--help') ||
+      (args.isNotEmpty && args.first == 'help') ||
+      (args.length == 1 && verbose);
+  final verboseHelp = help && verbose;
+
+  final runner = FlutterpiToolCommandRunner(verboseHelp: verboseHelp);
+
+  runner.addCommand(BuildCommand(verboseHelp: verboseHelp));
+  runner.addCommand(PrecacheCommand(verboseHelp: verboseHelp));
 
   runner.argParser
     ..addSeparator('Other options')

@@ -1,19 +1,17 @@
 import 'dart:async';
 
 import 'package:file/memory.dart';
-import 'package:flutter_tools/src/base/logger.dart';
-import 'package:flutter_tools/src/base/os.dart';
-import 'package:flutter_tools/src/base/platform.dart';
-import 'package:flutter_tools/src/base/process.dart';
-import 'package:flutter_tools/src/project.dart';
+import 'package:flutterpi_tool/src/platform.dart';
+import 'package:test/test.dart';
+
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
-import 'package:test/test.dart';
+import 'package:flutterpi_tool/src/fltool/common.dart';
 
 import 'src/fake_process_manager.dart';
 
 Future<Set<String>> getArtifactKeysFor({
-  HostPlatform? host,
+  FPiHostPlatform? host,
   Set<FlutterpiTargetPlatform> targets = const {},
   Set<EngineFlavor> flavors = const {},
   Set<BuildMode> runtimeModes = const {},
@@ -24,11 +22,11 @@ Future<Set<String>> getArtifactKeysFor({
   final platform = FakePlatform();
   final hooks = ShutdownHooks();
 
-  final cache = FlutterpiCache(
+  final cache = GithubRepoReleasesFlutterpiCache(
     logger: logger,
     fileSystem: fs,
     platform: platform,
-    osUtils: OperatingSystemUtils(
+    osUtils: FPiOperatingSystemUtils(
       fileSystem: fs,
       logger: logger,
       platform: platform,
@@ -42,13 +40,13 @@ Future<Set<String>> getArtifactKeysFor({
   );
 
   final result = cache
-      .requiredV2Artifacts(
+      .requiredArtifacts(
         host: host,
         targets: targets,
         runtimeModes: runtimeModes,
         flavors: flavors,
       )
-      .map((e) => e.artifactFilename)
+      .map((e) => e.storageKey)
       .toSet();
 
   await hooks.runShutdownHooks(logger);
@@ -116,7 +114,7 @@ void main() {
 
   test('all linux-x64 gen_snapshots', () async {
     final artifacts = await getArtifactKeysFor(
-      host: HostPlatform.linux_x64,
+      host: FPiHostPlatform.linuxX64,
       targets: {
         FlutterpiTargetPlatform.genericAArch64,
         FlutterpiTargetPlatform.genericArmV7,
@@ -145,7 +143,7 @@ void main() {
 
   test('all macos x64 gen_snapshots', () async {
     final artifacts = await getArtifactKeysFor(
-      host: HostPlatform.darwin_x64,
+      host: FPiHostPlatform.darwinX64,
       targets: {
         FlutterpiTargetPlatform.genericAArch64,
         FlutterpiTargetPlatform.genericArmV7,
@@ -175,7 +173,7 @@ void main() {
 
   test('specific artifact selection', () async {
     final artifacts = await getArtifactKeysFor(
-      host: HostPlatform.linux_x64,
+      host: FPiHostPlatform.linuxX64,
       targets: {FlutterpiTargetPlatform.genericArmV7, FlutterpiTargetPlatform.pi3},
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
@@ -195,7 +193,7 @@ void main() {
 
   test('specific artifact selection', () async {
     final artifacts = await getArtifactKeysFor(
-      host: HostPlatform.linux_x64,
+      host: FPiHostPlatform.linuxX64,
       targets: {FlutterpiTargetPlatform.genericArmV7, FlutterpiTargetPlatform.pi3, FlutterpiTargetPlatform.pi4_64},
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
@@ -216,7 +214,7 @@ void main() {
 
   test('specific artifact selection', () async {
     final artifacts = await getArtifactKeysFor(
-      host: HostPlatform.linux_x64,
+      host: FPiHostPlatform.linuxX64,
       targets: {FlutterpiTargetPlatform.genericX64, FlutterpiTargetPlatform.pi3, FlutterpiTargetPlatform.pi4_64},
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
