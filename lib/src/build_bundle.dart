@@ -511,7 +511,7 @@ abstract class FlutterpiCommand extends FlutterCommand {
     required ShutdownHooks shutdownHooks,
     required Logger logger,
     required Platform platform,
-    required FPiOperatingSystemUtils os,
+    required OperatingSystemUtils os,
     required FlutterProjectFactory projectFactory,
   }) {
     final repo = stringArg('github-artifacts-repo');
@@ -711,10 +711,17 @@ class BuildCommand extends FlutterpiCommand {
           final debugSymbols = getIncludeDebugSymbols();
           final buildInfo = await getBuildInfo();
 
-          final os = globals.os;
-          assert(os is FPiOperatingSystemUtils);
+          final os = switch (globals.os) {
+            FPiOperatingSystemUtils os => os,
+            _ => throw StateError('Operating system utils is not an FPiOperatingSystemUtils'),
+          };
 
-          final host = (os as FPiOperatingSystemUtils).fpiHostPlatform;
+          // for windows arm64, darwin arm64, we just use the x64 variant
+          final host = switch (os.fpiHostPlatform) {
+            FPiHostPlatform.windowsARM64 => FPiHostPlatform.windowsX64,
+            FPiHostPlatform.darwinARM64 => FPiHostPlatform.darwinX64,
+            FPiHostPlatform other => other
+          };
 
           var targetPlatform = getTargetPlatform();
 
@@ -737,10 +744,6 @@ class BuildCommand extends FlutterpiCommand {
             engineFlavors: {flavor},
             includeDebugSymbols: debugSymbols,
           );
-
-          if (debugSymbols && flutterpiCache.artifactPaths is! FlutterpiArtifactPathsV2) {
-            throwToolExit('Debug symbols are only supported since flutter 3.16.3.');
-          }
 
           // actually build the flutter bundle
           await buildFlutterpiBundle(
@@ -801,10 +804,16 @@ class PrecacheCommand extends FlutterpiCommand {
       ),
       runner: () async {
         try {
-          final os = globals.os;
-          assert(os is FPiOperatingSystemUtils);
+          final os = switch (globals.os) {
+            FPiOperatingSystemUtils os => os,
+            _ => throw StateError('Operating system utils is not an FPiOperatingSystemUtils'),
+          };
 
-          final host = (os as FPiOperatingSystemUtils).fpiHostPlatform;
+          final host = switch (os.fpiHostPlatform) {
+            FPiHostPlatform.windowsARM64 => FPiHostPlatform.windowsX64,
+            FPiHostPlatform.darwinARM64 => FPiHostPlatform.darwinX64,
+            FPiHostPlatform other => other
+          };
 
           // update the cached flutter-pi artifacts
           await flutterpiCache.updateAll(
