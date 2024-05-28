@@ -3,257 +3,18 @@
 import 'dart:async';
 import 'dart:io' as io;
 
-import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
-import 'package:github/github.dart' as gh;
-import 'package:package_config/package_config.dart';
-import 'package:path/path.dart' as path;
-import 'package:unified_analytics/unified_analytics.dart';
-
+import 'package:flutterpi_tool/src/build_targets.dart';
 import 'package:flutterpi_tool/src/cache.dart';
+import 'package:github/github.dart' as gh;
+import 'package:unified_analytics/unified_analytics.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
 
 import 'platform.dart';
 import 'common.dart';
-
-/// Copies the kernel_blob.bin to the output directory.
-class CopyFlutterAssets extends CopyFlutterBundle {
-  const CopyFlutterAssets();
-
-  @override
-  String get name => 'bundle_flutterpi_assets';
-}
-
-/// A wrapper for AOT compilation that copies app.so into the output directory.
-class FlutterpiAppElf extends Target {
-  /// Create a [FlutterpiAppElf] wrapper for [aotTarget].
-  const FlutterpiAppElf(this.aotTarget);
-
-  /// The [AotElfBase] subclass that produces the app.so.
-  final AotElfBase aotTarget;
-
-  @override
-  String get name => 'flutterpi_aot_bundle';
-
-  @override
-  List<Source> get inputs => const <Source>[
-        Source.pattern('{BUILD_DIR}/app.so'),
-      ];
-
-  @override
-  List<Source> get outputs => const <Source>[
-        Source.pattern('{OUTPUT_DIR}/app.so'),
-      ];
-
-  @override
-  List<Target> get dependencies => <Target>[
-        aotTarget,
-      ];
-
-  @override
-  Future<void> build(Environment environment) async {
-    final File outputFile = environment.buildDir.childFile('app.so');
-    outputFile.copySync(environment.outputDir.childFile('app.so').path);
-  }
-}
-
-class CopyFlutterpiEngine extends Target {
-  const CopyFlutterpiEngine(
-    this.flutterpiTargetPlatform, {
-    required BuildMode buildMode,
-    required FPiHostPlatform hostPlatform,
-    bool unoptimized = false,
-    this.includeDebugSymbols = false,
-    required FlutterpiArtifactPaths artifactPaths,
-  })  : _buildMode = buildMode,
-        _hostPlatform = hostPlatform,
-        _unoptimized = unoptimized,
-        _artifactPaths = artifactPaths;
-
-  final FlutterpiTargetPlatform flutterpiTargetPlatform;
-  final BuildMode _buildMode;
-  final FPiHostPlatform _hostPlatform;
-  final bool _unoptimized;
-  final FlutterpiArtifactPaths _artifactPaths;
-  final bool includeDebugSymbols;
-
-  EngineFlavor get _engineFlavor => EngineFlavor(_buildMode, _unoptimized);
-
-  @override
-  List<Target> get dependencies => [];
-
-  @override
-  List<Source> get inputs => [
-        _artifactPaths.getEngineSource(
-          hostPlatform: _hostPlatform,
-          target: flutterpiTargetPlatform,
-          flavor: _engineFlavor,
-        ),
-        if (includeDebugSymbols)
-          (_artifactPaths as FlutterpiArtifactPathsV2).getEngineDbgsymsSource(
-            hostPlatform: _hostPlatform,
-            target: flutterpiTargetPlatform,
-            flavor: _engineFlavor,
-          ),
-      ];
-
-  @override
-  String get name =>
-      'copy_flutterpi_engine_${flutterpiTargetPlatform.shortName}_$_buildMode${_unoptimized ? '_unopt' : ''}';
-
-  @override
-  List<Source> get outputs => [
-        const Source.pattern('{OUTPUT_DIR}/libflutter_engine.so'),
-        if (includeDebugSymbols) const Source.pattern('{OUTPUT_DIR}/libflutter_engine.dbgsyms')
-      ];
-
-  @override
-  Future<void> build(Environment environment) async {
-    final outputFile = environment.outputDir.childFile('libflutter_engine.so');
-    if (!outputFile.parent.existsSync()) {
-      outputFile.parent.createSync(recursive: true);
-    }
-
-    _artifactPaths
-        .getEngine(
-          engineCacheDir: environment.cacheDir.childDirectory('artifacts').childDirectory('engine'),
-          hostPlatform: _hostPlatform,
-          target: flutterpiTargetPlatform,
-          flavor: _engineFlavor,
-        )
-        .copySync(outputFile.path);
-
-    if (includeDebugSymbols) {
-      final dbgsymsOutputFile = environment.outputDir.childFile('libflutter_engine.dbgsyms');
-      if (!dbgsymsOutputFile.parent.existsSync()) {
-        dbgsymsOutputFile.parent.createSync(recursive: true);
-      }
-
-      (_artifactPaths as FlutterpiArtifactPathsV2)
-          .getEngineDbgsyms(
-            engineCacheDir: environment.cacheDir.childDirectory('artifacts').childDirectory('engine'),
-            target: flutterpiTargetPlatform,
-            flavor: _engineFlavor,
-          )
-          .copySync(dbgsymsOutputFile.path);
-    }
-  }
-}
-
-class CopyIcudtl extends Target {
-  const CopyIcudtl();
-
-  @override
-  String get name => 'flutterpi_copy_icudtl';
-
-  @override
-  List<Source> get inputs => const <Source>[
-        Source.artifact(Artifact.icuData),
-      ];
-
-  @override
-  List<Source> get outputs => const <Source>[
-        Source.pattern('{OUTPUT_DIR}/icudtl.dat'),
-      ];
-
-  @override
-  List<Target> get dependencies => [];
-
-  @override
-  Future<void> build(Environment environment) async {
-    final icudtl = environment.fileSystem.file(environment.artifacts.getArtifactPath(Artifact.icuData));
-    final outputFile = environment.outputDir.childFile('icudtl.dat');
-    icudtl.copySync(outputFile.path);
-  }
-}
-
-class DebugBundleFlutterpiAssets extends CompositeTarget {
-  DebugBundleFlutterpiAssets({
-    required this.flutterpiTargetPlatform,
-    required FPiHostPlatform hostPlatform,
-    bool unoptimized = false,
-    bool debugSymbols = false,
-    required FlutterpiArtifactPaths artifactPaths,
-  }) : super([
-          const CopyFlutterAssets(),
-          const CopyIcudtl(),
-          CopyFlutterpiEngine(
-            flutterpiTargetPlatform,
-            buildMode: BuildMode.debug,
-            hostPlatform: hostPlatform,
-            unoptimized: unoptimized,
-            artifactPaths: artifactPaths,
-            includeDebugSymbols: debugSymbols,
-          ),
-        ]);
-
-  final FlutterpiTargetPlatform flutterpiTargetPlatform;
-
-  @override
-  String get name => 'debug_bundle_flutterpi_assets';
-}
-
-class ProfileBundleFlutterpiAssets extends CompositeTarget {
-  ProfileBundleFlutterpiAssets({
-    required this.flutterpiTargetPlatform,
-    required FPiHostPlatform hostPlatform,
-    required FlutterpiArtifactPaths artifactPaths,
-    bool debugSymbols = false,
-  }) : super([
-          const CopyFlutterAssets(),
-          const CopyIcudtl(),
-          CopyFlutterpiEngine(
-            flutterpiTargetPlatform,
-            buildMode: BuildMode.profile,
-            hostPlatform: hostPlatform,
-            artifactPaths: artifactPaths,
-            includeDebugSymbols: debugSymbols,
-          ),
-          const FlutterpiAppElf(AotElfProfile(TargetPlatform.linux_arm64)),
-        ]);
-
-  final FlutterpiTargetPlatform flutterpiTargetPlatform;
-
-  @override
-  String get name => 'profile_bundle_flutterpi_${flutterpiTargetPlatform.shortName}_assets';
-}
-
-class ReleaseBundleFlutterpiAssets extends CompositeTarget {
-  ReleaseBundleFlutterpiAssets({
-    required this.flutterpiTargetPlatform,
-    required FPiHostPlatform hostPlatform,
-    required FlutterpiArtifactPaths artifactPaths,
-    bool debugSymbols = false,
-  }) : super([
-          const CopyFlutterAssets(),
-          const CopyIcudtl(),
-          CopyFlutterpiEngine(flutterpiTargetPlatform,
-              buildMode: BuildMode.release,
-              hostPlatform: hostPlatform,
-              artifactPaths: artifactPaths,
-              includeDebugSymbols: debugSymbols),
-          const FlutterpiAppElf(AotElfRelease(TargetPlatform.linux_arm64)),
-        ]);
-
-  final FlutterpiTargetPlatform flutterpiTargetPlatform;
-
-  @override
-  String get name => 'release_bundle_flutterpi_${flutterpiTargetPlatform.shortName}_assets';
-}
-
-Future<String> getFlutterRoot() async {
-  final pkgconfig = await findPackageConfigUri(io.Platform.script);
-  pkgconfig!;
-
-  final flutterToolsPath = pkgconfig.resolve(Uri.parse('package:flutter_tools/'))!.toFilePath();
-
-  const dirname = path.dirname;
-
-  return dirname(dirname(dirname(flutterToolsPath)));
-}
 
 Future<void> buildFlutterpiBundle({
   required FPiHostPlatform host,
@@ -433,16 +194,20 @@ Future<T> runWithContext<T>({
   );
 }
 
-Future<void> exitWithHooks(int code, {required ShutdownHooks shutdownHooks}) async {
+Future<void> exitWithHooks(
+  int code, {
+  required ShutdownHooks shutdownHooks,
+  required Logger logger,
+}) async {
   // Run shutdown hooks before flushing logs
-  await shutdownHooks.runShutdownHooks(globals.logger);
+  await shutdownHooks.runShutdownHooks(logger);
 
   final completer = Completer<void>();
 
   // Give the task / timer queue one cycle through before we hard exit.
   Timer.run(() {
     try {
-      globals.printTrace('exiting with code $code');
+      logger.printTrace('exiting with code $code');
       io.exit(code);
     } catch (error, stackTrace) {
       // ignore: avoid_catches_without_on_clauses
@@ -451,19 +216,6 @@ Future<void> exitWithHooks(int code, {required ShutdownHooks shutdownHooks}) asy
   });
 
   return completer.future;
-}
-
-Never exitWithUsage(ArgParser parser, {String? errorMessage, int exitCode = 1}) {
-  if (errorMessage != null) {
-    print(errorMessage);
-  }
-
-  print('');
-  print('Usage:');
-  print('  flutterpi-tool [options...]');
-  print('');
-  print(parser.usage);
-  io.exit(exitCode);
 }
 
 abstract class FlutterpiCommand extends FlutterCommand {
@@ -758,13 +510,18 @@ class BuildCommand extends FlutterpiCommand {
             includeDebugSymbols: debugSymbols,
           );
 
-          await globals.shutdownHooks.runShutdownHooks(globals.logger);
+          await exitWithHooks(0, shutdownHooks: globals.shutdownHooks, logger: globals.logger);
         } on ToolExit catch (e) {
           if (e.message != null) {
             globals.printError(e.message!);
           }
 
-          return exitWithHooks(e.exitCode ?? 1, shutdownHooks: globals.shutdownHooks);
+          await exitWithHooks(e.exitCode ?? 1, shutdownHooks: globals.shutdownHooks, logger: globals.logger);
+        } on UsageException catch (e) {
+          globals.printError(e.message);
+          globals.printStatus(e.usage);
+
+          await exitWithHooks(1, shutdownHooks: globals.shutdownHooks, logger: globals.logger);
         }
       },
     );
@@ -825,13 +582,18 @@ class PrecacheCommand extends FlutterpiCommand {
             includeDebugSymbols: true,
           );
 
-          await globals.shutdownHooks.runShutdownHooks(globals.logger);
+          await exitWithHooks(0, shutdownHooks: globals.shutdownHooks, logger: globals.logger);
         } on ToolExit catch (e) {
           if (e.message != null) {
             globals.printError(e.message!);
           }
 
-          return exitWithHooks(e.exitCode ?? 1, shutdownHooks: globals.shutdownHooks);
+          await exitWithHooks(e.exitCode ?? 1, shutdownHooks: globals.shutdownHooks, logger: globals.logger);
+        } on UsageException catch (e) {
+          globals.printError(e.message);
+          globals.printStatus(e.usage);
+
+          await exitWithHooks(1, shutdownHooks: globals.shutdownHooks, logger: globals.logger);
         }
       },
     );
@@ -901,9 +663,8 @@ Future<void> main(List<String> args) async {
 
   try {
     await runner.run(args);
-    io.exitCode = 0;
   } on UsageException catch (e) {
     print(e);
-    io.exitCode = 1;
+    io.exit(1);
   }
 }

@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'dart:io' as io;
 import 'package:file/file.dart';
-import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:meta/meta.dart';
 
