@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io' as io;
 
 import 'package:file/file.dart';
+import 'package:flutterpi_tool/src/authenticating_artifact_updater.dart';
 import 'package:github/github.dart' as gh;
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart' as http;
@@ -12,38 +13,8 @@ import 'package:meta/meta.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
-import 'package:flutterpi_tool/src/platform.dart';
 
 FlutterpiCache get flutterpiCache => globals.cache as FlutterpiCache;
-
-@visibleForTesting
-String flattenNameSubdirs(Uri url, FileSystem fileSystem) {
-  final List<String> pieces = <String>[url.host, ...url.pathSegments];
-  final Iterable<String> convertedPieces = pieces.map<String>(_flattenNameNoSubdirs);
-  return fileSystem.path.joinAll(convertedPieces);
-}
-
-String _flattenNameNoSubdirs(String fileName) {
-  final List<int> replacedCodeUnits = <int>[
-    for (final int codeUnit in fileName.codeUnits) ..._flattenNameSubstitutions[codeUnit] ?? <int>[codeUnit],
-  ];
-  return String.fromCharCodes(replacedCodeUnits);
-}
-
-// Copied from the flutter tool cache.dart as well.
-final Map<int, List<int>> _flattenNameSubstitutions = <int, List<int>>{
-  r'@'.codeUnitAt(0): '@@'.codeUnits,
-  r'/'.codeUnitAt(0): '@s@'.codeUnits,
-  r'\'.codeUnitAt(0): '@bs@'.codeUnits,
-  r':'.codeUnitAt(0): '@c@'.codeUnits,
-  r'%'.codeUnitAt(0): '@per@'.codeUnits,
-  r'*'.codeUnitAt(0): '@ast@'.codeUnits,
-  r'<'.codeUnitAt(0): '@lt@'.codeUnits,
-  r'>'.codeUnitAt(0): '@gt@'.codeUnits,
-  r'"'.codeUnitAt(0): '@q@'.codeUnits,
-  r'|'.codeUnitAt(0): '@pip@'.codeUnits,
-  r'?'.codeUnitAt(0): '@ques@'.codeUnits,
-};
 
 extension GithubReleaseFindAsset on gh.Release {
   gh.ReleaseAsset? findAsset(String name) {
@@ -51,207 +22,6 @@ extension GithubReleaseFindAsset on gh.Release {
           (asset) => asset!.name == name,
           orElse: () => null,
         );
-  }
-}
-
-class AuthenticatingArtifactUpdater implements ArtifactUpdater {
-  AuthenticatingArtifactUpdater({
-    required OperatingSystemUtils operatingSystemUtils,
-    required Logger logger,
-    required FileSystem fileSystem,
-    required Directory tempStorage,
-    required io.HttpClient httpClient,
-    required Platform platform,
-    required List<String> allowedBaseUrls,
-  })  : _operatingSystemUtils = operatingSystemUtils,
-        _httpClient = httpClient,
-        _logger = logger,
-        _fileSystem = fileSystem,
-        _tempStorage = tempStorage,
-        _allowedBaseUrls = allowedBaseUrls;
-
-  static const int _kRetryCount = 2;
-
-  final Logger _logger;
-  final OperatingSystemUtils _operatingSystemUtils;
-  final FileSystem _fileSystem;
-  final Directory _tempStorage;
-  final io.HttpClient _httpClient;
-
-  final List<String> _allowedBaseUrls;
-
-  @override
-  @visibleForTesting
-  final List<File> downloadedFiles = <File>[];
-
-  static const Set<String> _denylistedBasenames = <String>{'entitlements.txt', 'without_entitlements.txt'};
-  void _removeDenylistedFiles(Directory directory) {
-    for (final FileSystemEntity entity in directory.listSync(recursive: true)) {
-      if (entity is! File) {
-        continue;
-      }
-      if (_denylistedBasenames.contains(entity.basename)) {
-        entity.deleteSync();
-      }
-    }
-  }
-
-  @override
-  Future<void> downloadZipArchive(
-    String message,
-    Uri url,
-    Directory location, {
-    void Function(io.HttpClientRequest)? authenticate,
-  }) {
-    return _downloadArchive(
-      message,
-      url,
-      location,
-      _operatingSystemUtils.unzip,
-      authenticate: authenticate,
-    );
-  }
-
-  @override
-  Future<void> downloadZippedTarball(
-    String message,
-    Uri url,
-    Directory location, {
-    void Function(io.HttpClientRequest)? authenticate,
-  }) {
-    return _downloadArchive(
-      message,
-      url,
-      location,
-      _operatingSystemUtils.unpack,
-      authenticate: authenticate,
-    );
-  }
-
-  Future<void> _downloadArchive(
-    String message,
-    Uri url,
-    Directory location,
-    void Function(File, Directory) extractor, {
-    void Function(io.HttpClientRequest)? authenticate,
-  }) async {
-    final downloadPath = flattenNameSubdirs(url, _fileSystem);
-    final tempFile = _createDownloadFile(downloadPath);
-
-    var tries = _kRetryCount;
-    while (tries > 0) {
-      final status = _logger.startProgress(message);
-
-      try {
-        ErrorHandlingFileSystem.deleteIfExists(tempFile);
-        if (!tempFile.parent.existsSync()) {
-          tempFile.parent.createSync(recursive: true);
-        }
-
-        await _download(url, tempFile, status, authenticate: authenticate);
-
-        if (!tempFile.existsSync()) {
-          throw Exception('Did not find downloaded file ${tempFile.path}');
-        }
-      } on Exception catch (err) {
-        _logger.printTrace(err.toString());
-        tries -= 1;
-
-        if (tries == 0) {
-          throwToolExit('Failed to download $url. Ensure you have network connectivity and then try again.\n$err');
-        }
-        continue;
-      } finally {
-        status.stop();
-      }
-
-      final destination = location.childDirectory(tempFile.fileSystem.path.basenameWithoutExtension(tempFile.path));
-
-      ErrorHandlingFileSystem.deleteIfExists(destination, recursive: true);
-      location.createSync(recursive: true);
-
-      try {
-        extractor(tempFile, location);
-      } on Exception catch (err) {
-        tries -= 1;
-        if (tries == 0) {
-          throwToolExit(
-            'Flutter could not download and/or extract $url. Ensure you have '
-            'network connectivity and all of the required dependencies listed at '
-            'flutter.dev/setup.\nThe original exception was: $err.',
-          );
-        }
-
-        ErrorHandlingFileSystem.deleteIfExists(tempFile);
-        continue;
-      }
-
-      _removeDenylistedFiles(location);
-      return;
-    }
-  }
-
-  Future<void> _download(Uri url, File file, Status status, {void Function(io.HttpClientRequest)? authenticate}) async {
-    final allowed = _allowedBaseUrls.any((baseUrl) => url.toString().startsWith(baseUrl));
-
-    // In tests make this a hard failure.
-    assert(
-      allowed,
-      'URL not allowed: $url\n'
-      'Allowed URLs must be based on one of: ${_allowedBaseUrls.join(', ')}',
-    );
-
-    // In production, issue a warning but allow the download to proceed.
-    if (!allowed) {
-      status.pause();
-      _logger.printWarning(
-          'Downloading an artifact that may not be reachable in some environments (e.g. firewalled environments): $url\n'
-          'This should not have happened. This is likely a Flutter SDK bug. Please file an issue at https://github.com/flutter/flutter/issues/new?template=1_activation.yml');
-      status.resume();
-    }
-
-    final request = await _httpClient.getUrl(url);
-    if (authenticate != null) {
-      authenticate(request);
-    }
-
-    final response = await request.close();
-    if (response.statusCode != io.HttpStatus.ok) {
-      throw Exception(response.statusCode);
-    }
-
-    final handle = file.openSync(mode: FileMode.writeOnly);
-    try {
-      await for (final chunk in response) {
-        handle.writeFromSync(chunk);
-      }
-    } finally {
-      handle.closeSync();
-    }
-  }
-
-  File _createDownloadFile(String name) {
-    final path = _fileSystem.path.join(_tempStorage.path, name);
-    final file = _fileSystem.file(path);
-    downloadedFiles.add(file);
-    return file;
-  }
-
-  @override
-  void removeDownloadedFiles() {
-    for (final file in downloadedFiles) {
-      ErrorHandlingFileSystem.deleteIfExists(file);
-
-      for (var directory = file.parent;
-          directory.absolute.path != _tempStorage.absolute.path;
-          directory = directory.parent) {
-        // Handle race condition when the directory is deleted before this step
-
-        if (directory.existsSync() && directory.listSync().isEmpty) {
-          ErrorHandlingFileSystem.deleteIfExists(directory, recursive: true);
-        }
-      }
-    }
   }
 }
 
@@ -616,7 +386,7 @@ abstract class FlutterpiCache extends FlutterCache {
   @protected
   final Platform platform;
   @protected
-  final FPiOperatingSystemUtils osUtils;
+  final OperatingSystemUtils osUtils;
   @protected
   final io.HttpClient httpClient;
   @protected
@@ -756,7 +526,7 @@ abstract class FlutterpiCache extends FlutterCache {
   Future<void> updateAll(
     Set<DevelopmentArtifact> requiredArtifacts, {
     bool offline = false,
-    FPiHostPlatform? host,
+    @required FPiHostPlatform? host,
     Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {
       FlutterpiTargetPlatform.genericArmV7,
       FlutterpiTargetPlatform.genericAArch64,
@@ -774,7 +544,7 @@ abstract class FlutterpiCache extends FlutterCache {
     },
     bool includeDebugSymbols = false,
   }) async {
-    host ??= osUtils.fpiHostPlatform;
+    ArgumentError.checkNotNull(host, 'host');
 
     for (final artifact in artifacts) {
       final required = switch (artifact) {
@@ -823,8 +593,6 @@ class GithubRepoReleasesFlutterpiCache extends FlutterpiCache {
     gh.RepositorySlug? repo,
     gh.Authentication? auth,
   }) : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci') {
-    final pkgHttpHttpClient = http.IOClient(httpClient);
-
     for (final description in generateDescriptions()) {
       registerArtifact(GithubReleaseArtifact(
         httpClient: pkgHttpHttpClient,
@@ -859,7 +627,6 @@ class GithubWorkflowRunFlutterpiCache extends FlutterpiCache {
     String? availableEngineVersion,
     super.httpClient,
   }) : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci') {
-    final pkgHttpHttpClient = http.IOClient(httpClient);
     for (final artifact in generateDescriptions()) {
       registerArtifact(GithubWorkflowRunArtifact(
         httpClient: pkgHttpHttpClient,
