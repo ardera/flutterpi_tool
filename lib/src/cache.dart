@@ -13,6 +13,8 @@ import 'package:meta/meta.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
+import 'package:package_config/package_config.dart';
+import 'package:path/path.dart' as path;
 
 FlutterpiCache get flutterpiCache => globals.cache as FlutterpiCache;
 
@@ -806,4 +808,15 @@ class OverrideGenSnapshotArtifacts implements Artifacts {
   FileSystemEntity getHostArtifact(HostArtifact artifact) {
     return parent.getHostArtifact(artifact);
   }
+}
+
+Future<String> getFlutterRoot() async {
+  final pkgconfig = await findPackageConfigUri(io.Platform.script);
+  pkgconfig!;
+
+  final flutterToolsPath = pkgconfig.resolve(Uri.parse('package:flutter_tools/'))!.toFilePath();
+
+  const dirname = path.dirname;
+
+  return dirname(dirname(dirname(flutterToolsPath)));
 }
