@@ -24,6 +24,7 @@ dependencies:
   process: ^5.0.0
   unified_analytics: ^5.8.0
   archive: ^3.3.2
+  crypto: ^3.0.3
 
 dev_dependencies:
   lints: ^2.0.0
