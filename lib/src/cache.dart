@@ -216,7 +216,6 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
       throwToolExit('Failed to find artifact $storageKey in run $runId of repo ${repo.fullName}');
     }
 
-    // Avoid printing things like 'Downloading linux-x64 tools...' multiple times.
     await updater.downloadZipArchive('Downloading $storageKey...', url, dir, authenticate: _authenticate);
 
     makeFilesExecutable(dir, operatingSystemUtils);
@@ -325,7 +324,13 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
       throwToolExit('Failed to find artifact $storageKey in release $version');
     }
 
-    await updater.downloadZippedTarball('Downloading $storageKey...', url, dir, authenticate: _authenticate);
+    await updater.downloadArchive(
+      'Downloading $storageKey...',
+      url,
+      dir,
+      authenticate: _authenticate,
+      archiveType: ArchiveType.tarXz,
+    );
 
     makeFilesExecutable(dir, operatingSystemUtils);
   }
