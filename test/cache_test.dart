@@ -11,7 +11,7 @@ import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'src/fake_process_manager.dart';
 
 Future<Set<String>> getArtifactKeysFor({
-  FPiHostPlatform? host,
+  FlutterpiHostPlatform? host,
   Set<FlutterpiTargetPlatform> targets = const {},
   Set<EngineFlavor> flavors = const {},
   Set<BuildMode> runtimeModes = const {},
@@ -26,7 +26,7 @@ Future<Set<String>> getArtifactKeysFor({
     logger: logger,
     fileSystem: fs,
     platform: platform,
-    osUtils: FPiOperatingSystemUtils(
+    osUtils: MoreOperatingSystemUtils(
       fileSystem: fs,
       logger: logger,
       platform: platform,
@@ -114,7 +114,7 @@ void main() {
 
   test('all linux-x64 gen_snapshots', () async {
     final artifacts = await getArtifactKeysFor(
-      host: FPiHostPlatform.linuxX64,
+      host: FlutterpiHostPlatform.linuxX64,
       targets: {
         FlutterpiTargetPlatform.genericAArch64,
         FlutterpiTargetPlatform.genericArmV7,
@@ -143,7 +143,7 @@ void main() {
 
   test('all macos x64 gen_snapshots', () async {
     final artifacts = await getArtifactKeysFor(
-      host: FPiHostPlatform.darwinX64,
+      host: FlutterpiHostPlatform.darwinX64,
       targets: {
         FlutterpiTargetPlatform.genericAArch64,
         FlutterpiTargetPlatform.genericArmV7,
@@ -173,7 +173,7 @@ void main() {
 
   test('specific artifact selection', () async {
     final artifacts = await getArtifactKeysFor(
-      host: FPiHostPlatform.linuxX64,
+      host: FlutterpiHostPlatform.linuxX64,
       targets: {FlutterpiTargetPlatform.genericArmV7, FlutterpiTargetPlatform.pi3},
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
@@ -193,7 +193,7 @@ void main() {
 
   test('specific artifact selection', () async {
     final artifacts = await getArtifactKeysFor(
-      host: FPiHostPlatform.linuxX64,
+      host: FlutterpiHostPlatform.linuxX64,
       targets: {FlutterpiTargetPlatform.genericArmV7, FlutterpiTargetPlatform.pi3, FlutterpiTargetPlatform.pi4_64},
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
@@ -214,7 +214,7 @@ void main() {
 
   test('specific artifact selection', () async {
     final artifacts = await getArtifactKeysFor(
-      host: FPiHostPlatform.linuxX64,
+      host: FlutterpiHostPlatform.linuxX64,
       targets: {FlutterpiTargetPlatform.genericX64, FlutterpiTargetPlatform.pi3, FlutterpiTargetPlatform.pi4_64},
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},

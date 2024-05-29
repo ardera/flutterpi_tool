@@ -2,8 +2,10 @@
 
 import 'dart:async';
 import 'dart:io' as io;
+import 'package:archive/archive_io.dart';
 import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
+import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:meta/meta.dart';
 
 @visibleForTesting
@@ -38,7 +40,7 @@ String _legalizeName(String fileName) {
 
 class AuthenticatingArtifactUpdater implements ArtifactUpdater {
   AuthenticatingArtifactUpdater({
-    required OperatingSystemUtils operatingSystemUtils,
+    required MoreOperatingSystemUtils operatingSystemUtils,
     required Logger logger,
     required FileSystem fileSystem,
     required Directory tempStorage,
@@ -55,7 +57,7 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
   static const int _kRetryCount = 2;
 
   final Logger _logger;
-  final OperatingSystemUtils _operatingSystemUtils;
+  final MoreOperatingSystemUtils _operatingSystemUtils;
   final FileSystem _fileSystem;
   final Directory _tempStorage;
   final io.HttpClient _httpClient;
@@ -106,6 +108,30 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
       url,
       location,
       _operatingSystemUtils.unpack,
+      authenticate: authenticate,
+    );
+  }
+
+  Future<void> downloadArchive(
+    String message,
+    Uri url,
+    Directory location, {
+    void Function(io.HttpClientRequest)? authenticate,
+    ArchiveType? archiveType,
+    Archive Function(File)? decoder,
+  }) {
+    return _downloadArchive(
+      message,
+      url,
+      location,
+      (File file, Directory targetDirectory) {
+        _operatingSystemUtils.unpack(
+          file,
+          targetDirectory,
+          type: archiveType,
+          decoder: decoder,
+        );
+      },
       authenticate: authenticate,
     );
   }
