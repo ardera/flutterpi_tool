@@ -1,5 +1,5 @@
-import 'package:archive/archive_io.dart';
 import 'package:file/file.dart';
+import 'package:flutterpi_tool/src/archive.dart';
 import 'package:meta/meta.dart';
 import 'package:process/process.dart';
 
@@ -107,10 +107,10 @@ class MoreOperatingSystemUtilsWrapper implements MoreOperatingSystemUtils {
       return os.unpack(gzippedTarFile, targetDirectory);
     } else {
       decoder ??= switch (type) {
-        ArchiveType.tarXz => (file) => TarDecoder().decodeBytes(XZDecoder().decodeBuffer(InputFileStream(file.path))),
-        ArchiveType.tarGz => (file) => TarDecoder().decodeBytes(GZipDecoder().decodeBuffer(InputFileStream(file.path))),
-        ArchiveType.tar => (file) => TarDecoder().decodeBuffer(InputFileStream(file.path)),
-        ArchiveType.zip => (file) => ZipDecoder().decodeBuffer(InputFileStream(file.path)),
+        ArchiveType.tarXz => (file) => TarDecoder().decodeBytes(XZDecoder().decodeBytes(file.readAsBytesSync())),
+        ArchiveType.tarGz => (file) => TarDecoder().decodeBytes(GZipDecoder().decodeBytes(file.readAsBytesSync())),
+        ArchiveType.tar => (file) => TarDecoder().decodeBytes(file.readAsBytesSync()),
+        ArchiveType.zip => (file) => ZipDecoder().decodeBytes(file.readAsBytesSync()),
         null => throw 'unreachable',
       };
 
