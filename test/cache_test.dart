@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:file/memory.dart';
-import 'package:flutterpi_tool/src/platform.dart';
 import 'package:test/test.dart';
 
+import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
