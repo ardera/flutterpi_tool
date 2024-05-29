@@ -5,6 +5,7 @@ import 'dart:io' as io;
 
 import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/authenticating_artifact_updater.dart';
+import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:github/github.dart' as gh;
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart' as http;
@@ -38,7 +39,7 @@ class ArtifactDescription {
         runtimeMode = null;
 
   ArtifactDescription.hostTarget(
-    FPiHostPlatform this.host,
+    FlutterpiHostPlatform this.host,
     FlutterpiTargetPlatform this.target,
     BuildMode this.runtimeMode, {
     required this.prefix,
@@ -58,14 +59,14 @@ class ArtifactDescription {
   final String prefix;
   final String cacheKey;
 
-  final FPiHostPlatform? host;
+  final FlutterpiHostPlatform? host;
   final FlutterpiTargetPlatform? target;
   final EngineFlavor? flavor;
   final BuildMode? runtimeMode;
   final bool? includeDebugSymbols;
 
   bool requiredFor({
-    required FPiHostPlatform? host,
+    required FlutterpiHostPlatform? host,
     required Set<FlutterpiTargetPlatform> targets,
     required Set<EngineFlavor> flavors,
     required Set<BuildMode> runtimeModes,
@@ -115,7 +116,7 @@ abstract class FlutterpiArtifact extends EngineCachedArtifact {
 
   @visibleForTesting
   bool requiredFor({
-    required FPiHostPlatform? host,
+    required FlutterpiHostPlatform? host,
     required Set<FlutterpiTargetPlatform> targets,
     required Set<EngineFlavor> flavors,
     required Set<BuildMode> runtimeModes,
@@ -165,7 +166,7 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
   static String _getStorageKeyForArtifact(ArtifactDescription description) {
     return [
       description.prefix,
-      if (description.host case FPiHostPlatform host) host.githubName,
+      if (description.host case FlutterpiHostPlatform host) host.githubName,
       if (description.target case FlutterpiTargetPlatform target) target,
       if (description.flavor case EngineFlavor flavor) flavor.name,
       if (description.runtimeMode case BuildMode runtimeMode) runtimeMode.name,
@@ -229,7 +230,7 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
 
   @override
   bool requiredFor({
-    required FPiHostPlatform? host,
+    required FlutterpiHostPlatform? host,
     required Set<FlutterpiTargetPlatform> targets,
     required Set<EngineFlavor> flavors,
     required Set<BuildMode> runtimeModes,
@@ -338,7 +339,7 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
 
   @override
   bool requiredFor({
-    required FPiHostPlatform? host,
+    required FlutterpiHostPlatform? host,
     required Set<FlutterpiTargetPlatform> targets,
     required Set<EngineFlavor> flavors,
     required Set<BuildMode> runtimeModes,
@@ -388,7 +389,7 @@ abstract class FlutterpiCache extends FlutterCache {
   @protected
   final Platform platform;
   @protected
-  final OperatingSystemUtils osUtils;
+  final MoreOperatingSystemUtils osUtils;
   @protected
   final io.HttpClient httpClient;
   @protected
@@ -406,11 +407,11 @@ abstract class FlutterpiCache extends FlutterCache {
   @protected
   List<ArtifactDescription> generateDescriptions() {
     final hosts = {
-      FPiHostPlatform.darwinX64,
-      FPiHostPlatform.linuxARM,
-      FPiHostPlatform.linuxARM64,
-      FPiHostPlatform.linuxX64,
-      FPiHostPlatform.windowsX64,
+      FlutterpiHostPlatform.darwinX64,
+      FlutterpiHostPlatform.linuxARM,
+      FlutterpiHostPlatform.linuxARM64,
+      FlutterpiHostPlatform.linuxX64,
+      FlutterpiHostPlatform.windowsX64,
     };
 
     final targets = FlutterpiTargetPlatform.values;
@@ -504,7 +505,7 @@ abstract class FlutterpiCache extends FlutterCache {
 
   @visibleForTesting
   Set<FlutterpiArtifact> requiredArtifacts({
-    FPiHostPlatform? host,
+    FlutterpiHostPlatform? host,
     required Set<FlutterpiTargetPlatform> targets,
     required Set<BuildMode> runtimeModes,
     required Set<EngineFlavor> flavors,
@@ -528,7 +529,7 @@ abstract class FlutterpiCache extends FlutterCache {
   Future<void> updateAll(
     Set<DevelopmentArtifact> requiredArtifacts, {
     bool offline = false,
-    @required FPiHostPlatform? host,
+    @required FlutterpiHostPlatform? host,
     Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {
       FlutterpiTargetPlatform.genericArmV7,
       FlutterpiTargetPlatform.genericAArch64,
@@ -654,21 +655,21 @@ class GithubWorkflowRunFlutterpiCache extends FlutterpiCache {
 abstract class FlutterpiArtifactPaths {
   File getEngine({
     required Directory engineCacheDir,
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   });
 
   File getGenSnapshot({
     required Directory engineCacheDir,
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required BuildMode runtimeMode,
   });
 
   Source getEngineSource({
     String artifactSubDir = 'engine',
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   });
@@ -680,7 +681,7 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
   @override
   File getEngine({
     required Directory engineCacheDir,
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   }) {
@@ -700,7 +701,7 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
   @override
   File getGenSnapshot({
     required Directory engineCacheDir,
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required BuildMode runtimeMode,
   }) {
@@ -712,7 +713,7 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
   @override
   Source getEngineSource({
     String artifactSubDir = 'engine',
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   }) {
@@ -722,7 +723,7 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
 
   Source getEngineDbgsymsSource({
     String artifactSubDir = 'engine',
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   }) {
@@ -748,7 +749,7 @@ class OverrideGenSnapshotArtifacts implements Artifacts {
   factory OverrideGenSnapshotArtifacts.fromArtifactPaths({
     required Artifacts parent,
     required Directory engineCacheDir,
-    required FPiHostPlatform host,
+    required FlutterpiHostPlatform host,
     required FlutterpiTargetPlatform target,
     required FlutterpiArtifactPaths artifactPaths,
   }) {

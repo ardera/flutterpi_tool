@@ -4,7 +4,7 @@ import 'package:flutterpi_tool/src/fltool/common.dart' show BuildMode;
 
 enum Bitness { b32, b64 }
 
-enum FPiHostPlatform {
+enum FlutterpiHostPlatform {
   darwinX64.b64('darwin-x64', 'macOS-X64'),
   darwinARM64.b64('darwin-arm64', 'macOS-ARM64'),
   linuxX64.b64('linux-x64', 'Linux-X64'),
@@ -13,8 +13,8 @@ enum FPiHostPlatform {
   windowsX64.b64('windows-x64', 'Windows-X64'),
   windowsARM64.b64('windows-arm64', 'Windows-ARM64');
 
-  const FPiHostPlatform.b32(this.name, this.githubName) : bitness = Bitness.b32;
-  const FPiHostPlatform.b64(this.name, this.githubName) : bitness = Bitness.b64;
+  const FlutterpiHostPlatform.b32(this.name, this.githubName) : bitness = Bitness.b32;
+  const FlutterpiHostPlatform.b64(this.name, this.githubName) : bitness = Bitness.b64;
 
   final String name;
   final String githubName;

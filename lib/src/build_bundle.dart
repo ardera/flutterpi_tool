@@ -13,11 +13,11 @@ import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
 
-import 'platform.dart';
+import 'more_os_utils.dart';
 import 'common.dart';
 
 Future<void> buildFlutterpiBundle({
-  required FPiHostPlatform host,
+  required FlutterpiHostPlatform host,
   required FlutterpiTargetPlatform target,
   required BuildInfo buildInfo,
   required FlutterpiArtifactPaths artifactPaths,
@@ -162,7 +162,7 @@ Future<T> runWithContext<T>({
     overrides: {
       TemplateRenderer: () => const MustacheTemplateRenderer(),
       Cache: cacheFactory,
-      OperatingSystemUtils: () => FPiOperatingSystemUtils(
+      OperatingSystemUtils: () => MoreOperatingSystemUtils(
             fileSystem: globals.fs,
             logger: globals.logger,
             platform: globals.platform,
@@ -263,7 +263,7 @@ abstract class FlutterpiCommand extends FlutterCommand {
     required ShutdownHooks shutdownHooks,
     required Logger logger,
     required Platform platform,
-    required OperatingSystemUtils os,
+    required MoreOperatingSystemUtils os,
     required FlutterProjectFactory projectFactory,
   }) {
     final repo = stringArg('github-artifacts-repo');
@@ -453,7 +453,7 @@ class BuildCommand extends FlutterpiCommand {
         shutdownHooks: globals.shutdownHooks,
         logger: globals.logger,
         platform: globals.platform,
-        os: globals.os as FPiOperatingSystemUtils,
+        os: globals.os as MoreOperatingSystemUtils,
         projectFactory: globals.projectFactory,
       ),
       runner: () async {
@@ -464,15 +464,15 @@ class BuildCommand extends FlutterpiCommand {
           final buildInfo = await getBuildInfo();
 
           final os = switch (globals.os) {
-            FPiOperatingSystemUtils os => os,
+            MoreOperatingSystemUtils os => os,
             _ => throw StateError('Operating system utils is not an FPiOperatingSystemUtils'),
           };
 
           // for windows arm64, darwin arm64, we just use the x64 variant
           final host = switch (os.fpiHostPlatform) {
-            FPiHostPlatform.windowsARM64 => FPiHostPlatform.windowsX64,
-            FPiHostPlatform.darwinARM64 => FPiHostPlatform.darwinX64,
-            FPiHostPlatform other => other
+            FlutterpiHostPlatform.windowsARM64 => FlutterpiHostPlatform.windowsX64,
+            FlutterpiHostPlatform.darwinARM64 => FlutterpiHostPlatform.darwinX64,
+            FlutterpiHostPlatform other => other
           };
 
           var targetPlatform = getTargetPlatform();
@@ -556,20 +556,20 @@ class PrecacheCommand extends FlutterpiCommand {
         shutdownHooks: globals.shutdownHooks,
         logger: globals.logger,
         platform: globals.platform,
-        os: globals.os as FPiOperatingSystemUtils,
+        os: globals.os as MoreOperatingSystemUtils,
         projectFactory: globals.projectFactory,
       ),
       runner: () async {
         try {
           final os = switch (globals.os) {
-            FPiOperatingSystemUtils os => os,
+            MoreOperatingSystemUtils os => os,
             _ => throw StateError('Operating system utils is not an FPiOperatingSystemUtils'),
           };
 
           final host = switch (os.fpiHostPlatform) {
-            FPiHostPlatform.windowsARM64 => FPiHostPlatform.windowsX64,
-            FPiHostPlatform.darwinARM64 => FPiHostPlatform.darwinX64,
-            FPiHostPlatform other => other
+            FlutterpiHostPlatform.windowsARM64 => FlutterpiHostPlatform.windowsX64,
+            FlutterpiHostPlatform.darwinARM64 => FlutterpiHostPlatform.darwinX64,
+            FlutterpiHostPlatform other => other
           };
 
           // update the cached flutter-pi artifacts

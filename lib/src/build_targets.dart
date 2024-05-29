@@ -10,7 +10,7 @@ import 'package:flutterpi_tool/src/fltool/common.dart';
 class ReleaseBundleFlutterpiAssets extends CompositeTarget {
   ReleaseBundleFlutterpiAssets({
     required this.flutterpiTargetPlatform,
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     required FlutterpiArtifactPaths artifactPaths,
     bool debugSymbols = false,
   }) : super([
@@ -33,7 +33,7 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
 class ProfileBundleFlutterpiAssets extends CompositeTarget {
   ProfileBundleFlutterpiAssets({
     required this.flutterpiTargetPlatform,
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     required FlutterpiArtifactPaths artifactPaths,
     bool debugSymbols = false,
   }) : super([
@@ -58,7 +58,7 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
 class DebugBundleFlutterpiAssets extends CompositeTarget {
   DebugBundleFlutterpiAssets({
     required this.flutterpiTargetPlatform,
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     bool unoptimized = false,
     bool debugSymbols = false,
     required FlutterpiArtifactPaths artifactPaths,
@@ -112,7 +112,7 @@ class CopyFlutterpiEngine extends Target {
   const CopyFlutterpiEngine(
     this.flutterpiTargetPlatform, {
     required BuildMode buildMode,
-    required FPiHostPlatform hostPlatform,
+    required FlutterpiHostPlatform hostPlatform,
     bool unoptimized = false,
     this.includeDebugSymbols = false,
     required FlutterpiArtifactPaths artifactPaths,
@@ -123,7 +123,7 @@ class CopyFlutterpiEngine extends Target {
 
   final FlutterpiTargetPlatform flutterpiTargetPlatform;
   final BuildMode _buildMode;
-  final FPiHostPlatform _hostPlatform;
+  final FlutterpiHostPlatform _hostPlatform;
   final bool _unoptimized;
   final FlutterpiArtifactPaths _artifactPaths;
   final bool includeDebugSymbols;
