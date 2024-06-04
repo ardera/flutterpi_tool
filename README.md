@@ -1,6 +1,22 @@
 # flutterpi_tool
 A tool to make developing &amp; distributing flutter apps for https://github.com/ardera/flutter-pi easier.
 
+## Setup
+Setting up is as simple as:
+```shell
+flutter pub global activate flutterpi_tool
+```
+
+`flutterpi_tool` is pretty deeply integrated with the official flutter tool, so it's very well possible you encounter errors during this step when using incompatible versions.
+
+If that happens, and `flutter pub global activate` exits with an error, make sure you're on the latest stable flutter SDK. If you're on an older flutter SDK, you might want to add an explicit dependency constraint to use an older version of flutterpi_tool. E.g. for flutter 3.19 you would use flutterpi_tool 0.3.x:
+
+```shell
+flutter pub global activate flutterpi_tool ^0.3.0
+```
+
+If you are already using the latest stable flutter SDK, and the command still doesn't work, please open an issue!
+
 ## Usage
 ```
 $ flutterpi_tool --help
