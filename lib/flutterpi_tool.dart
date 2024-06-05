@@ -1,1 +1,1 @@
-export 'src/build_bundle.dart' show main;
+export 'src/executable.dart' show main;

@@ -1,20 +1,20 @@
 // ignore_for_file: avoid_print, implementation_imports
 
 import 'dart:async';
-import 'dart:io' as io;
 
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/build_targets.dart';
 import 'package:flutterpi_tool/src/cache.dart';
+import 'package:flutterpi_tool/src/commands/command_runner.dart';
+import 'package:flutterpi_tool/src/executable.dart';
 import 'package:github/github.dart' as gh;
 import 'package:unified_analytics/unified_analytics.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
-import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
 
-import 'more_os_utils.dart';
-import 'common.dart';
+import '../more_os_utils.dart';
+import '../common.dart';
 
 Future<void> buildFlutterpiBundle({
   required FlutterpiHostPlatform host,
@@ -151,73 +151,6 @@ Future<void> buildFlutterpiBundle({
   return;
 }
 
-Future<T> runWithContext<T>({
-  required FutureOr<T> Function() runner,
-  FlutterpiTargetPlatform? target,
-  required FlutterpiCache Function() cacheFactory,
-  bool verbose = false,
-}) async {
-  return fltool.runInContext(
-    runner,
-    overrides: {
-      TemplateRenderer: () => const MustacheTemplateRenderer(),
-      Cache: cacheFactory,
-      OperatingSystemUtils: () => MoreOperatingSystemUtils(
-            fileSystem: globals.fs,
-            logger: globals.logger,
-            platform: globals.platform,
-            processManager: globals.processManager,
-          ),
-      Logger: () {
-        final factory = LoggerFactory(
-          outputPreferences: globals.outputPreferences,
-          terminal: globals.terminal,
-          stdio: globals.stdio,
-        );
-
-        return factory.createLogger(
-          daemon: false,
-          machine: false,
-          verbose: verbose,
-          prefixedErrors: false,
-          windows: globals.platform.isWindows,
-        );
-      },
-      Artifacts: () => CachedArtifacts(
-            fileSystem: globals.fs,
-            platform: globals.platform,
-            cache: globals.cache,
-            operatingSystemUtils: globals.os,
-          ),
-      Usage: () => DisabledUsage()
-    },
-  );
-}
-
-Future<void> exitWithHooks(
-  int code, {
-  required ShutdownHooks shutdownHooks,
-  required Logger logger,
-}) async {
-  // Run shutdown hooks before flushing logs
-  await shutdownHooks.runShutdownHooks(logger);
-
-  final completer = Completer<void>();
-
-  // Give the task / timer queue one cycle through before we hard exit.
-  Timer.run(() {
-    try {
-      logger.printTrace('exiting with code $code');
-      io.exit(code);
-    } catch (error, stackTrace) {
-      // ignore: avoid_catches_without_on_clauses
-      completer.completeError(error, stackTrace);
-    }
-  });
-
-  return completer.future;
-}
-
 abstract class FlutterpiCommand extends FlutterCommand {
   void usesCustomCacheOption({bool verboseHelp = false}) {
     argParser.addOption(
@@ -296,6 +229,14 @@ abstract class FlutterpiCommand extends FlutterCommand {
         auth: token != null ? gh.Authentication.bearerToken(token) : null,
       );
     }
+  }
+
+  Future<FlutterCommandResult> runInContext() {
+
+  }
+
+  Future<void> run() {
+    
   }
 
   @override
@@ -599,72 +540,5 @@ class PrecacheCommand extends FlutterpiCommand {
     );
 
     return 0;
-  }
-}
-
-class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterCommandRunner {
-  FlutterpiToolCommandRunner({bool verboseHelp = false})
-      : super(
-          'flutterpi_tool',
-          'A tool to make development & distribution of flutter-pi apps easier.',
-          usageLineLength: 120,
-        ) {
-    argParser.addOption(
-      FlutterGlobalOptions.kPackagesOption,
-      hide: true,
-      help: 'Path to your "package_config.json" file.',
-    );
-  }
-
-  @override
-  String get usageFooter => '';
-
-  @override
-  List<Directory> getRepoPackages() {
-    throw UnimplementedError();
-  }
-
-  @override
-  List<String> getRepoRoots() {
-    throw UnimplementedError();
-  }
-
-  @override
-  void addCommand(Command<void> command) {
-    if (command.name != 'help' && command is! FlutterpiCommand) {
-      throw ArgumentError('Command is not a FlutterCommand: $command');
-    }
-
-    super.addCommand(command);
-  }
-}
-
-Future<void> main(List<String> args) async {
-  final verbose = args.contains('-v') || args.contains('--verbose') || args.contains('-vv');
-  final powershellHelpIndex = args.indexOf('-?');
-  if (powershellHelpIndex != -1) {
-    args[powershellHelpIndex] = '-h';
-  }
-
-  final help = args.contains('-h') ||
-      args.contains('--help') ||
-      (args.isNotEmpty && args.first == 'help') ||
-      (args.length == 1 && verbose);
-  final verboseHelp = help && verbose;
-
-  final runner = FlutterpiToolCommandRunner(verboseHelp: verboseHelp);
-
-  runner.addCommand(BuildCommand(verboseHelp: verboseHelp));
-  runner.addCommand(PrecacheCommand(verboseHelp: verboseHelp));
-
-  runner.argParser
-    ..addSeparator('Other options')
-    ..addFlag('verbose', negatable: false, help: 'Enable verbose logging.');
-
-  try {
-    await runner.run(args);
-  } on UsageException catch (e) {
-    print(e);
-    io.exit(1);
   }
 }

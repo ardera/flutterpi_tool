@@ -3,7 +3,7 @@ export 'package:flutter_tools/src/artifacts.dart';
 export 'package:flutter_tools/src/base/common.dart';
 export 'package:flutter_tools/src/base/logger.dart';
 export 'package:flutter_tools/src/base/os.dart';
-export 'package:flutter_tools/src/base/process.dart';
+export 'package:flutter_tools/src/base/process.dart' hide exitWithHooks;
 export 'package:flutter_tools/src/base/template.dart';
 export 'package:flutter_tools/src/build_info.dart';
 export 'package:flutter_tools/src/build_system/build_system.dart';
