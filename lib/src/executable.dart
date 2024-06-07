@@ -3,14 +3,12 @@
 import 'dart:async';
 import 'dart:io' as io;
 import 'package:args/command_runner.dart';
-import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/commands/build_bundle.dart';
 import 'package:flutterpi_tool/src/commands/command_runner.dart';
-import 'package:flutterpi_tool/src/common.dart';
+import 'package:flutterpi_tool/src/commands/devices.dart';
+import 'package:flutterpi_tool/src/commands/precache.dart';
+import 'package:flutterpi_tool/src/commands/run.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
-import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
-import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
-import 'package:flutterpi_tool/src/more_os_utils.dart';
 
 Future<void> main(List<String> args) async {
   final verbose = args.contains('-v') || args.contains('--verbose') || args.contains('-vv');
@@ -29,6 +27,8 @@ Future<void> main(List<String> args) async {
 
   runner.addCommand(BuildCommand(verboseHelp: verboseHelp));
   runner.addCommand(PrecacheCommand(verboseHelp: verboseHelp));
+  runner.addCommand(DevicesCommand(verboseHelp: verboseHelp));
+  runner.addCommand(RunCommand());
 
   runner.argParser
     ..addSeparator('Other options')
@@ -40,49 +40,6 @@ Future<void> main(List<String> args) async {
     print(e);
     io.exit(1);
   }
-}
-
-Future<T> runWithContext<T>({
-  required FutureOr<T> Function() runner,
-  FlutterpiTargetPlatform? target,
-  required FlutterpiCache Function() cacheFactory,
-  bool verbose = false,
-}) async {
-  return fltool.runInContext(
-    runner,
-    overrides: {
-      TemplateRenderer: () => const MustacheTemplateRenderer(),
-      Cache: cacheFactory,
-      OperatingSystemUtils: () => MoreOperatingSystemUtils(
-            fileSystem: globals.fs,
-            logger: globals.logger,
-            platform: globals.platform,
-            processManager: globals.processManager,
-          ),
-      Logger: () {
-        final factory = LoggerFactory(
-          outputPreferences: globals.outputPreferences,
-          terminal: globals.terminal,
-          stdio: globals.stdio,
-        );
-
-        return factory.createLogger(
-          daemon: false,
-          machine: false,
-          verbose: verbose,
-          prefixedErrors: false,
-          windows: globals.platform.isWindows,
-        );
-      },
-      Artifacts: () => CachedArtifacts(
-            fileSystem: globals.fs,
-            platform: globals.platform,
-            cache: globals.cache,
-            operatingSystemUtils: globals.os,
-          ),
-      Usage: () => DisabledUsage()
-    },
-  );
 }
 
 Future<void> exitWithHooks(

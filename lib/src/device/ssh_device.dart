@@ -1,8 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutterpi_tool/src/cache.dart';
+import 'package:flutterpi_tool/src/commands/build_bundle.dart';
+import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
-import 'package:meta/meta.dart';
+// import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
+import 'package:flutterpi_tool/src/more_os_utils.dart';
+import 'package:path/path.dart' as path;
 
 class SshException implements Exception {
   SshException(this.message);
@@ -17,39 +23,80 @@ class SshUtils {
   SshUtils({
     required this.processUtils,
     this.sshExecutable = 'ssh',
+    this.scpExecutable = 'scp',
     required this.defaultRemote,
   });
 
   final String sshExecutable;
+  final String scpExecutable;
   final String defaultRemote;
   final ProcessUtils processUtils;
 
-  @protected
-  List<String> getDefaultArgs() {
-    return ['-o', 'BatchMode=yes'];
+  static const defaultArgs = ['-o', 'BatchMode=yes'];
+
+  List<String> buildSshCommand({
+    Iterable<String> baseArgs = defaultArgs,
+    bool? allocateTTY,
+    bool? exitOnForwardFailure,
+    Iterable<int> remotePortForwards = const [],
+    Iterable<int> localPortForwards = const [],
+    String? remote,
+    String? command,
+  }) {
+    remote ??= defaultRemote;
+
+    return <String>[
+      sshExecutable,
+      ...baseArgs,
+      if (allocateTTY == true) '-tt',
+      if (exitOnForwardFailure == true) ...[
+        '-o',
+        'ExitOnForwardFailure=yes'
+      ] else if (exitOnForwardFailure == false) ...[
+        '-o',
+        'ExitOnForwardFailure=no'
+      ],
+      for (final port in localPortForwards) ...[
+        '-L',
+        '$port:localhost:$port',
+      ],
+      for (final port in remotePortForwards) ...[
+        '-R',
+        '$port:localhost:$port',
+      ],
+      if (command == null) '-T',
+      remote,
+      if (command != null) command,
+    ];
   }
 
   Future<RunResult> runSsh({
-    required String? remoteCommand,
     String? remote,
-    Iterable<String>? sshArgs,
+    String? command,
+    Iterable<String> baseArgs = defaultArgs,
     bool throwOnError = false,
     String? workingDirectory,
     Map<String, String>? environment,
     Duration? timeout,
     int timeoutRetries = 0,
+    bool? allocateTTY,
+    Iterable<int> localPortForwards = const [],
+    bool? exitOnForwardFailure,
   }) {
-    sshArgs ??= getDefaultArgs();
     remote ??= defaultRemote;
+
+    final cmd = buildSshCommand(
+      baseArgs: baseArgs,
+      allocateTTY: allocateTTY,
+      exitOnForwardFailure: exitOnForwardFailure,
+      localPortForwards: localPortForwards,
+      remote: remote,
+      command: command,
+    );
 
     try {
       return processUtils.run(
-        <String>[
-          sshExecutable,
-          ...sshArgs,
-          remote,
-          if (remoteCommand != null) remoteCommand,
-        ],
+        cmd,
         throwOnError: throwOnError,
         workingDirectory: workingDirectory,
         environment: environment,
@@ -58,36 +105,74 @@ class SshUtils {
       );
     } on ProcessException catch (e) {
       switch (e.errorCode) {
-        case 2:
-        case 74:
-          throw SshException('Connection to host failed.');
-        case 78:
-          throw SshException('Authentication failed.');
+        case 255:
+          throw SshException('SSH to "$remote" failed: $e');
         default:
-          throw SshException('Failed to run ssh: $e');
+          throw SshException('Remote command failed: $e');
       }
     }
   }
 
-  Future<RunResult> runScp({
+  Future<Process> startSsh({
+    String? remote,
+    String? command,
+    Iterable<String> baseArgs = defaultArgs,
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool? allocateTTY,
+    Iterable<int> remotePortForwards = const [],
+    Iterable<int> localPortForwards = const [],
+    bool? exitOnForwardFailure,
+    ProcessStartMode mode = ProcessStartMode.normal,
+  }) {
+    remote ??= defaultRemote;
+
+    final cmd = buildSshCommand(
+      baseArgs: baseArgs,
+      allocateTTY: allocateTTY,
+      exitOnForwardFailure: exitOnForwardFailure,
+      localPortForwards: localPortForwards,
+      remote: remote,
+      command: command,
+    );
+
+    try {
+      return processUtils.start(
+        cmd,
+        workingDirectory: workingDirectory,
+        environment: environment,
+        mode: mode,
+      );
+    } on ProcessException catch (e) {
+      switch (e.errorCode) {
+        case 255:
+          throw SshException('SSH to "$remote" failed: $e');
+        default:
+          throw SshException('Remote command failed: $e');
+      }
+    }
+  }
+
+  Future<RunResult> scp({
     String? remote,
     required String localPath,
     required String remotePath,
-    Iterable<String>? sshArgs,
+    Iterable<String> baseArgs = defaultArgs,
     bool throwOnError = false,
     String? workingDirectory,
     Map<String, String>? environment,
     Duration? timeout,
     int timeoutRetries = 0,
+    bool recursive = true,
   }) {
-    sshArgs ??= getDefaultArgs();
     remote ??= defaultRemote;
 
     try {
       return processUtils.run(
         [
-          sshExecutable,
-          ...sshArgs,
+          scpExecutable,
+          ...baseArgs,
+          if (recursive) '-r',
           localPath,
           '$remote:$remotePath',
         ],
@@ -99,35 +184,12 @@ class SshUtils {
       );
     } on ProcessException catch (e) {
       switch (e.errorCode) {
-        case 2:
-        case 74:
-          throw SshException('Connection to host failed.');
-        case 78:
-          throw SshException('Authentication failed.');
+        case 255:
+          throw SshException('SSH to remote "$remote" failed: $e');
         default:
-          throw SshException('Failed to run ssh: $e');
+          throw SshException('Remote command failed: $e');
       }
     }
-  }
-
-  Future<RunResult> runRemoteCommand(
-    String command, {
-    String? remote,
-    Iterable<String>? sshArgs,
-    bool throwOnError = false,
-    String? workingDirectory,
-    Map<String, String>? environment,
-    Duration? timeout,
-    int timeoutRetries = 0,
-  }) {
-    return runSsh(
-      remoteCommand: command,
-      throwOnError: throwOnError,
-      workingDirectory: workingDirectory,
-      environment: environment,
-      timeout: timeout,
-      timeoutRetries: timeoutRetries,
-    );
   }
 
   Future<bool> tryConnect({
@@ -141,9 +203,9 @@ class SshUtils {
     };
 
     final result = await runSsh(
-      remoteCommand: null,
-      sshArgs: [
-        ...getDefaultArgs(),
+      command: null,
+      baseArgs: [
+        ...defaultArgs,
         '-T',
         if (timeoutSecondsCeiled != null) ...[
           '-o',
@@ -165,9 +227,9 @@ class SshUtils {
     required String remotePath,
     String? remote,
   }) {
-    return runScp(
-      sshArgs: [
-        ...getDefaultArgs(),
+    return scp(
+      baseArgs: [
+        ...defaultArgs,
         '-r',
       ],
       localPath: localPath,
@@ -176,13 +238,179 @@ class SshUtils {
       throwOnError: true,
     );
   }
+
+  Future<String> uname({Iterable<String>? args, Duration? timeout}) async {
+    final command = ['uname', ...?args].join(' ');
+
+    final result = await runSsh(
+      command: command,
+      throwOnError: true,
+      timeout: timeout,
+    );
+
+    return result.stdout.trim();
+  }
+}
+
+abstract class FlutterpiAppBundle extends ApplicationPackage {
+  FlutterpiAppBundle({
+    required super.id,
+    required this.name,
+    required this.displayName,
+  });
+
+  @override
+  final String name;
+
+  @override
+  final String displayName;
+}
+
+class BuildableFlutterpiAppBundle extends FlutterpiAppBundle {
+  BuildableFlutterpiAppBundle({
+    required String id,
+    required String name,
+    required String displayName,
+  }) : super(id: id, name: name, displayName: displayName);
+}
+
+class PrebuiltFlutterpiAppBundle extends FlutterpiAppBundle {
+  PrebuiltFlutterpiAppBundle({
+    required String id,
+    required String name,
+    required String displayName,
+    required this.directory,
+  }) : super(id: id, name: name, displayName: displayName);
+
+  final Directory directory;
+}
+
+class ProcessDeviceLogReader extends DeviceLogReader {
+  ProcessDeviceLogReader(this.name);
+
+  /// The name of the device this log reader is associated with.
+  @override
+  final String name;
+
+  final _controller = StreamController<String>.broadcast();
+  final _subscriptions = <StreamSubscription<String>>[];
+
+  /// Listen to [process]' stdout and stderr, decode them using [SystemEncoding]
+  /// and add each decoded line to [logLines].
+  ///
+  /// However, [logLines] will not be done when the [process]' stdout and stderr
+  /// streams are done. So [logLines] will still be alive after the process has
+  /// finished.
+  ///
+  /// See [CustomDeviceLogReader.dispose] to end the [logLines] stream.
+  void listenToProcessOutput(
+    Process process, {
+    Encoding encoding = systemEncoding,
+    bool Function(int)? allowedExitCodes,
+    String? executable,
+    List<String>? arguments,
+  }) {
+    allowedExitCodes ??= (exitCode) => exitCode == 0;
+
+    final decodeLines = StreamTransformer<List<int>, String>.fromBind((out) {
+      return out.transform(encoding.decoder).transform(const LineSplitter());
+    });
+
+    _subscriptions.add(
+      process.stdout.transform(decodeLines).listen(_controller.add),
+    );
+
+    _subscriptions.add(
+      process.stderr.transform(decodeLines).listen(_controller.add),
+    );
+
+    process.exitCode.then((exitCode) {
+      allowedExitCodes!;
+
+      if (!allowedExitCodes(exitCode)) {
+        _controller.addError(ProcessException(
+          executable ?? '',
+          arguments ?? const [],
+          'Process exited with exit code $exitCode',
+          exitCode,
+        ));
+      }
+    });
+  }
+
+  /// Add all lines emitted by [lines] to this [CustomDeviceLogReader]s [logLines]
+  /// stream.
+  ///
+  /// Similar to [listenToProcessOutput], [logLines] will not be marked as done
+  /// when the argument stream is done.
+  ///
+  /// Useful when you want to combine the contents of multiple log readers.
+  void listenToLinesStream(Stream<String> lines) {
+    _subscriptions.add(lines.listen(_controller.add));
+  }
+
+  /// Dispose this log reader, freeing all associated resources and marking
+  /// [logLines] as done.
+  @override
+  Future<void> dispose() async {
+    final List<Future<void>> futures = <Future<void>>[];
+
+    for (final StreamSubscription<String> subscription in _subscriptions) {
+      futures.add(subscription.cancel());
+    }
+
+    futures.add(_controller.close());
+
+    await Future.wait(futures);
+  }
+
+  @override
+  Stream<String> get logLines => _controller.stream;
+}
+
+class RunningApp {
+  RunningApp({
+    required this.app,
+    required this.sshProcess,
+    required this.logReader,
+  });
+
+  final FlutterpiAppBundle app;
+  final Process sshProcess;
+  final DeviceLogReader logReader;
+
+  Future<bool> stop({Duration timeout = const Duration(seconds: 5)}) async {
+    logReader.dispose();
+
+    sshProcess.kill(ProcessSignal.sigint);
+
+    try {
+      await sshProcess.exitCode.timeout(timeout);
+      return true;
+    } on TimeoutException catch (_) {}
+
+    sshProcess.kill(ProcessSignal.sigterm);
+
+    try {
+      await sshProcess.exitCode.timeout(timeout);
+      return true;
+    } on TimeoutException catch (_) {}
+
+    return false;
+  }
 }
 
 class SshDevice extends Device {
   SshDevice({
     required String id,
+    required this.name,
     required this.sshUtils,
-  }) : super(
+    required String? remoteInstallPath,
+    required this.logger,
+    required this.os,
+    required this.cache,
+  })  : remoteInstallPath = remoteInstallPath ?? '/tmp/',
+        super(
           id,
           category: Category.mobile,
           platformType: PlatformType.custom,
@@ -190,6 +418,35 @@ class SshDevice extends Device {
         );
 
   final SshUtils sshUtils;
+  final String remoteInstallPath;
+  final Logger logger;
+  final FlutterpiCache cache;
+  final MoreOperatingSystemUtils os;
+
+  final runningApps = <String, RunningApp>{};
+  final globalLogReader = ProcessDeviceLogReader('FlutterPi');
+
+  String _getRemoteInstallPath(FlutterpiAppBundle bundle) {
+    return path.posix.join(remoteInstallPath, bundle.id);
+  }
+
+  Future<FlutterpiTargetPlatform> _getFlutterpiTargetPlatform() async {
+    try {
+      final result = await sshUtils.uname(args: ['-m']);
+      switch (result) {
+        case 'armv7l':
+          return FlutterpiTargetPlatform.genericArmV7;
+        case 'aarch64':
+          return FlutterpiTargetPlatform.genericAArch64;
+        case 'x86_64':
+          return FlutterpiTargetPlatform.genericX64;
+        default:
+          throwToolExit('SSH device "$id" has unknown target platform. `uname -m`: $result');
+      }
+    } on SshException catch (e) {
+      throwToolExit('Error querying ssh device "$id" target platform: $e');
+    }
+  }
 
   @override
   Category? get category => Category.mobile;
@@ -201,9 +458,9 @@ class SshDevice extends Device {
   DeviceConnectionInterface get connectionInterface => DeviceConnectionInterface.wireless;
 
   @override
-  Future<void> dispose() {
-    // TODO: implement dispose
-    throw UnimplementedError();
+  Future<void> dispose() async {
+    await stopApp(null);
+    globalLogReader.dispose();
   }
 
   @override
@@ -214,55 +471,59 @@ class SshDevice extends Device {
 
   @override
   FutureOr<DeviceLogReader> getLogReader({ApplicationPackage? app, bool includePastLogs = false}) {
-    // TODO: implement getLogReader
-    throw UnimplementedError();
+    return ProcessDeviceLogReader(app?.name ?? name);
   }
 
   @override
-  String get id => 'ssh';
+  Future<bool> installApp(covariant FlutterpiAppBundle app, {String? userIdentifier}) async {
+    final installDir = _getRemoteInstallPath(app);
 
-  @override
-  Future<bool> installApp(ApplicationPackage app, {String? userIdentifier}) {
-    // TODO: implement
-    throw UnimplementedError();
+    if (app is! PrebuiltFlutterpiAppBundle) {
+      throwToolExit('Cannot install unbuilt app bundle "${app.id}".');
+    }
+
+    await uninstallApp(app);
+
+    try {
+      await sshUtils.scp(localPath: app.directory.path, remotePath: installDir, throwOnError: true);
+    } on SshException catch (e) {
+      throwToolExit('Error installing app on SSH device "$id": $e');
+    }
+
+    logger.printTrace('Installed app bundle "${app.directory.path}" on SSH device "$id".');
+    return true;
   }
 
   @override
-  Future<bool> isAppInstalled(ApplicationPackage app, {String? userIdentifier}) {
-    // TODO: implement isAppInstalled
-    throw UnimplementedError();
+  Future<bool> isAppInstalled(covariant FlutterpiAppBundle app, {String? userIdentifier}) async {
+    return false;
   }
 
   @override
-  bool get isConnected => throw UnimplementedError();
+  bool get isConnected => true;
 
   @override
-  Future<bool> isLatestBuildInstalled(ApplicationPackage app) {
-    // TODO: implement isLatestBuildInstalled
-    throw UnimplementedError();
+  Future<bool> isLatestBuildInstalled(covariant FlutterpiAppBundle app) async {
+    return false;
   }
 
   @override
-  // TODO: implement isLocalEmulator
-  Future<bool> get isLocalEmulator => throw UnimplementedError();
+  Future<bool> get isLocalEmulator async => false;
 
   @override
-  bool isSupported() {
-    // TODO: implement isSupported
-    throw UnimplementedError();
-  }
+  bool isSupported() => true;
 
   @override
   bool isSupportedForProject(FlutterProject flutterProject) {
     // TODO: implement isSupportedForProject
-    throw UnimplementedError();
+    return true;
   }
 
   @override
   bool get isWirelesslyConnected => true;
 
   @override
-  String get name => 'ssh-name';
+  final String name;
 
   @override
   PlatformType? get platformType => PlatformType.custom;
@@ -271,74 +532,178 @@ class SshDevice extends Device {
   DevicePortForwarder? get portForwarder => throw UnimplementedError();
 
   @override
-  Future<MemoryInfo> queryMemoryInfo() {
-    // TODO: implement queryMemoryInfo
-    throw UnimplementedError();
+  Future<MemoryInfo> queryMemoryInfo() async {
+    return MemoryInfo.empty();
   }
 
   @override
-  Future<String> get sdkNameAndVersion => throw UnimplementedError();
+  Future<String> get sdkNameAndVersion async => 'Linux';
+
+  Future<FlutterpiAppBundle> _buildApp({
+    required String id,
+    String? mainPath,
+    required DebuggingOptions debuggingOptions,
+  }) async {
+    return await buildFlutterpiApp(
+      id: id,
+      host: os.fpiHostPlatform,
+      target: await _getFlutterpiTargetPlatform(),
+      buildInfo: debuggingOptions.buildInfo,
+      artifactPaths: cache.artifactPaths,
+      mainPath: mainPath,
+    );
+  }
 
   @override
   Future<LaunchResult> startApp(
-    covariant ApplicationPackage? package, {
+    covariant FlutterpiAppBundle? package, {
     String? mainPath,
     String? route,
     required DebuggingOptions debuggingOptions,
-    Map<String, Object?> platformArgs,
+    Map<String, Object?> platformArgs = const {},
     bool prebuiltApplication = false,
     bool ipv6 = false,
     String? userIdentifier,
-  }) {
-    // TODO: implement startApp
-    throw UnimplementedError();
+  }) async {
+    final prebuiltApp = switch (package) {
+      PrebuiltFlutterpiAppBundle prebuilt => prebuilt,
+      BuildableFlutterpiAppBundle buildable => await _buildApp(
+          id: buildable.id,
+          mainPath: mainPath,
+          debuggingOptions: debuggingOptions,
+        ),
+      dynamic _ => throwToolExit('Cannot start app on SSH device "$id" without an app bundle.'),
+    };
+
+    await installApp(prebuiltApp, userIdentifier: userIdentifier);
+
+    final remoteInstallPath = _getRemoteInstallPath(prebuiltApp);
+
+    final flutterpiExePath = path.posix.join(remoteInstallPath, 'flutter-pi');
+
+    final runtimeModeArg = switch (debuggingOptions.buildInfo.mode) {
+      BuildMode.debug => null,
+      BuildMode.profile => '--profile',
+      BuildMode.release => '--release',
+      dynamic other => throwToolExit('Unsupported runtime mode: $other')
+    };
+
+    final port = await os.findFreePort();
+
+    final command = [
+      flutterpiExePath,
+      if (runtimeModeArg != null) runtimeModeArg,
+      remoteInstallPath,
+      '--vm-service-port=$port'
+    ];
+
+    final sshProcess = await sshUtils.startSsh(
+      command: command.join(' '),
+      allocateTTY: true,
+      localPortForwards: [port],
+      exitOnForwardFailure: true,
+    );
+
+    final logReader = CustomDeviceLogReader(prebuiltApp.name);
+    globalLogReader.listenToLinesStream(logReader.logLines);
+    logReader.listenToProcessOutput(sshProcess);
+
+    final runningApp = RunningApp(
+      app: prebuiltApp,
+      sshProcess: sshProcess,
+      logReader: logReader,
+    );
+
+    final discovery = ProtocolDiscovery.vmService(
+      logReader,
+      portForwarder: NoOpDevicePortForwarder(),
+      logger: logger,
+      hostPort: port,
+      devicePort: port,
+      ipv6: false,
+    );
+
+    final uriCompleter = Completer<Uri>();
+
+    sshProcess.exitCode.then((exitCode) {
+      if (!uriCompleter.isCompleted) {
+        if (exitCode != 0) {
+          uriCompleter.completeError(ProcessException(
+            flutterpiExePath,
+            command.skip(1).toList(),
+            'Process exited abnormally with code $exitCode',
+            exitCode,
+          ));
+        } else {
+          uriCompleter.completeError(Exception('Process exited without providing a VM service URI.'));
+        }
+      }
+    });
+
+    discovery.uri.then(uriCompleter.complete);
+
+    try {
+      final uri = await uriCompleter.future;
+
+      runningApps[prebuiltApp.id] = runningApp;
+      return LaunchResult.succeeded(vmServiceUri: uri);
+    } on Exception catch (e) {
+      logger.printError(e.toString());
+    }
+
+    return LaunchResult.failed();
   }
 
   @override
-  Future<bool> stopApp(ApplicationPackage? app, {String? userIdentifier}) {
-    // TODO: implement stopApp
-    throw UnimplementedError();
+  Future<bool> stopApp(covariant FlutterpiAppBundle? app, {String? userIdentifier}) async {
+    if (app == null) {
+      final apps = runningApps.values.toList();
+      runningApps.clear();
+
+      final results = await Future.wait(apps.map((app) => app.stop()));
+      return results.any((result) => !result);
+    } else {
+      final runningApp = runningApps.remove(app.id);
+      if (runningApp == null) {
+        logger.printTrace('Attempted to kill non-running app "${app.id}" on SSH device "$id".');
+        return false;
+      }
+
+      return await runningApp.stop();
+    }
   }
 
   @override
-  String supportMessage() {
-    // TODO: implement supportMessage
-    throw UnimplementedError();
-  }
+  bool get supportsFastStart => false;
 
   @override
-  bool get supportsFastStart => throw UnimplementedError();
+  bool get supportsFlavors => false;
 
   @override
-  bool get supportsFlavors => throw UnimplementedError();
+  bool get supportsFlutterExit => false;
 
   @override
-  bool get supportsFlutterExit => throw UnimplementedError();
+  Future<bool> get supportsHardwareRendering async => true;
 
   @override
-  Future<bool> get supportsHardwareRendering => throw UnimplementedError();
+  bool get supportsHotReload => true;
 
   @override
-  bool get supportsHotReload => throw UnimplementedError();
-
-  @override
-  bool get supportsHotRestart => throw UnimplementedError();
+  bool get supportsHotRestart => true;
 
   @override
   FutureOr<bool> supportsRuntimeMode(BuildMode buildMode) {
-    // TODO: implement supportsRuntimeMode
-    throw UnimplementedError();
+    return buildMode != BuildMode.jitRelease;
   }
 
   @override
-  bool get supportsScreenshot => throw UnimplementedError();
+  bool get supportsScreenshot => false;
 
   @override
-  bool get supportsStartPaused => throw UnimplementedError();
+  bool get supportsStartPaused => false;
 
   @override
   Future<void> takeScreenshot(File outputFile) {
-    // TODO: implement takeScreenshot
     throw UnimplementedError();
   }
 
@@ -346,8 +711,17 @@ class SshDevice extends Device {
   Future<TargetPlatform> get targetPlatform async => TargetPlatform.linux_arm64;
 
   @override
-  Future<bool> uninstallApp(ApplicationPackage app, {String? userIdentifier}) {
-    // TODO: implement uninstallApp
-    throw UnimplementedError();
+  Future<bool> uninstallApp(covariant FlutterpiAppBundle app, {String? userIdentifier}) async {
+    final path = _getRemoteInstallPath(app);
+
+    try {
+      await sshUtils.runSsh(command: 'rm -rf "$path"', throwOnError: true);
+    } on SshException catch (e) {
+      logger.printError('Error uninstalling app on SSH device "$id": $e');
+      return false;
+    }
+
+    logger.printTrace('Uninstalled app bundle "${app.id}" from SSH device "$id".');
+    return true;
   }
 }
