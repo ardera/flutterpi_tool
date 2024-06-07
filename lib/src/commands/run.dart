@@ -1,14 +1,5 @@
-import 'package:flutterpi_tool/src/fltool/common.dart';
+// ignore: implementation_imports
+import 'package:flutter_tools/src/commands/run.dart' as fltool;
+import 'package:flutterpi_tool/src/commands/flutterpi_command.dart';
 
-class RunCommand extends FlutterCommand {
-  @override
-  String get description => 'Runs an app on a remote device.';
-
-  @override
-  String get name => 'run';
-
-  @override
-  Future<FlutterCommandResult> runCommand() {
-    throw UnimplementedError();
-  }
-}
+class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {}

@@ -2,7 +2,7 @@
 
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
-import 'package:flutterpi_tool/src/commands/build_bundle.dart';
+import 'package:flutterpi_tool/src/commands/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 
 class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterCommandRunner {
@@ -16,6 +16,12 @@ class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterC
       FlutterGlobalOptions.kPackagesOption,
       hide: true,
       help: 'Path to your "package_config.json" file.',
+    );
+
+    argParser.addOption(
+      FlutterGlobalOptions.kDeviceIdOption,
+      abbr: 'd',
+      help: 'Target device id or name (prefixes allowed).',
     );
   }
 
@@ -34,10 +40,12 @@ class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterC
 
   @override
   void addCommand(Command<void> command) {
-    if (command.name != 'help' && command is! FlutterpiCommand) {
+    if (command.name != 'help' && command is! FlutterpiCommandMixin) {
       throw ArgumentError('Command is not a FlutterCommand: $command');
     }
 
     super.addCommand(command);
   }
 }
+
+abstract class FlutterpiCommand extends FlutterCommand with FlutterpiCommandMixin {}

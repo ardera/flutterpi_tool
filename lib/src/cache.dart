@@ -552,7 +552,7 @@ abstract class FlutterpiCache extends FlutterCache {
     },
     bool includeDebugSymbols = false,
   }) async {
-    ArgumentError.checkNotNull(host, 'host');
+    host ??= osUtils.fpiHostPlatform;
 
     for (final artifact in artifacts) {
       final required = switch (artifact) {
