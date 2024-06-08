@@ -32,9 +32,8 @@ Future<FlutterpiAppBundle> buildFlutterpiApp({
   bool includeDebugSymbols = false,
 }) async {
   final buildDir = getBuildDirectory();
-  final subDirs = 'flutter-pi/$target';
-  final outPath = globals.fs.path.join(buildDir, subDirs);
 
+  final outPath = globals.fs.path.join(buildDir, 'flutter-pi', target.toString());
   final outDir = globals.fs.directory(outPath);
 
   await buildFlutterpiBundle(
@@ -73,7 +72,7 @@ Future<void> buildFlutterpiBundle({
   mainPath ??= defaultMainPath;
   depfilePath ??= defaultDepfilePath;
   buildSystem ??= globals.buildSystem;
-  outDir ??= globals.fs.directory(getBuildDirectory());
+  outDir ??= globals.fs.directory(getAssetBuildDirectory());
 
   artifacts = OverrideGenSnapshotArtifacts.fromArtifactPaths(
     parent: artifacts ?? globals.artifacts!,

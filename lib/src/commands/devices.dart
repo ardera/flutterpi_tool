@@ -1,9 +1,9 @@
 import 'package:args/command_runner.dart';
 import 'package:flutterpi_tool/src/commands/command_runner.dart';
-import 'package:flutterpi_tool/src/device/ssh_device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/flutterpi_config.dart';
+import 'package:flutterpi_tool/src/device/ssh_utils.dart';
 
 mixin DevicesCommandBase on FlutterpiCommand {
   void usesDeviceIdArg({bool mandatory = true}) {}

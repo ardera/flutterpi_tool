@@ -25,29 +25,29 @@ enum FlutterpiHostPlatform {
 }
 
 enum FlutterpiTargetPlatform {
-  genericArmV7.generic32('armv7-generic'),
-  genericAArch64.generic64('aarch64-generic'),
-  genericX64.generic64('x64-generic'),
-  pi3.tuned32('pi3', 'armv7-generic'),
-  pi3_64.tuned64('pi3-64', 'aarch64-generic'),
-  pi4.tuned32('pi4', 'armv7-generic'),
-  pi4_64.tuned64('pi4-64', 'aarch64-generic');
+  genericArmV7.generic32('armv7-generic', 'arm-linux-gnueabihf'),
+  genericAArch64.generic64('aarch64-generic', 'aarch64-linux-gnu'),
+  genericX64.generic64('x64-generic', 'x86_64-linux-gnu'),
+  pi3.tuned32('pi3', 'armv7-generic', 'arm-linux-gnueabihf'),
+  pi3_64.tuned64('pi3-64', 'aarch64-generic', 'aarch64-linux-gnu'),
+  pi4.tuned32('pi4', 'armv7-generic', 'arm-linux-gnueabihf'),
+  pi4_64.tuned64('pi4-64', 'aarch64-generic', 'aarch64-linux-gnu');
 
-  const FlutterpiTargetPlatform.generic64(this.shortName)
+  const FlutterpiTargetPlatform.generic64(this.shortName, this.triple)
       : isGeneric = true,
         _genericVariantStr = null,
         bitness = Bitness.b64;
 
-  const FlutterpiTargetPlatform.generic32(this.shortName)
+  const FlutterpiTargetPlatform.generic32(this.shortName, this.triple)
       : isGeneric = true,
         _genericVariantStr = null,
         bitness = Bitness.b32;
 
-  const FlutterpiTargetPlatform.tuned32(this.shortName, this._genericVariantStr)
+  const FlutterpiTargetPlatform.tuned32(this.shortName, this._genericVariantStr, this.triple)
       : isGeneric = false,
         bitness = Bitness.b32;
 
-  const FlutterpiTargetPlatform.tuned64(this.shortName, this._genericVariantStr)
+  const FlutterpiTargetPlatform.tuned64(this.shortName, this._genericVariantStr, this.triple)
       : isGeneric = false,
         bitness = Bitness.b64;
 
@@ -55,6 +55,8 @@ enum FlutterpiTargetPlatform {
   final String shortName;
   final bool isGeneric;
   final String? _genericVariantStr;
+  final String triple;
+
   FlutterpiTargetPlatform get genericVariant {
     if (_genericVariantStr != null) {
       return values.singleWhere((target) => target.shortName == _genericVariantStr);
