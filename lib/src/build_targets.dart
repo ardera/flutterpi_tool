@@ -21,6 +21,7 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
               hostPlatform: hostPlatform,
               artifactPaths: artifactPaths,
               includeDebugSymbols: debugSymbols),
+          CopyFlutterpiBinary(target: flutterpiTargetPlatform, buildMode: BuildMode.release),
           const FlutterpiAppElf(AotElfRelease(TargetPlatform.linux_arm64)),
         ]);
 
@@ -46,6 +47,7 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
             artifactPaths: artifactPaths,
             includeDebugSymbols: debugSymbols,
           ),
+          CopyFlutterpiBinary(target: flutterpiTargetPlatform, buildMode: BuildMode.profile),
           const FlutterpiAppElf(AotElfProfile(TargetPlatform.linux_arm64)),
         ]);
 
@@ -73,6 +75,7 @@ class DebugBundleFlutterpiAssets extends CompositeTarget {
             artifactPaths: artifactPaths,
             includeDebugSymbols: debugSymbols,
           ),
+          CopyFlutterpiBinary(target: flutterpiTargetPlatform, buildMode: BuildMode.debug),
         ]);
 
   final FlutterpiTargetPlatform flutterpiTargetPlatform;
@@ -106,6 +109,46 @@ class CopyIcudtl extends Target {
     final outputFile = environment.outputDir.childFile('icudtl.dat');
     icudtl.copySync(outputFile.path);
   }
+}
+
+class CopyFlutterpiBinary extends Target {
+  CopyFlutterpiBinary({
+    required this.target,
+    required BuildMode buildMode,
+  }) : flutterpiBuildType = buildMode == BuildMode.debug ? 'debug' : 'release';
+
+  final FlutterpiTargetPlatform target;
+  final String flutterpiBuildType;
+
+  @override
+  Future<void> build(Environment environment) async {
+    final file = environment.cacheDir
+        .childDirectory('artifacts')
+        .childDirectory('flutter-pi')
+        .childDirectory(target.triple)
+        .childDirectory(flutterpiBuildType)
+        .childFile('flutter-pi');
+
+    final outputFile = environment.outputDir.childFile('flutter-pi');
+
+    file.copySync(outputFile.path);
+  }
+
+  @override
+  List<Target> get dependencies => [];
+
+  @override
+  List<Source> get inputs => <Source>[
+        Source.pattern('{CACHE_DIR}/artifacts/flutter-pi/${target.triple}/$flutterpiBuildType/flutter-pi'),
+      ];
+
+  @override
+  String get name => 'copy_flutterpi';
+
+  @override
+  List<Source> get outputs => <Source>[
+        Source.pattern('{OUTPUT_DIR}/flutter-pi'),
+      ];
 }
 
 class CopyFlutterpiEngine extends Target {

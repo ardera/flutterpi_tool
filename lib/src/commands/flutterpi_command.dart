@@ -4,13 +4,13 @@ import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/application_package_factory.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/device/flutterpi_tool_device_manager.dart';
-import 'package:flutterpi_tool/src/device/ssh_device.dart';
 import 'package:flutterpi_tool/src/executable.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/flutterpi_config.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
+import 'package:flutterpi_tool/src/device/ssh_utils.dart';
 import 'package:github/github.dart' as gh;
 
 mixin FlutterpiCommandMixin on FlutterCommand {

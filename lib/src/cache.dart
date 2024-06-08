@@ -89,6 +89,127 @@ class ArtifactDescription {
   }
 }
 
+class FlutterpiBinaries extends ArtifactSet {
+  FlutterpiBinaries({
+    required this.cache,
+    required this.fs,
+    required this.httpClient,
+    required this.logger,
+  }) : super(DevelopmentArtifact.universal);
+
+  final FlutterpiCache cache;
+  final FileSystem fs;
+  final http.Client httpClient;
+  final Logger logger;
+  final gh.RepositorySlug repo = gh.RepositorySlug('ardera', 'flutter-pi');
+  late final gh.GitHub github = gh.GitHub(client: httpClient);
+
+  Future<gh.Release> _getLatestRelease() async {
+    return await github.repositories.getLatestRelease(repo);
+  }
+
+  Future<String> _getLatestVersion() async {
+    final release = await _getLatestRelease();
+    return switch (release.tagName) {
+      String tagName => tagName,
+      null => throw gh.GitHubError(github, 'Failed to find latest release in $repo.'),
+    };
+  }
+
+  @override
+  Future<bool> isUpToDate(FileSystem fileSystem, {bool offline = false}) async {
+    if (!location.existsSync()) {
+      return false;
+    }
+
+    if (!offline) {
+      try {
+        final version = await _getLatestVersion();
+        if (version != cache.getStampFor(stampName)) {
+          return false;
+        }
+      } on gh.GitHubError catch (e) {
+        logger.printError('Failed to check for flutter-pi updates: ${e.message}');
+        return true;
+      }
+    }
+
+    return true;
+  }
+
+  @override
+  Map<String, String> get environment => <String, String>{};
+
+  @override
+  String get name => 'flutter-pi';
+
+  @override
+  String get stampName => 'flutter-pi';
+
+  Directory get location => cache.getArtifactDirectory(name);
+
+  @override
+  Future<void> update(
+    covariant AuthenticatingArtifactUpdater artifactUpdater,
+    Logger logger,
+    FileSystem fileSystem,
+    OperatingSystemUtils operatingSystemUtils, {
+    bool offline = false,
+  }) async {
+    if (offline) {
+      throwToolExit('Cannot download flutter-pi binaries in offline mode.');
+    }
+
+    if (!location.existsSync()) {
+      try {
+        location.createSync(recursive: true);
+      } on FileSystemException catch (err) {
+        logger.printError(err.toString());
+        throwToolExit('Failed to create directory for flutter cache at ${location.path}. '
+            'Flutter may be missing permissions in its cache directory.');
+      }
+    }
+
+    final release = await _getLatestRelease();
+
+    final artifacts = [
+      for (final triple in ['aarch64-linux-gnu', 'arm-linux-gnueabihf', 'x86_64-linux-gnu'])
+        for (final type in ['release', 'debug'])
+          (
+            'flutterpi-$triple-$type.tar.xz',
+            [triple, type],
+          ),
+    ];
+
+    for (final (assetName, subdirs) in artifacts) {
+      final asset = release.findAsset(assetName);
+
+      final url = Uri.parse(switch (asset?.browserDownloadUrl) {
+        String url => url,
+        null =>
+          throwToolExit('Failed to find asset "$assetName" in release "${release.tagName}" of repo ${repo.fullName}.'),
+      });
+
+      final location = this.location.fileSystem.directory(path.joinAll([this.location.path, ...subdirs]));
+
+      artifactUpdater.downloadArchive('Downloading $assetName...', url, location);
+    }
+
+    try {
+      cache.setStampFor(stampName, release.tagName!);
+    } on FileSystemException catch (err) {
+      logger.printWarning(
+        'The new artifact "$name" was downloaded, but Flutter failed to update '
+        'its stamp file, receiving the error "$err". '
+        'Flutter can continue, but the artifact may be re-downloaded on '
+        'subsequent invocations until the problem is resolved.',
+      );
+    }
+
+    artifactUpdater.removeDownloadedFiles();
+  }
+}
+
 abstract class FlutterpiArtifact extends EngineCachedArtifact {
   FlutterpiArtifact(String cacheKey, {required Cache cache}) : super(cacheKey, cache, DevelopmentArtifact.universal);
 
@@ -385,6 +506,13 @@ abstract class FlutterpiCache extends FlutterCache {
       // this will close the inner dart:io http client.
       pkgHttpHttpClient.close();
     });
+
+    registerArtifact(FlutterpiBinaries(
+      cache: this,
+      fs: fileSystem,
+      httpClient: pkgHttpHttpClient,
+      logger: logger,
+    ));
   }
 
   @protected
@@ -492,6 +620,7 @@ abstract class FlutterpiCache extends FlutterCache {
   List<String> get allowedBaseUrls => [
         cipdBaseUrl,
         storageBaseUrl,
+        'https://github.com/ardera/flutter-pi',
       ];
 
   /// This has to be lazy because it requires FLUTTER_ROOT to be initialized.

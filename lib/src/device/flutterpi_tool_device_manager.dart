@@ -1,9 +1,9 @@
 import 'package:flutterpi_tool/src/cache.dart';
-import 'package:flutterpi_tool/src/device/ssh_device.dart';
 import 'package:flutterpi_tool/src/device/ssh_device_discovery.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/flutterpi_config.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
+import 'package:flutterpi_tool/src/device/ssh_utils.dart';
 
 class FlutterpiToolDeviceManager extends DeviceManager {
   FlutterpiToolDeviceManager({
