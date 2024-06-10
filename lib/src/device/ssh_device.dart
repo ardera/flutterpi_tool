@@ -111,7 +111,8 @@ class SshDevice extends Device {
     return path.posix.join(remoteInstallPath, bundle.id);
   }
 
-  Future<FlutterpiTargetPlatform> _getFlutterpiTargetPlatform() async {
+  @visibleForTesting
+  Future<FlutterpiTargetPlatform> getFlutterpiTargetPlatform() async {
     try {
       final result = await sshUtils.uname(args: ['-m']);
       switch (result) {
@@ -128,6 +129,8 @@ class SshDevice extends Device {
       throwToolExit('Error querying ssh device "$id" target platform: $e');
     }
   }
+
+  late final flutterpiTargetPlatform = getFlutterpiTargetPlatform();
 
   @override
   Category? get category => Category.mobile;
@@ -237,8 +240,12 @@ class SshDevice extends Device {
   }) async {
     return await buildFlutterpiApp(
       id: id,
-      host: os.fpiHostPlatform,
-      target: await _getFlutterpiTargetPlatform(),
+      host: switch (os.fpiHostPlatform) {
+        FlutterpiHostPlatform.darwinARM64 => FlutterpiHostPlatform.darwinX64,
+        FlutterpiHostPlatform.windowsARM64 => FlutterpiHostPlatform.windowsX64,
+        FlutterpiHostPlatform other => other,
+      },
+      target: await flutterpiTargetPlatform,
       buildInfo: debuggingOptions.buildInfo,
       artifactPaths: cache.artifactPaths,
       mainPath: mainPath,

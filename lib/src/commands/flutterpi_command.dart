@@ -3,7 +3,9 @@ import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/application_package_factory.dart';
 import 'package:flutterpi_tool/src/cache.dart';
+import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/device/flutterpi_tool_device_manager.dart';
+import 'package:flutterpi_tool/src/device/ssh_device.dart';
 import 'package:flutterpi_tool/src/executable.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
@@ -214,6 +216,137 @@ mixin FlutterpiCommandMixin on FlutterCommand {
         deviceId: stringArg(FlutterGlobalOptions.kDeviceIdOption, global: true),
       ),
     );
+  }
+
+  void usesEngineFlavorOption() {
+    argParser.addFlag(
+      'debug',
+      help: 'Build for debug mode.',
+      negatable: false,
+    );
+
+    argParser.addFlag(
+      'profile',
+      help: 'Build for profile mode.',
+      negatable: false,
+    );
+
+    argParser.addFlag(
+      'release',
+      help: 'Build for release mode.',
+      negatable: false,
+    );
+
+    argParser.addFlag(
+      'debug-unoptimized',
+      help: 'Build for debug mode and use unoptimized engine. (For stepping through engine code)',
+      negatable: false,
+    );
+  }
+
+  void usesDebugSymbolsOption() {
+    argParser.addFlag(
+      'debug-symbols',
+      help: 'Include debug symbols in the output.',
+      negatable: false,
+    );
+  }
+
+  bool getIncludeDebugSymbols() {
+    return boolArg('debug-symbols');
+  }
+
+  EngineFlavor getEngineFlavor() {
+    final debug = boolArg('debug');
+    final profile = boolArg('profile');
+    final release = boolArg('release');
+    final debugUnopt = boolArg('debug-unoptimized');
+
+    final flags = [debug, profile, release, debugUnopt];
+    if (flags.where((flag) => flag).length > 1) {
+      throw UsageException(
+          'Only one of "--debug", "--profile", "--release", '
+              'or "--debug-unoptimized" can be specified.',
+          '');
+    }
+
+    if (debug) {
+      return EngineFlavor.debug;
+    } else if (profile) {
+      return EngineFlavor.profile;
+    } else if (release) {
+      return EngineFlavor.release;
+    } else if (debugUnopt) {
+      return EngineFlavor.debugUnopt;
+    } else {
+      return EngineFlavor.debug;
+    }
+  }
+
+  Future<Set<FlutterpiTargetPlatform>> getDeviceBasedTargetPlatforms() async {
+    final devices = await globals.deviceManager!.getDevices(
+      filter: DeviceDiscoveryFilter(excludeDisconnected: false),
+    );
+    if (devices.isEmpty) {
+      return {};
+    }
+
+    final targetPlatforms = {
+      for (final device in devices.whereType<SshDevice>()) await device.flutterpiTargetPlatform,
+    };
+
+    return targetPlatforms.expand((p) => [p, p.genericVariant]).toSet();
+  }
+
+  Future<void> populateCache({
+    FlutterpiHostPlatform? hostPlatform,
+    Set<FlutterpiTargetPlatform>? targetPlatforms,
+    Set<EngineFlavor>? flavors,
+    Set<BuildMode>? runtimeModes,
+    bool? includeDebugSymbols,
+  }) async {
+    // If there are no devices, use the default configuration.
+    // Otherwise, only add development artifacts corresponding to
+    // potentially connected devices. We might not be able to determine if a
+    // device is connected yet, so include it in case it becomes connected.
+
+    hostPlatform ??= switch ((globals.os as MoreOperatingSystemUtils).fpiHostPlatform) {
+      FlutterpiHostPlatform.darwinARM64 => FlutterpiHostPlatform.darwinX64,
+      FlutterpiHostPlatform.windowsARM64 => FlutterpiHostPlatform.windowsX64,
+      FlutterpiHostPlatform other => other,
+    };
+
+    targetPlatforms ??= await getDeviceBasedTargetPlatforms();
+
+    flavors ??= {getEngineFlavor()};
+
+    runtimeModes ??= {getEngineFlavor().buildMode};
+
+    includeDebugSymbols ??= getIncludeDebugSymbols();
+
+    await globals.flutterpiCache.updateAll(
+      {DevelopmentArtifact.universal},
+      host: hostPlatform,
+      flutterpiPlatforms: targetPlatforms,
+      runtimeModes: runtimeModes,
+      engineFlavors: flavors,
+      includeDebugSymbols: includeDebugSymbols,
+    );
+  }
+
+  @override
+  void addBuildModeFlags({
+    required bool verboseHelp,
+    bool defaultToRelease = true,
+    bool excludeDebug = false,
+    bool excludeRelease = false,
+  }) {
+    throw UnsupportedError('This method is not supported in Flutterpi commands.');
+  }
+
+  @override
+  BuildMode getBuildMode() {
+    return getEngineFlavor().buildMode;
   }
 
   @override
