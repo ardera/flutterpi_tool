@@ -7,6 +7,7 @@ import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:flutterpi_tool/src/device/ssh_utils.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 
 abstract class FlutterpiAppBundle extends ApplicationPackage {
@@ -98,6 +99,7 @@ class SshDevice extends Device {
   final MoreOperatingSystemUtils os;
 
   final runningApps = <String, RunningApp>{};
+  final logReaders = <String, CustomDeviceLogReader>{};
   final globalLogReader = CustomDeviceLogReader('FlutterPi');
 
   String _getRemoteInstallPath(FlutterpiAppBundle bundle) {
@@ -148,12 +150,7 @@ class SshDevice extends Device {
     if (app == null) {
       return globalLogReader;
     } else {
-      final runningApp = runningApps[app.id];
-      if (runningApp == null) {
-        throwToolExit('Attempted to get logs for non-running app "${app.id}" on SSH device "$id".');
-      }
-
-      return runningApp.logReader;
+      return logReaders.putIfAbsent(app.id, () => CustomDeviceLogReader(app.id));
     }
   }
 
@@ -293,7 +290,7 @@ class SshDevice extends Device {
       exitOnForwardFailure: true,
     );
 
-    final logReader = CustomDeviceLogReader(prebuiltApp.name);
+    final logReader = logReaders.putIfAbsent(prebuiltApp.id, () => CustomDeviceLogReader(prebuiltApp.name));
     globalLogReader.listenToLinesStream(logReader.logLines);
     logReader.listenToProcessOutput(sshProcess);
 
