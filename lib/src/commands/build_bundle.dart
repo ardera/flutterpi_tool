@@ -193,22 +193,18 @@ class BuildCommand extends FlutterpiCommand {
   static const cpus = ['generic', 'pi3', 'pi4'];
 
   BuildCommand({bool verboseHelp = false}) {
+    argParser.addSeparator('Runtime mode options (Defaults to debug. At most one can be specified)');
+
+    usesEngineFlavorOption();
+
     argParser
-      ..addSeparator('Runtime mode options (Defaults to debug. At most one can be specified)')
-      ..addFlag('debug', negatable: false, help: 'Build for debug mode.')
-      ..addFlag('profile', negatable: false, help: 'Build for profile mode.')
-      ..addFlag('release', negatable: false, help: 'Build for release mode.')
-      ..addFlag(
-        'debug-unoptimized',
-        negatable: false,
-        help: 'Build for debug mode and use unoptimized engine. (For stepping through engine code)',
-      )
       ..addSeparator('Build options')
       ..addFlag(
         'tree-shake-icons',
         help: 'Tree shake icon fonts so that only glyphs used by the application remain.',
-      )
-      ..addFlag('debug-symbols', help: 'Include flutter engine & app debug symbols.');
+      );
+
+    usesDebugSymbolsOption();
 
     // add --dart-define, --dart-define-from-file options
     usesDartDefineOption();
@@ -258,33 +254,6 @@ class BuildCommand extends FlutterpiCommand {
 
   EngineFlavor get defaultFlavor => EngineFlavor.debug;
 
-  EngineFlavor getEngineFlavor() {
-    final debug = boolArg('debug');
-    final profile = boolArg('profile');
-    final release = boolArg('release');
-    final debugUnopt = boolArg('debug-unoptimized');
-
-    final flags = [debug, profile, release, debugUnopt];
-    if (flags.where((flag) => flag).length > 1) {
-      throw UsageException(
-          'Only one of "--debug", "--profile", "--release", '
-              'or "--debug-unoptimized" can be specified.',
-          '');
-    }
-
-    if (debug) {
-      return EngineFlavor.debug;
-    } else if (profile) {
-      return EngineFlavor.profile;
-    } else if (release) {
-      return EngineFlavor.release;
-    } else if (debugUnopt) {
-      return EngineFlavor.debugUnopt;
-    } else {
-      return defaultFlavor;
-    }
-  }
-
   int exitWithUsage({int exitCode = 1, String? errorMessage, String? usage}) {
     if (errorMessage != null) {
       print(errorMessage);
@@ -296,15 +265,6 @@ class BuildCommand extends FlutterpiCommand {
       printUsage();
     }
     return exitCode;
-  }
-
-  @override
-  BuildMode getBuildMode() {
-    return getEngineFlavor().buildMode;
-  }
-
-  bool getIncludeDebugSymbols() {
-    return boolArg('debug-symbols');
   }
 
   FlutterpiTargetPlatform getTargetPlatform() {
