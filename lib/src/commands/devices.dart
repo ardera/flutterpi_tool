@@ -4,6 +4,7 @@ import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/flutterpi_config.dart';
 import 'package:flutterpi_tool/src/device/ssh_utils.dart';
+import 'package:http/http.dart';
 
 mixin DevicesCommandBase on FlutterpiCommand {
   void usesDeviceIdArg({bool mandatory = true}) {}
@@ -123,6 +124,8 @@ class DevicesAddCommand extends FlutterpiCommand with DevicesCommandBase {
       return FlutterCommandResult.fail();
     }
 
+    final postInstallMessages = <(String, void Function())>[];
+
     if (!force) {
       final ssh = SshUtils(
         processUtils: globals.processUtils,
@@ -139,16 +142,54 @@ class DevicesAddCommand extends FlutterpiCommand with DevicesCommandBase {
         );
         return FlutterCommandResult.fail();
       }
+
+      final hasPermissions = await ssh.remoteUserBelongsToGroups(['video', 'input']);
+      if (!hasPermissions) {
+        final addGroupsCommand = ssh
+            .buildSshCommand(
+              interactive: null,
+              allocateTTY: true,
+              command: r"'sudo usermod -aG video,input $USER'",
+            )
+            .join(' ');
+
+        postInstallMessages.add((
+          'The user needs permission to use display and input devices.',
+          () {
+            globals.printStatus(
+              'To add the necessary permissions, run the following command in your terminal.',
+              indent: 3,
+            );
+            globals.printStatus(
+              'NOTE: This gives any app running as the remote user access to the display and input devices. '
+              'If you\'re running untrusted code, consider the security implications.\n',
+              indent: 3,
+            );
+            globals.printStatus(addGroupsCommand, wrap: false, emphasis: true, indent: 5);
+          }
+        ));
+      }
     }
 
-    globals.flutterPiToolConfig.addDevice(
-      DeviceConfigEntry(
-        id: id,
-        sshExecutable: sshExecutable,
-        sshRemote: sshTarget,
-        remoteInstallPath: remoteInstallPath,
-      ),
-    );
+    globals.flutterPiToolConfig.addDevice(DeviceConfigEntry(
+      id: id,
+      sshExecutable: sshExecutable,
+      sshRemote: sshTarget,
+      remoteInstallPath: remoteInstallPath,
+    ));
+
+    if (postInstallMessages.isNotEmpty) {
+      globals.printWarning(
+        'The device has been added, but additional steps are necessary to be able to run Flutter apps.',
+        color: TerminalColor.yellow,
+      );
+      for (final (index, (title, step)) in postInstallMessages.indexed) {
+        globals.printStatus('${index + 1}. $title');
+        step();
+      }
+    } else {
+      globals.printStatus('Device $id has been added.');
+    }
 
     return FlutterCommandResult.success();
   }

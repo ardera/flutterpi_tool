@@ -65,6 +65,12 @@ class SshUtils {
     ];
   }
 
+  List<String> buildUsermodAddGroupsCommand(Iterable<String> groups) {
+    if (groups.isEmpty) throw ArgumentError.value(groups, 'groups', 'Groups must not be empty.');
+
+    return ['usermod', '-aG', groups.join(','), r'$USER'];
+  }
+
   Future<RunResult> runSsh({
     String? remote,
     String? command,
@@ -241,5 +247,23 @@ class SshUtils {
     );
 
     return result.stdout.trim();
+  }
+
+  Future<String> id({Iterable<String>? args, Duration? timeout}) async {
+    final command = ['id', ...?args].join(' ');
+
+    final result = await runSsh(
+      command: command,
+      throwOnError: true,
+      timeout: timeout,
+    );
+
+    return result.stdout.trim();
+  }
+
+  Future<bool> remoteUserBelongsToGroups(Iterable<String> groups) async {
+    final result = await id(args: ['-nG']);
+    final userGroups = result.split(' ');
+    return groups.every(userGroups.contains);
   }
 }

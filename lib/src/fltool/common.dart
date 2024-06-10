@@ -28,3 +28,4 @@ export 'package:flutter_tools/src/protocol_discovery.dart';
 export 'package:flutter_tools/src/build_system/build_targets.dart';
 export 'package:flutter_tools/src/isolated/build_targets.dart';
 export 'package:flutter_tools/src/flutter_application_package.dart';
+export 'package:flutter_tools/src/base/terminal.dart';
