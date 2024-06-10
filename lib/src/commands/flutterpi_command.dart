@@ -182,6 +182,30 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     );
   }
 
+  void usesDeviceManager() {
+    // The option is added to the arg parser as a global option in
+    // FlutterpiToolCommandRunner.
+
+    addContextOverride<DeviceManager>(
+      () => FlutterpiToolDeviceManager(
+        logger: globals.logger,
+        platform: globals.platform,
+        cache: globals.cache as FlutterpiCache,
+        operatingSystemUtils: globals.os as MoreOperatingSystemUtils,
+        sshUtils: SshUtils(
+          processUtils: globals.processUtils,
+          defaultRemote: '',
+        ),
+        flutterpiToolConfig: FlutterPiToolConfig(
+          fs: globals.fs,
+          logger: globals.logger,
+          platform: globals.platform,
+        ),
+        deviceId: stringArg(FlutterGlobalOptions.kDeviceIdOption, global: true),
+      ),
+    );
+  }
+
   @override
   bool get usingCISystem => false;
 
@@ -222,21 +246,6 @@ mixin FlutterpiCommandMixin on FlutterCommand {
               platform: globals.platform,
             ),
         BuildTargets: () => const BuildTargetsImpl(),
-        DeviceManager: () => FlutterpiToolDeviceManager(
-              logger: globals.logger,
-              platform: globals.platform,
-              cache: globals.cache as FlutterpiCache,
-              operatingSystemUtils: globals.os as MoreOperatingSystemUtils,
-              sshUtils: SshUtils(
-                processUtils: globals.processUtils,
-                defaultRemote: '',
-              ),
-              flutterpiToolConfig: FlutterPiToolConfig(
-                fs: globals.fs,
-                logger: globals.logger,
-                platform: globals.platform,
-              ),
-            ),
         ApplicationPackageFactory: () => FlutterpiApplicationPackageFactory(),
         ..._contextOverrides,
       },

@@ -13,7 +13,8 @@ class FlutterpiToolDeviceManager extends DeviceManager {
     required MoreOperatingSystemUtils operatingSystemUtils,
     required SshUtils sshUtils,
     required FlutterPiToolConfig flutterpiToolConfig,
-  }) : deviceDiscoverers = <DeviceDiscovery>[
+    required String? deviceId,
+  })  : deviceDiscoverers = <DeviceDiscovery>[
           SshDeviceDiscovery(
             sshUtils: sshUtils,
             logger: logger,
@@ -21,8 +22,19 @@ class FlutterpiToolDeviceManager extends DeviceManager {
             os: operatingSystemUtils,
             cache: cache,
           ),
-        ];
+        ],
+        _deviceId = deviceId;
 
   @override
   final List<DeviceDiscovery> deviceDiscoverers;
+
+  final String? _deviceId;
+
+  @override
+  String? get specifiedDeviceId => _deviceId;
+
+  @override
+  set specifiedDeviceId(String? deviceId) {
+    throw UnsupportedError('Attempted to set device ID on FlutterPiToolDeviceManager.');
+  }
 }
