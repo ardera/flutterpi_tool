@@ -29,6 +29,8 @@ class DevicesListCommand extends FlutterpiCommand {
   DevicesListCommand() {
     usesDeviceTimeoutOption();
     usesDeviceConnectionOption();
+
+    usesDeviceManager();
   }
 
   @override
