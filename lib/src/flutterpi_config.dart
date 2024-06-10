@@ -7,12 +7,16 @@ class DeviceConfigEntry {
     required this.sshExecutable,
     required this.sshRemote,
     required this.remoteInstallPath,
+    this.displaySizeMillimeters,
+    this.devicePixelRatio,
   });
 
   final String id;
   final String? sshExecutable;
   final String sshRemote;
   final String? remoteInstallPath;
+  final (int, int)? displaySizeMillimeters;
+  final double? devicePixelRatio;
 
   static DeviceConfigEntry fromMap(Map<String, dynamic> map) {
     return DeviceConfigEntry(
@@ -20,6 +24,11 @@ class DeviceConfigEntry {
       sshExecutable: map['sshExecutable'] as String?,
       sshRemote: map['sshRemote'] as String,
       remoteInstallPath: map['remoteInstallPath'] as String?,
+      displaySizeMillimeters: switch (map['displaySizeMillimeters']) {
+        [num width, num height] => (width.round(), height.round()),
+        _ => null,
+      },
+      devicePixelRatio: (map['devicePixelRatio'] as num?)?.toDouble(),
     );
   }
 
@@ -29,6 +38,8 @@ class DeviceConfigEntry {
       'sshExecutable': sshExecutable,
       'sshRemote': sshRemote,
       'remoteInstallPath': remoteInstallPath,
+      if (displaySizeMillimeters case (final width, final height)) 'displaySizeMillimeters': [width, height],
+      if (devicePixelRatio case int devicePixelRatio) 'devicePixelRatio': devicePixelRatio,
     };
   }
 
@@ -43,11 +54,14 @@ class DeviceConfigEntry {
     return id == otherEntry.id &&
         sshExecutable == otherEntry.sshExecutable &&
         sshRemote == otherEntry.sshRemote &&
-        remoteInstallPath == otherEntry.remoteInstallPath;
+        remoteInstallPath == otherEntry.remoteInstallPath &&
+        displaySizeMillimeters == otherEntry.displaySizeMillimeters &&
+        devicePixelRatio == otherEntry.devicePixelRatio;
   }
 
   @override
-  int get hashCode => Object.hash(id, sshExecutable, sshRemote, remoteInstallPath);
+  int get hashCode =>
+      Object.hash(id, sshExecutable, sshRemote, remoteInstallPath, displaySizeMillimeters, devicePixelRatio);
 }
 
 class FlutterPiToolConfig {

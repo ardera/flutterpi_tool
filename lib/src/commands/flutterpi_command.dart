@@ -70,6 +70,62 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     );
   }
 
+  void usesDeviceIdArg({bool mandatory = true}) {
+    assert(mandatory);
+  }
+
+  void usesDisplaySizeArg() {
+    argParser.addOption(
+      'display-size',
+      help: 'The physical size of the device display in millimeters. This is used to calculate the device pixel ratio.',
+      valueHelp: 'width x height',
+    );
+  }
+
+  (int, int)? get displaySize {
+    final size = stringArg('display-size');
+    if (size == null) {
+      return null;
+    }
+
+    final parts = size.split('x');
+    if (parts.length != 2) {
+      usageException('Invalid --display-size: Expected two dimensions separated by "x".');
+    }
+
+    try {
+      return (int.parse(parts[0].trim()), int.parse(parts[1].trim()));
+    } on FormatException {
+      usageException('Invalid --display-size: Expected both dimensions to be integers.');
+    }
+  }
+
+  double? get pixelRatio {
+    final ratio = stringArg('pixel-ratio');
+    if (ratio == null) {
+      return null;
+    }
+
+    try {
+      return double.parse(ratio);
+    } on FormatException {
+      usageException('Invalid --pixel-ratio: Expected a floating point number.');
+    }
+  }
+
+  String get deviceIdArg {
+    switch (argResults!.rest) {
+      case [String id]:
+        return id;
+      case [String _, ...]:
+        throw UsageException('Too many non-option arguments specified: ${argResults!.rest.skip(1)}', usage);
+      case []:
+        throw UsageException('Expected device id as non-option arg.', usage);
+      default:
+        throw StateError('Unexpected non-option argument list: ${argResults!.rest}');
+    }
+  }
+
   final _contextOverrides = <Type, dynamic Function()>{};
 
   void addContextOverride<T>(dynamic Function() fn) {

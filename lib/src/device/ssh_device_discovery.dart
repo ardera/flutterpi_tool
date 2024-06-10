@@ -42,6 +42,8 @@ class SshDeviceDiscovery extends PollingDeviceDiscovery {
       logger: logger,
       cache: cache,
       os: os,
+      explicitDisplaySizeMillimeters: configEntry.displaySizeMillimeters,
+      explicitDevicePixelRatio: null,
     );
   }
 

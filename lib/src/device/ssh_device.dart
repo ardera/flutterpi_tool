@@ -84,6 +84,8 @@ class SshDevice extends Device {
     required this.logger,
     required this.os,
     required this.cache,
+    this.explicitDevicePixelRatio,
+    this.explicitDisplaySizeMillimeters,
   })  : remoteInstallPath = remoteInstallPath ?? '/tmp/',
         super(
           id,
@@ -101,6 +103,9 @@ class SshDevice extends Device {
   final runningApps = <String, RunningApp>{};
   final logReaders = <String, CustomDeviceLogReader>{};
   final globalLogReader = CustomDeviceLogReader('FlutterPi');
+
+  final double? explicitDevicePixelRatio;
+  final (int, int)? explicitDisplaySizeMillimeters;
 
   String _getRemoteInstallPath(FlutterpiAppBundle bundle) {
     return path.posix.join(remoteInstallPath, bundle.id);
@@ -240,6 +245,32 @@ class SshDevice extends Device {
     );
   }
 
+  @visibleForTesting
+  List<String> buildFlutterpiCommand({
+    required String flutterpiExe,
+    required String bundlePath,
+    required DebuggingOptions debuggingOptions,
+    Iterable<String> engineArgs = const [],
+  }) {
+    final runtimeModeArg = switch (debuggingOptions.buildInfo.mode) {
+      BuildMode.debug => null,
+      BuildMode.profile => '--profile',
+      BuildMode.release => '--release',
+      dynamic other => throw Exception('Unsupported runtime mode: $other')
+    };
+
+    return [
+      flutterpiExe,
+      if (explicitDisplaySizeMillimeters case (final width, final height)) ...[
+        '--dimensions',
+        '$width,$height',
+      ],
+      if (runtimeModeArg != null) runtimeModeArg,
+      bundlePath,
+      ...engineArgs,
+    ];
+  }
+
   @override
   Future<LaunchResult> startApp(
     covariant FlutterpiAppBundle? package, {
@@ -264,24 +295,21 @@ class SshDevice extends Device {
     await installApp(prebuiltApp, userIdentifier: userIdentifier);
 
     final remoteInstallPath = _getRemoteInstallPath(prebuiltApp);
-
     final flutterpiExePath = path.posix.join(remoteInstallPath, 'flutter-pi');
-
-    final runtimeModeArg = switch (debuggingOptions.buildInfo.mode) {
-      BuildMode.debug => null,
-      BuildMode.profile => '--profile',
-      BuildMode.release => '--release',
-      dynamic other => throwToolExit('Unsupported runtime mode: $other')
-    };
 
     final port = await os.findFreePort();
 
-    final command = [
-      flutterpiExePath,
-      if (runtimeModeArg != null) runtimeModeArg,
-      remoteInstallPath,
-      '--vm-service-port=$port'
-    ];
+    final List<String> command;
+    try {
+      command = buildFlutterpiCommand(
+        flutterpiExe: flutterpiExePath,
+        bundlePath: remoteInstallPath,
+        debuggingOptions: debuggingOptions,
+        engineArgs: ['--vm-service-port=$port'],
+      );
+    } on Exception catch (e) {
+      throwToolExit(e.toString());
+    }
 
     final sshProcess = await sshUtils.startSsh(
       command: command.join(' '),
