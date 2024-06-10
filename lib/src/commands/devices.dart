@@ -73,11 +73,10 @@ class DevicesAddCommand extends FlutterpiCommand {
     );
 
     argParser.addOption(
-      'ssh-target',
-      help: 'The SSH target, with or without the username prefix. '
-          'If this is not specified it\'s assumed this is equivalent to the device id. '
-          'Example: root@embedded-board',
-      valueHelp: '[user@]hostname',
+      'id',
+      help: 'The id of the device to be created. If not specified, this is '
+          'the hostname part of the [user@]hostname argument.',
+      valueHelp: 'id',
     );
 
     argParser.addOption(
@@ -99,7 +98,7 @@ class DevicesAddCommand extends FlutterpiCommand {
     );
 
     usesDisplaySizeArg();
-    usesDeviceIdArg();
+    usesSshRemoteNonOptionArg();
   }
 
   @override
@@ -109,15 +108,19 @@ class DevicesAddCommand extends FlutterpiCommand {
   String get name => 'add';
 
   @override
+  String get invocation => 'flutterpi_tool devices add <[user@]hostname>';
+
+  @override
   Future<FlutterCommandResult> runCommand() async {
-    final id = deviceIdArg;
+    final remote = sshRemote;
+
+    final id = stringArg('id') ?? sshHostname;
 
     final type = stringArg('type');
     if (type != 'ssh') {
       throw UsageException('Unsupported device type: $type', usage);
     }
 
-    final sshTarget = stringArg('ssh-target') ?? id;
     final sshExecutable = stringArg('ssh-executable');
     final remoteInstallPath = stringArg('remote-install-path');
     final force = boolArg('force');
@@ -135,7 +138,7 @@ class DevicesAddCommand extends FlutterpiCommand {
       final ssh = SshUtils(
         processUtils: globals.processUtils,
         sshExecutable: sshExecutable ?? 'ssh',
-        defaultRemote: sshTarget,
+        defaultRemote: remote,
       );
 
       final connected = await ssh.tryConnect(timeout: Duration(seconds: 5));
@@ -159,7 +162,7 @@ class DevicesAddCommand extends FlutterpiCommand {
             .join(' ');
 
         postInstallMessages.add((
-          'The user needs permission to use display and input devices.',
+          'The remote user needs permission to use display and input devices.',
           () {
             globals.printStatus(
               'To add the necessary permissions, run the following command in your terminal.',
@@ -179,14 +182,14 @@ class DevicesAddCommand extends FlutterpiCommand {
     globals.flutterPiToolConfig.addDevice(DeviceConfigEntry(
       id: id,
       sshExecutable: sshExecutable,
-      sshRemote: sshTarget,
+      sshRemote: remote,
       remoteInstallPath: remoteInstallPath,
       displaySizeMillimeters: displaySize,
     ));
 
     if (postInstallMessages.isNotEmpty) {
       globals.printWarning(
-        'The device has been added, but additional steps are necessary to be able to run Flutter apps.',
+        'The device "$id" has been added, but additional steps are necessary to be able to run Flutter apps.',
         color: TerminalColor.yellow,
       );
       for (final (index, (title, step)) in postInstallMessages.indexed) {
@@ -203,7 +206,7 @@ class DevicesAddCommand extends FlutterpiCommand {
 
 class DevicesRemoveCommand extends FlutterpiCommand {
   DevicesRemoveCommand() {
-    usesDeviceIdArg();
+    usesSshRemoteNonOptionArg();
   }
 
   @override
@@ -213,13 +216,16 @@ class DevicesRemoveCommand extends FlutterpiCommand {
   String get name => 'remove';
 
   @override
+  List<String> get aliases => ['rm'];
+
+  @override
   Future<FlutterCommandResult> runCommand() async {
-    final id = deviceIdArg;
+    final id = sshHostname;
 
     final flutterpiToolConfig = globals.flutterPiToolConfig;
 
     if (!flutterpiToolConfig.containsDevice(id)) {
-      globals.printError('No flutterpi_tool device with id $id found.');
+      globals.printError('No flutterpi_tool device with id "$id" found.');
       return FlutterCommandResult.fail();
     }
 
