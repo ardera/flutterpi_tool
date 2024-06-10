@@ -70,7 +70,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     );
   }
 
-  void usesDeviceIdArg({bool mandatory = true}) {
+  void usesSshRemoteNonOptionArg({bool mandatory = true}) {
     assert(mandatory);
   }
 
@@ -113,7 +113,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     }
   }
 
-  String get deviceIdArg {
+  String get sshRemote {
     switch (argResults!.rest) {
       case [String id]:
         return id;
@@ -124,6 +124,16 @@ mixin FlutterpiCommandMixin on FlutterCommand {
       default:
         throw StateError('Unexpected non-option argument list: ${argResults!.rest}');
     }
+  }
+
+  String get sshHostname {
+    final remote = sshRemote;
+    return remote.contains('@') ? remote.split('@').last : remote;
+  }
+
+  String? get sshUser {
+    final remote = sshRemote;
+    return remote.contains('@') ? remote.split('@').first : null;
   }
 
   final _contextOverrides = <Type, dynamic Function()>{};
