@@ -46,6 +46,18 @@ class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterC
 
     super.addCommand(command);
   }
+
+  @override
+  Future<void> run(Iterable<String> args) {
+    // This hacky rewriting cmdlines is also done in the upstream flutter tool.
+
+    /// FIXME: This fails when options are specified.
+    if (args.singleOrNull == 'devices') {
+      args = <String>['devices', 'list'];
+    }
+
+    return super.run(args);
+  }
 }
 
 abstract class FlutterpiCommand extends FlutterCommand with FlutterpiCommandMixin {}
