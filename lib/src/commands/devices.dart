@@ -6,23 +6,6 @@ import 'package:flutterpi_tool/src/flutterpi_config.dart';
 import 'package:flutterpi_tool/src/device/ssh_utils.dart';
 import 'package:http/http.dart';
 
-mixin DevicesCommandBase on FlutterpiCommand {
-  void usesDeviceIdArg({bool mandatory = true}) {}
-
-  String getDeviceIdArg() {
-    switch (argResults!.rest) {
-      case [String id]:
-        return id;
-      case [String _, ...]:
-        throw UsageException('Too many non-option arguments specified: ${argResults!.rest.skip(1)}', usage);
-      case []:
-        throw UsageException('Expected device id as non-option arg.', usage);
-      default:
-        throw StateError('Unexpected non-option argument list: ${argResults!.rest}');
-    }
-  }
-}
-
 class DevicesCommand extends FlutterpiCommand {
   DevicesCommand({bool verboseHelp = false}) {
     addSubcommand(DevicesAddCommand());
@@ -37,12 +20,17 @@ class DevicesCommand extends FlutterpiCommand {
   String get name => 'devices';
 
   @override
-  Future<FlutterCommandResult> runCommand() {
+  Future<FlutterCommandResult> runCommand() async {
     throw UnimplementedError();
   }
 }
 
 class DevicesListCommand extends FlutterpiCommand {
+  DevicesListCommand() {
+    usesDeviceTimeoutOption();
+    usesDeviceConnectionOption();
+  }
+
   @override
   String get description => 'List flutterpi_tool device.';
 
@@ -50,12 +38,30 @@ class DevicesListCommand extends FlutterpiCommand {
   String get name => 'list';
 
   @override
-  Future<FlutterCommandResult> runCommand() {
-    throw UnimplementedError();
+  Future<FlutterCommandResult> runCommand() async {
+    if (globals.doctor?.canListAnything != true) {
+      throwToolExit(
+        "Unable to locate a development device; please run 'flutter doctor' for "
+        'information about installing additional components.',
+        exitCode: 1,
+      );
+    }
+
+    final output = DevicesCommandOutput(
+      platform: globals.platform,
+      logger: globals.logger,
+      deviceManager: globals.deviceManager,
+      deviceDiscoveryTimeout: deviceDiscoveryTimeout,
+      deviceConnectionInterface: deviceConnectionInterface,
+    );
+
+    await output.findAndOutputAllTargetDevices(machine: false);
+
+    return FlutterCommandResult.success();
   }
 }
 
-class DevicesAddCommand extends FlutterpiCommand with DevicesCommandBase {
+class DevicesAddCommand extends FlutterpiCommand {
   DevicesAddCommand() {
     argParser.addOption(
       'type',
@@ -92,6 +98,7 @@ class DevicesAddCommand extends FlutterpiCommand with DevicesCommandBase {
       help: 'Don\'t verify the configured device before adding it.',
     );
 
+    usesDisplaySizeArg();
     usesDeviceIdArg();
   }
 
@@ -103,7 +110,7 @@ class DevicesAddCommand extends FlutterpiCommand with DevicesCommandBase {
 
   @override
   Future<FlutterCommandResult> runCommand() async {
-    final id = getDeviceIdArg();
+    final id = deviceIdArg;
 
     final type = stringArg('type');
     if (type != 'ssh') {
@@ -111,12 +118,10 @@ class DevicesAddCommand extends FlutterpiCommand with DevicesCommandBase {
     }
 
     final sshTarget = stringArg('ssh-target') ?? id;
-
     final sshExecutable = stringArg('ssh-executable');
-
     final remoteInstallPath = stringArg('remote-install-path');
-
     final force = boolArg('force');
+    final displaySize = this.displaySize;
 
     final flutterpiToolConfig = globals.flutterPiToolConfig;
     if (flutterpiToolConfig.containsDevice(id)) {
@@ -176,6 +181,7 @@ class DevicesAddCommand extends FlutterpiCommand with DevicesCommandBase {
       sshExecutable: sshExecutable,
       sshRemote: sshTarget,
       remoteInstallPath: remoteInstallPath,
+      displaySizeMillimeters: displaySize,
     ));
 
     if (postInstallMessages.isNotEmpty) {
@@ -188,14 +194,14 @@ class DevicesAddCommand extends FlutterpiCommand with DevicesCommandBase {
         step();
       }
     } else {
-      globals.printStatus('Device $id has been added.');
+      globals.printStatus('Device "$id" has been added successfully.');
     }
 
     return FlutterCommandResult.success();
   }
 }
 
-class DevicesRemoveCommand extends FlutterpiCommand with DevicesCommandBase {
+class DevicesRemoveCommand extends FlutterpiCommand {
   DevicesRemoveCommand() {
     usesDeviceIdArg();
   }
@@ -208,7 +214,7 @@ class DevicesRemoveCommand extends FlutterpiCommand with DevicesCommandBase {
 
   @override
   Future<FlutterCommandResult> runCommand() async {
-    final id = getDeviceIdArg();
+    final id = deviceIdArg;
 
     final flutterpiToolConfig = globals.flutterPiToolConfig;
 
