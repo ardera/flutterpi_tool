@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutterpi_tool/src/build_system/build_app.dart';
 import 'package:flutterpi_tool/src/cache.dart';
-import 'package:flutterpi_tool/src/commands/build_bundle.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
-import 'package:flutterpi_tool/src/device/ssh_utils.dart';
+import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 
@@ -43,8 +43,8 @@ class PrebuiltFlutterpiAppBundle extends FlutterpiAppBundle {
   final Directory directory;
 }
 
-class RunningApp {
-  RunningApp({
+class _RunningApp {
+  _RunningApp({
     required this.app,
     required this.sshProcess,
     required this.logReader,
@@ -75,8 +75,8 @@ class RunningApp {
   }
 }
 
-class SshDevice extends Device {
-  SshDevice({
+class FlutterpiSshDevice extends Device {
+  FlutterpiSshDevice({
     required String id,
     required this.name,
     required this.sshUtils,
@@ -100,7 +100,7 @@ class SshDevice extends Device {
   final FlutterpiCache cache;
   final MoreOperatingSystemUtils os;
 
-  final runningApps = <String, RunningApp>{};
+  final runningApps = <String, _RunningApp>{};
   final logReaders = <String, CustomDeviceLogReader>{};
   final globalLogReader = CustomDeviceLogReader('FlutterPi');
 
@@ -329,7 +329,7 @@ class SshDevice extends Device {
     globalLogReader.listenToLinesStream(logReader.logLines);
     logReader.listenToProcessOutput(sshProcess);
 
-    final runningApp = RunningApp(
+    final runningApp = _RunningApp(
       app: prebuiltApp,
       sshProcess: sshProcess,
       logReader: logReader,
@@ -445,7 +445,17 @@ class SshDevice extends Device {
   }
 
   @override
-  Future<TargetPlatform> get targetPlatform async => TargetPlatform.linux_arm64;
+  Future<TargetPlatform> get targetPlatform async => switch (await flutterpiTargetPlatform) {
+        FlutterpiTargetPlatform.genericArmV7 ||
+        FlutterpiTargetPlatform.pi3 ||
+        FlutterpiTargetPlatform.pi4 =>
+          TargetPlatform.linux_arm64,
+        FlutterpiTargetPlatform.genericAArch64 ||
+        FlutterpiTargetPlatform.pi3_64 ||
+        FlutterpiTargetPlatform.pi4_64 =>
+          TargetPlatform.linux_arm64,
+        FlutterpiTargetPlatform.genericX64 => TargetPlatform.linux_x64,
+      };
 
   @override
   Future<bool> uninstallApp(covariant FlutterpiAppBundle app, {String? userIdentifier}) async {

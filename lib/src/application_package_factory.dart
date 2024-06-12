@@ -1,5 +1,5 @@
 import 'package:file/file.dart';
-import 'package:flutterpi_tool/src/device/ssh_device.dart';
+import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 
 class FlutterpiApplicationPackageFactory implements FlutterApplicationPackageFactory {

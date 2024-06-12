@@ -4,15 +4,15 @@ import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/application_package_factory.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
-import 'package:flutterpi_tool/src/device/flutterpi_tool_device_manager.dart';
-import 'package:flutterpi_tool/src/device/ssh_device.dart';
-import 'package:flutterpi_tool/src/executable.dart';
+import 'package:flutterpi_tool/src/devices/device_manager.dart';
+import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
-import 'package:flutterpi_tool/src/flutterpi_config.dart';
+import 'package:flutterpi_tool/src/config.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
-import 'package:flutterpi_tool/src/device/ssh_utils.dart';
+import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
+import 'package:flutterpi_tool/src/shutdown_hooks.dart';
 import 'package:github/github.dart' as gh;
 
 mixin FlutterpiCommandMixin on FlutterCommand {
@@ -256,6 +256,19 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     return boolArg('debug-symbols');
   }
 
+  void usesLocalFlutterpiBinary({bool verboseHelp = false}) {
+    argParser.addOption(
+      'local-flutterpi-binary',
+      help: 'The path to the locally built flutter-pi binary. This is used for testing flutter-pi.',
+      valueHelp: 'path',
+      hide: !verboseHelp,
+    );
+  }
+
+  String? getLocalFlutterpiBinaryPath() {
+    return stringArg('local-flutterpi-binary');
+  }
+
   EngineFlavor getEngineFlavor() {
     final debug = boolArg('debug');
     final profile = boolArg('profile');
@@ -292,7 +305,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     }
 
     final targetPlatforms = {
-      for (final device in devices.whereType<SshDevice>()) await device.flutterpiTargetPlatform,
+      for (final device in devices.whereType<FlutterpiSshDevice>()) await device.flutterpiTargetPlatform,
     };
 
     return targetPlatforms.expand((p) => [p, p.genericVariant]).toSet();
@@ -305,11 +318,6 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     Set<BuildMode>? runtimeModes,
     bool? includeDebugSymbols,
   }) async {
-    // If there are no devices, use the default configuration.
-    // Otherwise, only add development artifacts corresponding to
-    // potentially connected devices. We might not be able to determine if a
-    // device is connected yet, so include it in case it becomes connected.
-
     hostPlatform ??= switch ((globals.os as MoreOperatingSystemUtils).fpiHostPlatform) {
       FlutterpiHostPlatform.darwinARM64 => FlutterpiHostPlatform.darwinX64,
       FlutterpiHostPlatform.windowsARM64 => FlutterpiHostPlatform.windowsX64,

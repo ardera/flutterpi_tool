@@ -1,9 +1,9 @@
 import 'package:flutterpi_tool/src/cache.dart';
-import 'package:flutterpi_tool/src/device/ssh_device_discovery.dart';
+import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device_discovery.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
-import 'package:flutterpi_tool/src/flutterpi_config.dart';
+import 'package:flutterpi_tool/src/config.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
-import 'package:flutterpi_tool/src/device/ssh_utils.dart';
+import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 
 class FlutterpiToolDeviceManager extends DeviceManager {
   FlutterpiToolDeviceManager({
@@ -15,7 +15,7 @@ class FlutterpiToolDeviceManager extends DeviceManager {
     required FlutterPiToolConfig flutterpiToolConfig,
     required String? deviceId,
   })  : deviceDiscoverers = <DeviceDiscovery>[
-          SshDeviceDiscovery(
+          FlutterpiSshDeviceDiscovery(
             sshUtils: sshUtils,
             logger: logger,
             config: flutterpiToolConfig,

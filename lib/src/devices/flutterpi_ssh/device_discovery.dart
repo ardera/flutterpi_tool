@@ -1,12 +1,12 @@
 import 'package:flutterpi_tool/src/cache.dart';
-import 'package:flutterpi_tool/src/device/ssh_device.dart';
+import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
-import 'package:flutterpi_tool/src/flutterpi_config.dart';
+import 'package:flutterpi_tool/src/config.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
-import 'package:flutterpi_tool/src/device/ssh_utils.dart';
+import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 
-class SshDeviceDiscovery extends PollingDeviceDiscovery {
-  SshDeviceDiscovery({
+class FlutterpiSshDeviceDiscovery extends PollingDeviceDiscovery {
+  FlutterpiSshDeviceDiscovery({
     required this.sshUtils,
     required this.config,
     required this.logger,
@@ -34,7 +34,7 @@ class SshDeviceDiscovery extends PollingDeviceDiscovery {
       return null;
     }
 
-    return SshDevice(
+    return FlutterpiSshDevice(
       id: configEntry.id,
       name: configEntry.id,
       sshUtils: sshUtils,
