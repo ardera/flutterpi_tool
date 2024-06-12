@@ -5,6 +5,48 @@ import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/config.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 
+// A diagnostic message, reported to the user when a problem is detected.
+abstract class Diagnostic {
+  const Diagnostic();
+
+  const factory Diagnostic.fixCommand({
+    required String title,
+    required String message,
+    required String command,
+  }) = FixCommandDiagnostic;
+
+  String get title;
+
+  void printMessage(Logger logger);
+
+  static void printList(Iterable<Diagnostic> diagnostics, {required Logger logger}) {
+    for (final (index, diagnostic) in diagnostics.indexed) {
+      logger.printStatus('${index + 1}. ${diagnostic.title}');
+      diagnostic.printMessage(logger);
+    }
+  }
+}
+
+// A diagnostic message that includes a command to fix the issue.
+class FixCommandDiagnostic extends Diagnostic {
+  const FixCommandDiagnostic({
+    required this.title,
+    required this.message,
+    required this.command,
+  });
+
+  @override
+  final String title;
+  final String message;
+  final String command;
+
+  @override
+  void printMessage(Logger logger, {int indent = 3}) {
+    logger.printStatus(message, indent: indent);
+    logger.printStatus(command, indent: indent + 2, emphasis: true);
+  }
+}
+
 class DevicesCommand extends FlutterpiCommand {
   DevicesCommand({bool verboseHelp = false}) {
     addSubcommand(DevicesAddCommand());
@@ -133,7 +175,7 @@ class DevicesAddCommand extends FlutterpiCommand {
       return FlutterCommandResult.fail();
     }
 
-    final postInstallMessages = <(String, void Function())>[];
+    final diagnostics = <Diagnostic>[];
 
     if (!force) {
       final ssh = SshUtils(
@@ -162,20 +204,12 @@ class DevicesAddCommand extends FlutterpiCommand {
             )
             .join(' ');
 
-        postInstallMessages.add((
-          'The remote user needs permission to use display and input devices.',
-          () {
-            globals.printStatus(
-              'To add the necessary permissions, run the following command in your terminal.',
-              indent: 3,
-            );
-            globals.printStatus(
+        diagnostics.add(Diagnostic.fixCommand(
+          title: 'The remote user needs permission to use display and input devices.',
+          message: 'To add the necessary permissions, run the following command in your terminal.\n'
               'NOTE: This gives any app running as the remote user access to the display and input devices. '
               'If you\'re running untrusted code, consider the security implications.\n',
-              indent: 3,
-            );
-            globals.printStatus(addGroupsCommand, wrap: false, emphasis: true, indent: 5);
-          }
+          command: addGroupsCommand,
         ));
       }
     }
@@ -188,15 +222,12 @@ class DevicesAddCommand extends FlutterpiCommand {
       displaySizeMillimeters: displaySize,
     ));
 
-    if (postInstallMessages.isNotEmpty) {
+    if (diagnostics.isNotEmpty) {
       globals.printWarning(
         'The device "$id" has been added, but additional steps are necessary to be able to run Flutter apps.',
         color: TerminalColor.yellow,
       );
-      for (final (index, (title, step)) in postInstallMessages.indexed) {
-        globals.printStatus('${index + 1}. $title');
-        step();
-      }
+      Diagnostic.printList(diagnostics, logger: globals.logger);
     } else {
       globals.printStatus('Device "$id" has been added successfully.');
     }
