@@ -1,8 +1,9 @@
 // ignore: implementation_imports
 import 'package:flutter_tools/src/commands/run.dart' as fltool;
+// ignore: implementation_imports
 import 'package:flutter_tools/src/runner/flutter_command.dart';
-import 'package:flutterpi_tool/src/commands/flutterpi_command.dart';
-import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
+
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 
 class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
   RunCommand() {

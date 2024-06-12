@@ -13,6 +13,7 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
     required FlutterpiHostPlatform hostPlatform,
     required FlutterpiArtifactPaths artifactPaths,
     bool debugSymbols = false,
+    String? flutterpiBinaryPathOverride,
   }) : super([
           const CopyFlutterAssets(),
           const CopyIcudtl(),
@@ -21,7 +22,11 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
               hostPlatform: hostPlatform,
               artifactPaths: artifactPaths,
               includeDebugSymbols: debugSymbols),
-          CopyFlutterpiBinary(target: flutterpiTargetPlatform, buildMode: BuildMode.release),
+          CopyFlutterpiBinary(
+            target: flutterpiTargetPlatform,
+            buildMode: BuildMode.release,
+            pathOverride: flutterpiBinaryPathOverride,
+          ),
           const FlutterpiAppElf(AotElfRelease(TargetPlatform.linux_arm64)),
         ]);
 
@@ -37,6 +42,7 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
     required FlutterpiHostPlatform hostPlatform,
     required FlutterpiArtifactPaths artifactPaths,
     bool debugSymbols = false,
+    String? flutterpiBinaryPathOverride,
   }) : super([
           const CopyFlutterAssets(),
           const CopyIcudtl(),
@@ -47,7 +53,11 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
             artifactPaths: artifactPaths,
             includeDebugSymbols: debugSymbols,
           ),
-          CopyFlutterpiBinary(target: flutterpiTargetPlatform, buildMode: BuildMode.profile),
+          CopyFlutterpiBinary(
+            target: flutterpiTargetPlatform,
+            buildMode: BuildMode.profile,
+            pathOverride: flutterpiBinaryPathOverride,
+          ),
           const FlutterpiAppElf(AotElfProfile(TargetPlatform.linux_arm64)),
         ]);
 
@@ -64,6 +74,7 @@ class DebugBundleFlutterpiAssets extends CompositeTarget {
     bool unoptimized = false,
     bool debugSymbols = false,
     required FlutterpiArtifactPaths artifactPaths,
+    String? flutterpiBinaryPathOverride,
   }) : super([
           const CopyFlutterAssets(),
           const CopyIcudtl(),
@@ -75,7 +86,11 @@ class DebugBundleFlutterpiAssets extends CompositeTarget {
             artifactPaths: artifactPaths,
             includeDebugSymbols: debugSymbols,
           ),
-          CopyFlutterpiBinary(target: flutterpiTargetPlatform, buildMode: BuildMode.debug),
+          CopyFlutterpiBinary(
+            target: flutterpiTargetPlatform,
+            buildMode: BuildMode.debug,
+            pathOverride: flutterpiBinaryPathOverride,
+          ),
         ]);
 
   final FlutterpiTargetPlatform flutterpiTargetPlatform;
@@ -115,19 +130,26 @@ class CopyFlutterpiBinary extends Target {
   CopyFlutterpiBinary({
     required this.target,
     required BuildMode buildMode,
+    this.pathOverride,
   }) : flutterpiBuildType = buildMode == BuildMode.debug ? 'debug' : 'release';
 
   final FlutterpiTargetPlatform target;
   final String flutterpiBuildType;
 
+  /// TODO: Source these from a custom artifacts instance.
+  final String? pathOverride;
+
   @override
   Future<void> build(Environment environment) async {
-    final file = environment.cacheDir
-        .childDirectory('artifacts')
-        .childDirectory('flutter-pi')
-        .childDirectory(target.triple)
-        .childDirectory(flutterpiBuildType)
-        .childFile('flutter-pi');
+    final file = switch (pathOverride) {
+      String path => environment.fileSystem.file(path),
+      _ => environment.cacheDir
+          .childDirectory('artifacts')
+          .childDirectory('flutter-pi')
+          .childDirectory(target.triple)
+          .childDirectory(flutterpiBuildType)
+          .childFile('flutter-pi'),
+    };
 
     final outputFile = environment.outputDir.childFile('flutter-pi');
 
@@ -139,7 +161,10 @@ class CopyFlutterpiBinary extends Target {
 
   @override
   List<Source> get inputs => <Source>[
-        Source.pattern('{CACHE_DIR}/artifacts/flutter-pi/${target.triple}/$flutterpiBuildType/flutter-pi'),
+        if (pathOverride case String pathOverride)
+          Source.pattern(Uri.file(pathOverride).path)
+        else
+          Source.pattern('{CACHE_DIR}/artifacts/flutter-pi/${target.triple}/$flutterpiBuildType/flutter-pi'),
       ];
 
   @override

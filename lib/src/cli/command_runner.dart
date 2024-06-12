@@ -2,7 +2,7 @@
 
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
-import 'package:flutterpi_tool/src/commands/flutterpi_command.dart';
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 
 class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterCommandRunner {

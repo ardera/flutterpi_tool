@@ -1,5 +1,5 @@
 import 'package:flutterpi_tool/src/cache.dart';
-import 'package:flutterpi_tool/src/commands/command_runner.dart';
+import 'package:flutterpi_tool/src/cli/command_runner.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 
