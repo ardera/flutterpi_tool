@@ -256,10 +256,11 @@ class FlutterpiSshDevice extends Device {
   List<String> buildFlutterpiCommand({
     required String flutterpiExe,
     required String bundlePath,
-    required DebuggingOptions debuggingOptions,
+    required BuildMode runtimeMode,
     Iterable<String> engineArgs = const [],
+    Iterable<String> dartCmdlineArgs = const [],
   }) {
-    final runtimeModeArg = switch (debuggingOptions.buildInfo.mode) {
+    final runtimeModeArg = switch (runtimeMode) {
       BuildMode.debug => null,
       BuildMode.profile => '--profile',
       BuildMode.release => '--release',
@@ -276,6 +277,99 @@ class FlutterpiSshDevice extends Device {
       bundlePath,
       ...engineArgs,
     ];
+  }
+
+  @visibleForTesting
+  List<String> buildEngineArgs({
+    required DebuggingOptions debuggingOptions,
+    bool traceStartup = false,
+    String? route,
+  }) {
+    final cmdlineArgs = <String>[];
+
+    void addFlag(String value) {
+      cmdlineArgs.add('--$value');
+    }
+
+    addFlag('enable-dart-profiling=true');
+
+    if (traceStartup) {
+      addFlag('trace-startup=true');
+    }
+    if (route != null) {
+      addFlag('route=$route');
+    }
+    if (debuggingOptions.enableSoftwareRendering) {
+      addFlag('enable-software-rendering=true');
+    }
+    if (debuggingOptions.skiaDeterministicRendering) {
+      addFlag('skia-deterministic-rendering=true');
+    }
+    if (debuggingOptions.traceSkia) {
+      addFlag('trace-skia=true');
+    }
+    if (debuggingOptions.traceAllowlist != null) {
+      addFlag('trace-allowlist=${debuggingOptions.traceAllowlist}');
+    }
+    if (debuggingOptions.traceSkiaAllowlist != null) {
+      addFlag('trace-skia-allowlist=${debuggingOptions.traceSkiaAllowlist}');
+    }
+    if (debuggingOptions.traceSystrace) {
+      addFlag('trace-systrace=true');
+    }
+    if (debuggingOptions.traceToFile != null) {
+      addFlag('trace-to-file=${debuggingOptions.traceToFile}');
+    }
+    if (debuggingOptions.endlessTraceBuffer) {
+      addFlag('endless-trace-buffer=true');
+    }
+    if (debuggingOptions.dumpSkpOnShaderCompilation) {
+      addFlag('dump-skp-on-shader-compilation=true');
+    }
+    if (debuggingOptions.cacheSkSL) {
+      addFlag('cache-sksl=true');
+    }
+    if (debuggingOptions.purgePersistentCache) {
+      addFlag('purge-persistent-cache=true');
+    }
+
+    switch (debuggingOptions.enableImpeller) {
+      case ImpellerStatus.enabled:
+        addFlag('enable-impeller=true');
+      case ImpellerStatus.disabled:
+        addFlag('enable-impeller=false');
+      case ImpellerStatus.platformDefault:
+    }
+
+    // Options only supported when there is a VM Service connection between the
+    // tool and the device, usually in debug or profile mode.
+    if (debuggingOptions.debuggingEnabled) {
+      if (debuggingOptions.deviceVmServicePort != null) {
+        addFlag('vm-service-port=${debuggingOptions.deviceVmServicePort}');
+      }
+      if (debuggingOptions.buildInfo.isDebug) {
+        addFlag('enable-checked-mode=true');
+        addFlag('verify-entry-points=true');
+      }
+      if (debuggingOptions.startPaused) {
+        addFlag('start-paused=true');
+      }
+      if (debuggingOptions.disableServiceAuthCodes) {
+        addFlag('disable-service-auth-codes=true');
+      }
+      final String dartVmFlags = computeDartVmFlags(debuggingOptions);
+      if (dartVmFlags.isNotEmpty) {
+        addFlag('dart-flags=$dartVmFlags');
+      }
+      if (debuggingOptions.useTestFonts) {
+        addFlag('use-test-fonts=true');
+      }
+      if (debuggingOptions.verboseSystemLogs) {
+        addFlag('verbose-logging=true');
+      }
+    }
+
+    return cmdlineArgs;
   }
 
   @override
@@ -304,15 +398,28 @@ class FlutterpiSshDevice extends Device {
     final remoteInstallPath = _getRemoteInstallPath(prebuiltApp);
     final flutterpiExePath = path.posix.join(remoteInstallPath, 'flutter-pi');
 
-    final port = await os.findFreePort();
+    final hostPort = switch (debuggingOptions.hostVmServicePort) {
+      int port => port,
+      null => await os.findFreePort(),
+    };
+
+    final devicePort = switch (debuggingOptions.deviceVmServicePort) {
+      int port => port,
+      null => hostPort,
+    };
 
     final List<String> command;
     try {
+      final engineArgs = buildEngineArgs(debuggingOptions: debuggingOptions, traceStartup: false, route: route);
+
       command = buildFlutterpiCommand(
         flutterpiExe: flutterpiExePath,
         bundlePath: remoteInstallPath,
-        debuggingOptions: debuggingOptions,
-        engineArgs: ['--vm-service-port=$port'],
+        runtimeMode: debuggingOptions.buildInfo.mode,
+        engineArgs: [
+          ...engineArgs,
+          if (debuggingOptions.deviceVmServicePort == null) '--vm-service-port=$devicePort',
+        ],
       );
     } on Exception catch (e) {
       throwToolExit(e.toString());
@@ -321,7 +428,9 @@ class FlutterpiSshDevice extends Device {
     final sshProcess = await sshUtils.startSsh(
       command: command.join(' '),
       allocateTTY: true,
-      localPortForwards: [port],
+      localPortForwards: [
+        (hostPort, devicePort),
+      ],
       exitOnForwardFailure: true,
     );
 
@@ -339,9 +448,9 @@ class FlutterpiSshDevice extends Device {
       logReader,
       portForwarder: NoOpDevicePortForwarder(),
       logger: logger,
-      hostPort: port,
-      devicePort: port,
-      ipv6: false,
+      hostPort: hostPort,
+      devicePort: devicePort,
+      ipv6: ipv6,
     );
 
     final uriCompleter = Completer<Uri>();
