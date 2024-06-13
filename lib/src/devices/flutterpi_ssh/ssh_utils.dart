@@ -28,8 +28,8 @@ class SshUtils {
     bool? interactive = false,
     bool? allocateTTY,
     bool? exitOnForwardFailure,
-    Iterable<int> remotePortForwards = const [],
-    Iterable<int> localPortForwards = const [],
+    Iterable<(int, int)> remotePortForwards = const [],
+    Iterable<(int, int)> localPortForwards = const [],
     Iterable<String> extraArgs = const [],
     String? remote,
     String? command,
@@ -50,13 +50,13 @@ class SshUtils {
         '-o',
         'ExitOnForwardFailure=no'
       ],
-      for (final port in localPortForwards) ...[
+      for (final (local, remote) in localPortForwards) ...[
         '-L',
-        '$port:localhost:$port',
+        '$local:localhost:$remote',
       ],
-      for (final port in remotePortForwards) ...[
+      for (final (remote, local) in remotePortForwards) ...[
         '-R',
-        '$port:localhost:$port',
+        '$local:localhost:$remote',
       ],
       if (command == null) '-T',
       ...extraArgs,
@@ -81,7 +81,8 @@ class SshUtils {
     Duration? timeout,
     int timeoutRetries = 0,
     bool? allocateTTY,
-    Iterable<int> localPortForwards = const [],
+    Iterable<(int, int)> localPortForwards = const [],
+    Iterable<(int, int)> remotePortForwards = const [],
     bool? exitOnForwardFailure,
   }) {
     remote ??= defaultRemote;
@@ -121,8 +122,8 @@ class SshUtils {
     String? workingDirectory,
     Map<String, String>? environment,
     bool? allocateTTY,
-    Iterable<int> remotePortForwards = const [],
-    Iterable<int> localPortForwards = const [],
+    Iterable<(int, int)> remotePortForwards = const [],
+    Iterable<(int, int)> localPortForwards = const [],
     bool? exitOnForwardFailure,
     ProcessStartMode mode = ProcessStartMode.normal,
   }) {
