@@ -161,6 +161,7 @@ class CopyFlutterpiBinary extends Target {
 
   @override
   List<Source> get inputs => <Source>[
+        /// TODO: This should really be a Source.artifact(Artifact.flutterpiBinary)
         if (pathOverride case String pathOverride)
           Source.pattern(Uri.file(pathOverride).path)
         else
