@@ -18,7 +18,7 @@ class PrecacheCommand extends FlutterpiCommand {
   String get description => 'Populate the flutterpi_tool\'s cache of binary artifacts.';
 
   @override
-  final String category = FlutterCommandCategory.sdk;
+  final String category = 'Flutter-Pi Tool';
 
   @override
   Future<FlutterCommandResult> runCommand() async {
