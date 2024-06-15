@@ -1,3 +1,9 @@
+## [0.4.1] - 2024-06-15
+
+### 📚 Documentation
+
+- Mention version conflicts in README
+
 ## 0.4.0
 
 - fix for flutter 3.22
