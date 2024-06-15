@@ -124,7 +124,7 @@ class FlutterpiToolDevicesCommandOutput {
       }
     }
     status.write(
-        'If you expected ${foundAny ? 'another' : 'a'} device to be detected, try increasing the time to wait for connected devices with the "--${FlutterOptions.kDeviceTimeout}" flag.');
+        'If you expected ${foundAny ? 'another' : 'a'} device to be detected, try increasing the time to wait for connected devices by using the "flutterpi_tool devices list" command with the "--${FlutterOptions.kDeviceTimeout}" flag.');
     _logger.printStatus(status.toString());
   }
 
@@ -299,6 +299,12 @@ class DevicesCommand extends FlutterpiCommand {
 
   @override
   String get name => 'devices';
+
+  @override
+  String get invocation => '${runner!.executableName} devices [subcommand] [arguments]';
+
+  @override
+  String? get usageFooter => 'If no subcommand is specified, the attached devices will be listed.';
 
   @override
   Future<FlutterCommandResult> runCommand() async {
