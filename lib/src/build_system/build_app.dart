@@ -25,7 +25,6 @@ Future<FlutterpiAppBundle> buildFlutterpiApp({
   BuildSystem? buildSystem,
   bool unoptimized = false,
   bool includeDebugSymbols = false,
-  String? flutterpiBinaryPathOverride,
 }) async {
   final buildDir = getBuildDirectory();
 
@@ -63,7 +62,6 @@ Future<void> buildFlutterpiBundle({
   BuildSystem? buildSystem,
   bool unoptimized = false,
   bool includeDebugSymbols = false,
-  String? flutterpiBinaryPathOverride,
 }) async {
   project ??= FlutterProject.current();
   mainPath ??= defaultMainPath;
@@ -118,8 +116,6 @@ Future<void> buildFlutterpiBundle({
       'flutterpi-target': target.shortName,
       'unoptimized': unoptimized.toString(),
       'debug-symbols': includeDebugSymbols.toString(),
-
-      if (flutterpiBinaryPathOverride != null) 'flutter-binary-path': flutterpiBinaryPathOverride,
     },
     artifacts: artifacts,
     fileSystem: globals.fs,

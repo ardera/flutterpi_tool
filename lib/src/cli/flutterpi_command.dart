@@ -256,19 +256,6 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     return boolArg('debug-symbols');
   }
 
-  void usesLocalFlutterpiBinary({bool verboseHelp = false}) {
-    argParser.addOption(
-      'local-flutterpi-binary',
-      help: 'The path to the locally built flutter-pi binary. This is used for testing flutter-pi.',
-      valueHelp: 'path',
-      hide: !verboseHelp,
-    );
-  }
-
-  String? getLocalFlutterpiBinaryPath() {
-    return stringArg('local-flutterpi-binary');
-  }
-
   EngineFlavor getEngineFlavor() {
     final debug = boolArg('debug');
     final profile = boolArg('profile');

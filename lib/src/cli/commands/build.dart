@@ -35,7 +35,6 @@ class BuildCommand extends FlutterpiCommand {
     usesDartDefineOption();
     usesTargetOption();
     usesCustomCache(verboseHelp: verboseHelp);
-    usesLocalFlutterpiBinary(verboseHelp: verboseHelp);
 
     argParser
       ..addSeparator('Target options')
@@ -151,19 +150,22 @@ class BuildCommand extends FlutterpiCommand {
     );
 
     // actually build the flutter bundle
-    await buildFlutterpiBundle(
-      host: host,
-      target: targetPlatform,
-      buildInfo: buildInfo,
-      mainPath: targetFile,
-      artifactPaths: flutterpiCache.artifactPaths,
+    try {
+      await buildFlutterpiBundle(
+        host: host,
+        target: targetPlatform,
+        buildInfo: buildInfo,
+        mainPath: targetFile,
+        artifactPaths: flutterpiCache.artifactPaths,
 
-      // for `--debug-unoptimized` build mode
-      unoptimized: flavor.unoptimized,
-      includeDebugSymbols: debugSymbols,
-
-      flutterpiBinaryPathOverride: getLocalFlutterpiBinaryPath(),
-    );
+        // for `--debug-unoptimized` build mode
+        unoptimized: flavor.unoptimized,
+        includeDebugSymbols: debugSymbols,
+      );
+    } on Exception catch (e, st) {
+      globals.logger.printError('Failed to build Flutter-Pi bundle: $e\n$st');
+      return FlutterCommandResult.fail();
+    }
 
     return FlutterCommandResult.success();
   }
