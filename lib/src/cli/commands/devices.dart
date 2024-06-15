@@ -55,7 +55,10 @@ class DevicesCommand extends FlutterpiCommand {
   }
 
   @override
-  String get description => 'Manage flutterpi_tool devices.';
+  String get description => 'List & manage flutterpi_tool devices.';
+
+  @override
+  final String category = FlutterCommandCategory.tools;
 
   @override
   String get name => 'devices';

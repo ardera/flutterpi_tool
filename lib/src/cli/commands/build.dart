@@ -75,6 +75,9 @@ class BuildCommand extends FlutterpiCommand {
   String get description => 'Builds a flutter-pi asset bundle.';
 
   @override
+  String get category => FlutterCommandCategory.project;
+
+  @override
   FlutterpiToolCommandRunner? get runner => super.runner as FlutterpiToolCommandRunner;
 
   EngineFlavor get defaultFlavor => EngineFlavor.debug;

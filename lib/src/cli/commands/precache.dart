@@ -18,6 +18,9 @@ class PrecacheCommand extends FlutterpiCommand {
   String get description => 'Populate the flutterpi_tool\'s cache of binary artifacts.';
 
   @override
+  final String category = FlutterCommandCategory.sdk;
+
+  @override
   Future<FlutterCommandResult> runCommand() async {
     final os = switch (globals.os) {
       MoreOperatingSystemUtils os => os,
