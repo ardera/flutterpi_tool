@@ -664,21 +664,9 @@ abstract class FlutterpiCache extends FlutterCache {
     Set<DevelopmentArtifact> requiredArtifacts, {
     bool offline = false,
     @required FlutterpiHostPlatform? host,
-    Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {
-      FlutterpiTargetPlatform.genericArmV7,
-      FlutterpiTargetPlatform.genericAArch64,
-      FlutterpiTargetPlatform.genericX64,
-    },
-    Set<BuildMode> runtimeModes = const {
-      BuildMode.debug,
-      BuildMode.profile,
-      BuildMode.release,
-    },
-    Set<EngineFlavor> engineFlavors = const {
-      EngineFlavor.debug,
-      EngineFlavor.profile,
-      EngineFlavor.release,
-    },
+    Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {},
+    Set<BuildMode> runtimeModes = const {},
+    Set<EngineFlavor> engineFlavors = const {},
     bool includeDebugSymbols = false,
   }) async {
     host ??= osUtils.fpiHostPlatform;
