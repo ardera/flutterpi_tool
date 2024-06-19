@@ -192,7 +192,7 @@ class FlutterpiBinaries extends ArtifactSet {
 
       final location = this.location.fileSystem.directory(path.joinAll([this.location.path, ...subdirs]));
 
-      artifactUpdater.downloadArchive(
+      await artifactUpdater.downloadArchive(
         'Downloading $assetName...',
         url,
         location,
