@@ -1,3 +1,10 @@
+## [0.5.0] - 2024-06-26
+
+- add `run` and `devices` subcommands
+- add persistent flutterpi_tool config for devices
+- update Readme
+- constrain to flutter 3.22.0
+
 ## [0.4.1] - 2024-06-15
 
 ### 📚 Documentation
