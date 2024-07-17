@@ -56,8 +56,12 @@ abstract class MoreOperatingSystemUtils implements OperatingSystemUtils {
   FlutterpiHostPlatform get fpiHostPlatform;
 
   @override
-  void unpack(File gzippedTarFile, Directory targetDirectory,
-      {ArchiveType? type, Archive Function(File)? decoder,});
+  void unpack(
+    File gzippedTarFile,
+    Directory targetDirectory, {
+    ArchiveType? type,
+    Archive Function(File)? decoder,
+  });
 }
 
 class MoreOperatingSystemUtilsWrapper implements MoreOperatingSystemUtils {
@@ -295,8 +299,12 @@ class PosixMoreOsUtils extends DelegatingMoreOsUtils {
     Archive Function(File)? decoder,
   }) {
     if (decoder != null) {
-      return delegate.unpack(gzippedTarFile, targetDirectory,
-          decoder: decoder, type: type,);
+      return delegate.unpack(
+        gzippedTarFile,
+        targetDirectory,
+        decoder: decoder,
+        type: type,
+      );
     }
 
     switch (type) {

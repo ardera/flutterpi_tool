@@ -19,7 +19,8 @@ class BuildCommand extends FlutterpiCommand {
 
   BuildCommand({bool verboseHelp = false}) {
     argParser.addSeparator(
-        'Runtime mode options (Defaults to debug. At most one can be specified)',);
+      'Runtime mode options (Defaults to debug. At most one can be specified)',
+    );
 
     usesEngineFlavorOption();
 
@@ -124,7 +125,8 @@ class BuildCommand extends FlutterpiCommand {
     final os = switch (globals.os) {
       MoreOperatingSystemUtils os => os,
       _ => throw StateError(
-          'Operating system utils is not an FPiOperatingSystemUtils',),
+          'Operating system utils is not an FPiOperatingSystemUtils',
+        ),
     };
 
     // for windows arm64, darwin arm64, we just use the x64 variant

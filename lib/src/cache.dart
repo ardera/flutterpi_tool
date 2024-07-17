@@ -132,7 +132,8 @@ class FlutterpiBinaries extends ArtifactSet {
         }
       } on gh.GitHubError catch (e) {
         logger.printWarning(
-            'Failed to check for flutter-pi updates: ${e.message}',);
+          'Failed to check for flutter-pi updates: ${e.message}',
+        );
         return true;
       }
     }
@@ -192,11 +193,14 @@ class FlutterpiBinaries extends ArtifactSet {
     for (final (assetName, subdirs) in artifacts) {
       final asset = release.findAsset(assetName);
 
-      final url = Uri.parse(switch (asset?.browserDownloadUrl) {
-        String url => url,
-        null => throwToolExit(
-            'Failed to find asset "$assetName" in release "${release.tagName}" of repo ${repo.fullName}.',),
-      },);
+      final url = Uri.parse(
+        switch (asset?.browserDownloadUrl) {
+          String url => url,
+          null => throwToolExit(
+              'Failed to find asset "$assetName" in release "${release.tagName}" of repo ${repo.fullName}.',
+            ),
+        },
+      );
 
       final location = this
           .location
@@ -348,16 +352,22 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
     final updater = artifactUpdater as AuthenticatingArtifactUpdater;
 
     final dir = fileSystem.directory(
-        fileSystem.path.join(location.path, artifactDescription.cacheKey),);
+      fileSystem.path.join(location.path, artifactDescription.cacheKey),
+    );
     final url = await _findArtifact(storageKey, version!);
 
     if (url == null) {
       throwToolExit(
-          'Failed to find artifact $storageKey in run $runId of repo ${repo.fullName}',);
+        'Failed to find artifact $storageKey in run $runId of repo ${repo.fullName}',
+      );
     }
 
-    await updater.downloadZipArchive('Downloading $storageKey...', url, dir,
-        authenticate: _authenticate,);
+    await updater.downloadZipArchive(
+      'Downloading $storageKey...',
+      url,
+      dir,
+      authenticate: _authenticate,
+    );
 
     makeFilesExecutable(dir, operatingSystemUtils);
   }
@@ -440,7 +450,9 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
   }
 
   Future<gh.ReleaseAsset?> _findReleaseAsset(
-      String name, String version,) async {
+    String name,
+    String version,
+  ) async {
     final release = await _findRelease(version);
     return release.findAsset(name);
   }
@@ -456,7 +468,8 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
     final updater = artifactUpdater as AuthenticatingArtifactUpdater;
 
     final dir = fileSystem.directory(
-        fileSystem.path.join(location.path, artifactDescription.cacheKey),);
+      fileSystem.path.join(location.path, artifactDescription.cacheKey),
+    );
 
     final asset = await _findReleaseAsset(storageKey, version!);
 
@@ -530,12 +543,14 @@ abstract class FlutterpiCache extends FlutterCache {
       pkgHttpHttpClient.close();
     });
 
-    registerArtifact(FlutterpiBinaries(
-      cache: this,
-      fs: fileSystem,
-      httpClient: pkgHttpHttpClient,
-      logger: logger,
-    ),);
+    registerArtifact(
+      FlutterpiBinaries(
+        cache: this,
+        fs: fileSystem,
+        httpClient: pkgHttpHttpClient,
+        logger: logger,
+      ),
+    );
   }
 
   @protected
@@ -586,20 +601,24 @@ abstract class FlutterpiCache extends FlutterCache {
           continue;
         }
 
-        descriptions.add(ArtifactDescription.target(
-          target,
-          flavor,
-          prefix: 'engine',
-          cacheKey: 'flutterpi-engine-$target-$flavor',
-        ),);
+        descriptions.add(
+          ArtifactDescription.target(
+            target,
+            flavor,
+            prefix: 'engine',
+            cacheKey: 'flutterpi-engine-$target-$flavor',
+          ),
+        );
 
-        descriptions.add(ArtifactDescription.target(
-          target,
-          flavor,
-          prefix: 'engine-dbgsyms',
-          cacheKey: 'flutterpi-engine-dbgsyms-$target-$flavor',
-          includeDebugSymbols: true,
-        ),);
+        descriptions.add(
+          ArtifactDescription.target(
+            target,
+            flavor,
+            prefix: 'engine-dbgsyms',
+            cacheKey: 'flutterpi-engine-dbgsyms-$target-$flavor',
+            includeDebugSymbols: true,
+          ),
+        );
       }
     }
 
@@ -617,21 +636,25 @@ abstract class FlutterpiCache extends FlutterCache {
         }
 
         for (final runtimeMode in aotRuntimeModes) {
-          descriptions.add(ArtifactDescription.hostTarget(
-            host,
-            target,
-            runtimeMode,
-            prefix: 'gen-snapshot',
-            cacheKey: 'flutterpi-gen-snapshot-$host-$target-$runtimeMode',
-          ),);
+          descriptions.add(
+            ArtifactDescription.hostTarget(
+              host,
+              target,
+              runtimeMode,
+              prefix: 'gen-snapshot',
+              cacheKey: 'flutterpi-gen-snapshot-$host-$target-$runtimeMode',
+            ),
+          );
         }
       }
     }
 
-    descriptions.add(ArtifactDescription.universal(
-      prefix: 'universal',
-      cacheKey: 'flutterpi-universal',
-    ),);
+    descriptions.add(
+      ArtifactDescription.universal(
+        prefix: 'universal',
+        cacheKey: 'flutterpi-universal',
+      ),
+    );
 
     return descriptions;
   }
@@ -742,13 +765,15 @@ class GithubRepoReleasesFlutterpiCache extends FlutterpiCache {
     gh.Authentication? auth,
   }) : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci') {
     for (final description in generateDescriptions()) {
-      registerArtifact(GithubReleaseArtifact(
-        httpClient: pkgHttpHttpClient,
-        repo: repo,
-        auth: auth,
-        cache: this,
-        artifactDescription: description,
-      ),);
+      registerArtifact(
+        GithubReleaseArtifact(
+          httpClient: pkgHttpHttpClient,
+          repo: repo,
+          auth: auth,
+          cache: this,
+          artifactDescription: description,
+        ),
+      );
     }
   }
 
@@ -776,15 +801,17 @@ class GithubWorkflowRunFlutterpiCache extends FlutterpiCache {
     super.httpClient,
   }) : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci') {
     for (final artifact in generateDescriptions()) {
-      registerArtifact(GithubWorkflowRunArtifact(
-        httpClient: pkgHttpHttpClient,
-        repo: repo,
-        auth: auth,
-        runId: runId,
-        availableEngineVersion: availableEngineVersion,
-        cache: this,
-        artifactDescription: artifact,
-      ),);
+      registerArtifact(
+        GithubWorkflowRunArtifact(
+          httpClient: pkgHttpHttpClient,
+          repo: repo,
+          auth: auth,
+          runId: runId,
+          availableEngineVersion: availableEngineVersion,
+          cache: this,
+          artifactDescription: artifact,
+        ),
+      );
     }
   }
 
@@ -854,7 +881,8 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
   }) {
     return engineCacheDir
         .childDirectory(
-            'flutterpi-gen-snapshot-$hostPlatform-$target-$runtimeMode',)
+          'flutterpi-gen-snapshot-$hostPlatform-$target-$runtimeMode',
+        )
         .childFile('gen_snapshot');
   }
 
@@ -866,7 +894,8 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
     required EngineFlavor flavor,
   }) {
     return Source.pattern(
-        '{CACHE_DIR}/artifacts/$artifactSubDir/flutterpi-engine-$target-$flavor/libflutter_engine.so',);
+      '{CACHE_DIR}/artifacts/$artifactSubDir/flutterpi-engine-$target-$flavor/libflutter_engine.so',
+    );
   }
 
   Source getEngineDbgsymsSource({
@@ -876,7 +905,8 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
     required EngineFlavor flavor,
   }) {
     return Source.pattern(
-        '{CACHE_DIR}/artifacts/$artifactSubDir/flutterpi-engine-dbgsyms-$target-$flavor/libflutter_engine.dbgsyms',);
+      '{CACHE_DIR}/artifacts/$artifactSubDir/flutterpi-engine-dbgsyms-$target-$flavor/libflutter_engine.dbgsyms',
+    );
   }
 }
 

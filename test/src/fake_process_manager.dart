@@ -168,11 +168,13 @@ class FakeProcess implements io.Process {
       this.stderr = const Stream<List<int>>.empty();
     } else if (outputFollowsExit) {
       // Wait for the process to exit before emitting stderr.
-      this.stderr = Stream<List<int>>.fromFuture(this.exitCode.then((_) {
-        // Return a Future so stderr isn't immediately available to those who
-        // await exitCode, but is available asynchronously later.
-        return Future<List<int>>(() => _stderr);
-      }),);
+      this.stderr = Stream<List<int>>.fromFuture(
+        this.exitCode.then((_) {
+          // Return a Future so stderr isn't immediately available to those who
+          // await exitCode, but is available asynchronously later.
+          return Future<List<int>>(() => _stderr);
+        }),
+      );
     } else {
       this.stderr = Stream<List<int>>.value(_stderr);
     }
@@ -181,11 +183,13 @@ class FakeProcess implements io.Process {
       this.stdout = const Stream<List<int>>.empty();
     } else if (outputFollowsExit) {
       // Wait for the process to exit before emitting stdout.
-      this.stdout = Stream<List<int>>.fromFuture(this.exitCode.then((_) {
-        // Return a Future so stdout isn't immediately available to those who
-        // await exitCode, but is available asynchronously later.
-        return Future<List<int>>(() => _stdout);
-      }),);
+      this.stdout = Stream<List<int>>.fromFuture(
+        this.exitCode.then((_) {
+          // Return a Future so stdout isn't immediately available to those who
+          // await exitCode, but is available asynchronously later.
+          return Future<List<int>>(() => _stdout);
+        }),
+      );
     } else {
       this.stdout = Stream<List<int>>.value(_stdout);
     }
@@ -310,7 +314,8 @@ abstract class FakeProcessManager implements ProcessManager {
     );
     if (fakeCommand.exception != null) {
       assert(
-          fakeCommand.exception is Exception || fakeCommand.exception is Error,);
+        fakeCommand.exception is Exception || fakeCommand.exception is Error,
+      );
       throw fakeCommand.exception!; // ignore: only_throw_errors
     }
     if (fakeCommand.onRun != null) {
@@ -477,10 +482,13 @@ class _SequenceProcessManager extends FakeProcessManager {
     Encoding? encoding,
     io.ProcessStartMode? mode,
   ) {
-    expect(_commands, isNotEmpty,
-        reason:
-            'ProcessManager was told to execute $command (in $workingDirectory) '
-            'but the FakeProcessManager.list expected no more processes.',);
+    expect(
+      _commands,
+      isNotEmpty,
+      reason:
+          'ProcessManager was told to execute $command (in $workingDirectory) '
+          'but the FakeProcessManager.list expected no more processes.',
+    );
     _commands.first
         ._matches(command, workingDirectory, environment, encoding, mode);
     return _commands.removeAt(0);
@@ -522,6 +530,7 @@ class _HasNoRemainingExpectations extends Matcher {
   ) {
     final FakeProcessManager fakeProcessManager = item as FakeProcessManager;
     return description.add(
-        'has remaining expectations:\n${fakeProcessManager._remainingExpectations.map((FakeCommand command) => command.command).join('\n')}',);
+      'has remaining expectations:\n${fakeProcessManager._remainingExpectations.map((FakeCommand command) => command.command).join('\n')}',
+    );
   }
 }

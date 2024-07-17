@@ -99,7 +99,8 @@ class FlutterpiToolDevicesCommandOutput {
     } else {
       if (attachedDevices.isNotEmpty) {
         _logger.printStatus(
-            'Found ${attachedDevices.length} connected ${pluralize('device', attachedDevices.length)}:',);
+          'Found ${attachedDevices.length} connected ${pluralize('device', attachedDevices.length)}:',
+        );
         await Device.printDevices(attachedDevices, _logger, prefix: '  ');
       }
       if (wirelessDevices.isNotEmpty) {
@@ -107,7 +108,8 @@ class FlutterpiToolDevicesCommandOutput {
           _logger.printStatus('');
         }
         _logger.printStatus(
-            'Found ${wirelessDevices.length} wirelessly connected ${pluralize('device', wirelessDevices.length)}:',);
+          'Found ${wirelessDevices.length} wirelessly connected ${pluralize('device', wirelessDevices.length)}:',
+        );
         await Device.printDevices(wirelessDevices, _logger, prefix: '  ');
       }
     }
@@ -127,7 +129,8 @@ class FlutterpiToolDevicesCommandOutput {
       }
     }
     status.write(
-        'If you expected ${foundAny ? 'another' : 'a'} device to be detected, try increasing the time to wait for connected devices by using the "flutterpi_tool devices list" command with the "--${FlutterOptions.kDeviceTimeout}" flag.',);
+      'If you expected ${foundAny ? 'another' : 'a'} device to be detected, try increasing the time to wait for connected devices by using the "flutterpi_tool devices list" command with the "--${FlutterOptions.kDeviceTimeout}" flag.',
+    );
     _logger.printStatus(status.toString());
   }
 
@@ -193,7 +196,8 @@ class FlutterpiToolDevicesCommandOutputWithExtendedWirelessDeviceDiscovery
     // Display list of attached devices.
     if (attachedDevices.isNotEmpty) {
       _logger.printStatus(
-          'Found ${attachedDevices.length} connected ${pluralize('device', attachedDevices.length)}:',);
+        'Found ${attachedDevices.length} connected ${pluralize('device', attachedDevices.length)}:',
+      );
       await Device.printDevices(attachedDevices, _logger, prefix: '  ');
       _logger.printStatus('');
       numLinesToClear += 1;
@@ -220,7 +224,8 @@ class FlutterpiToolDevicesCommandOutputWithExtendedWirelessDeviceDiscovery
       // Reprint the attach devices.
       if (attachedDevices.isNotEmpty) {
         _logger.printStatus(
-            '\nFound ${attachedDevices.length} connected ${pluralize('device', attachedDevices.length)}:',);
+          '\nFound ${attachedDevices.length} connected ${pluralize('device', attachedDevices.length)}:',
+        );
         await Device.printDevices(attachedDevices, _logger, prefix: '  ');
       }
     } else if (terminal.supportsColor && terminal is AnsiTerminal) {
@@ -245,11 +250,13 @@ class FlutterpiToolDevicesCommandOutputWithExtendedWirelessDeviceDiscovery
     } else {
       // Display list of wireless devices.
       _logger.printStatus(
-          'Found ${wirelessDevices.length} wirelessly connected ${pluralize('device', wirelessDevices.length)}:',);
+        'Found ${wirelessDevices.length} wirelessly connected ${pluralize('device', wirelessDevices.length)}:',
+      );
       await Device.printDevices(wirelessDevices, _logger, prefix: '  ');
     }
     await _printDiagnostics(
-        foundAny: wirelessDevices.isNotEmpty || attachedDevices.isNotEmpty,);
+      foundAny: wirelessDevices.isNotEmpty || attachedDevices.isNotEmpty,
+    );
   }
 }
 
@@ -267,8 +274,10 @@ abstract class Diagnostic {
 
   void printMessage(Logger logger);
 
-  static void printList(Iterable<Diagnostic> diagnostics,
-      {required Logger logger,}) {
+  static void printList(
+    Iterable<Diagnostic> diagnostics, {
+    required Logger logger,
+  }) {
     for (final (index, diagnostic) in diagnostics.indexed) {
       logger.printStatus('${index + 1}. ${diagnostic.title}');
       diagnostic.printMessage(logger);
@@ -464,25 +473,29 @@ class DevicesAddCommand extends FlutterpiCommand {
             )
             .join(' ');
 
-        diagnostics.add(Diagnostic.fixCommand(
-          title:
-              'The remote user needs permission to use display and input devices.',
-          message:
-              'To add the necessary permissions, run the following command in your terminal.\n'
-              'NOTE: This gives any app running as the remote user access to the display and input devices. '
-              'If you\'re running untrusted code, consider the security implications.\n',
-          command: addGroupsCommand,
-        ),);
+        diagnostics.add(
+          Diagnostic.fixCommand(
+            title:
+                'The remote user needs permission to use display and input devices.',
+            message:
+                'To add the necessary permissions, run the following command in your terminal.\n'
+                'NOTE: This gives any app running as the remote user access to the display and input devices. '
+                'If you\'re running untrusted code, consider the security implications.\n',
+            command: addGroupsCommand,
+          ),
+        );
       }
     }
 
-    globals.flutterPiToolConfig.addDevice(DeviceConfigEntry(
-      id: id,
-      sshExecutable: sshExecutable,
-      sshRemote: remote,
-      remoteInstallPath: remoteInstallPath,
-      displaySizeMillimeters: displaySize,
-    ),);
+    globals.flutterPiToolConfig.addDevice(
+      DeviceConfigEntry(
+        id: id,
+        sshExecutable: sshExecutable,
+        sshRemote: remote,
+        remoteInstallPath: remoteInstallPath,
+        displaySizeMillimeters: displaySize,
+      ),
+    );
 
     if (diagnostics.isNotEmpty) {
       globals.printWarning(

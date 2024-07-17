@@ -16,11 +16,13 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
   }) : super([
           const CopyFlutterAssets(),
           const CopyIcudtl(),
-          CopyFlutterpiEngine(flutterpiTargetPlatform,
-              buildMode: BuildMode.release,
-              hostPlatform: hostPlatform,
-              artifactPaths: artifactPaths,
-              includeDebugSymbols: debugSymbols,),
+          CopyFlutterpiEngine(
+            flutterpiTargetPlatform,
+            buildMode: BuildMode.release,
+            hostPlatform: hostPlatform,
+            artifactPaths: artifactPaths,
+            includeDebugSymbols: debugSymbols,
+          ),
           CopyFlutterpiBinary(
             target: flutterpiTargetPlatform,
             buildMode: BuildMode.release,
@@ -155,7 +157,8 @@ class CopyFlutterpiBinary extends Target {
   List<Source> get inputs => <Source>[
         /// TODO: This should really be a Source.artifact(Artifact.flutterpiBinary)
         Source.pattern(
-            '{CACHE_DIR}/artifacts/flutter-pi/${target.triple}/$flutterpiBuildType/flutter-pi',),
+          '{CACHE_DIR}/artifacts/flutter-pi/${target.triple}/$flutterpiBuildType/flutter-pi',
+        ),
       ];
 
   @override

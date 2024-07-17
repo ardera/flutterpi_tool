@@ -62,8 +62,14 @@ class DeviceConfigEntry {
   }
 
   @override
-  int get hashCode => Object.hash(id, sshExecutable, sshRemote,
-      remoteInstallPath, displaySizeMillimeters, devicePixelRatio,);
+  int get hashCode => Object.hash(
+        id,
+        sshExecutable,
+        sshRemote,
+        remoteInstallPath,
+        displaySizeMillimeters,
+        devicePixelRatio,
+      );
 }
 
 class FlutterPiToolConfig {
