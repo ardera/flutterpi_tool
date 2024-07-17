@@ -26,7 +26,8 @@ class PrecacheCommand extends FlutterpiCommand {
     final os = switch (globals.os) {
       MoreOperatingSystemUtils os => os,
       _ => throw StateError(
-          'Operating system utils is not an FPiOperatingSystemUtils',),
+          'Operating system utils is not an FPiOperatingSystemUtils',
+        ),
     };
 
     final host = switch (os.fpiHostPlatform) {
