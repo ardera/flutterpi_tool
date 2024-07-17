@@ -129,7 +129,7 @@ class FlutterpiBinaries extends ArtifactSet {
           return false;
         }
       } on gh.GitHubError catch (e) {
-        logger.printError('Failed to check for flutter-pi updates: ${e.message}');
+        logger.printWarning('Failed to check for flutter-pi updates: ${e.message}');
         return true;
       }
     }
