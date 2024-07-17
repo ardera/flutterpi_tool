@@ -45,10 +45,10 @@ class SshUtils {
       if (allocateTTY == true) '-tt',
       if (exitOnForwardFailure == true) ...[
         '-o',
-        'ExitOnForwardFailure=yes'
+        'ExitOnForwardFailure=yes',
       ] else if (exitOnForwardFailure == false) ...[
         '-o',
-        'ExitOnForwardFailure=no'
+        'ExitOnForwardFailure=no',
       ],
       for (final (local, remote) in localPortForwards) ...[
         '-L',
@@ -66,8 +66,9 @@ class SshUtils {
   }
 
   List<String> buildUsermodAddGroupsCommand(Iterable<String> groups) {
-    if (groups.isEmpty)
+    if (groups.isEmpty) {
       throw ArgumentError.value(groups, 'groups', 'Groups must not be empty.');
+    }
 
     return ['usermod', '-aG', groups.join(','), r'$USER'];
   }

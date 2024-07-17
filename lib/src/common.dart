@@ -46,12 +46,12 @@ enum FlutterpiTargetPlatform {
         bitness = Bitness.b32;
 
   const FlutterpiTargetPlatform.tuned32(
-      this.shortName, this._genericVariantStr, this.triple)
+      this.shortName, this._genericVariantStr, this.triple,)
       : isGeneric = false,
         bitness = Bitness.b32;
 
   const FlutterpiTargetPlatform.tuned64(
-      this.shortName, this._genericVariantStr, this.triple)
+      this.shortName, this._genericVariantStr, this.triple,)
       : isGeneric = false,
         bitness = Bitness.b64;
 
@@ -83,7 +83,7 @@ enum EngineFlavor {
   release._internal('release', BuildMode.release);
 
   const EngineFlavor._internal(this.name, this.buildMode,
-      {this.unoptimized = false});
+      {this.unoptimized = false,});
 
   factory EngineFlavor(BuildMode mode, bool unoptimized) {
     return switch ((mode, unoptimized)) {
@@ -92,7 +92,7 @@ enum EngineFlavor {
       (BuildMode.profile, false) => profile,
       (BuildMode.release, false) => release,
       (_, true) => throw ArgumentError.value(unoptimized, 'unoptimized',
-          'Unoptimized builds are only supported for debug engine.'),
+          'Unoptimized builds are only supported for debug engine.',),
       _ => throw ArgumentError.value(mode, 'mode', 'Illegal build mode'),
     };
   }

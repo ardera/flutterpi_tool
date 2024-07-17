@@ -94,14 +94,14 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     final parts = size.split('x');
     if (parts.length != 2) {
       usageException(
-          'Invalid --display-size: Expected two dimensions separated by "x".');
+          'Invalid --display-size: Expected two dimensions separated by "x".',);
     }
 
     try {
       return (int.parse(parts[0].trim()), int.parse(parts[1].trim()));
     } on FormatException {
       usageException(
-          'Invalid --display-size: Expected both dimensions to be integers.');
+          'Invalid --display-size: Expected both dimensions to be integers.',);
     }
   }
 
@@ -115,7 +115,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
       return double.parse(ratio);
     } on FormatException {
       usageException(
-          'Invalid --pixel-ratio: Expected a floating point number.');
+          'Invalid --pixel-ratio: Expected a floating point number.',);
     }
   }
 
@@ -126,12 +126,12 @@ mixin FlutterpiCommandMixin on FlutterCommand {
       case [String _, ...]:
         throw UsageException(
             'Too many non-option arguments specified: ${argResults!.rest.skip(1)}',
-            usage);
+            usage,);
       case []:
         throw UsageException('Expected device id as non-option arg.', usage);
       default:
         throw StateError(
-            'Unexpected non-option argument list: ${argResults!.rest}');
+            'Unexpected non-option argument list: ${argResults!.rest}',);
     }
   }
 
@@ -275,7 +275,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
       throw UsageException(
           'Only one of "--debug", "--profile", "--release", '
               'or "--debug-unoptimized" can be specified.',
-          '');
+          '',);
     }
 
     if (debug) {
@@ -347,7 +347,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     bool excludeRelease = false,
   }) {
     throw UnsupportedError(
-        'This method is not supported in Flutterpi commands.');
+        'This method is not supported in Flutterpi commands.',);
   }
 
   @override
@@ -413,20 +413,20 @@ mixin FlutterpiCommandMixin on FlutterCommand {
         final result = await verifyThenRunCommand(null);
 
         await exitWithHooks(result.exitStatus == ExitStatus.success ? 0 : 1,
-            shutdownHooks: globals.shutdownHooks, logger: globals.logger);
+            shutdownHooks: globals.shutdownHooks, logger: globals.logger,);
       } on ToolExit catch (e) {
         if (e.message != null) {
           globals.printError(e.message!);
         }
 
         await exitWithHooks(e.exitCode ?? 1,
-            shutdownHooks: globals.shutdownHooks, logger: globals.logger);
+            shutdownHooks: globals.shutdownHooks, logger: globals.logger,);
       } on UsageException catch (e) {
         globals.printError(e.message);
         globals.printStatus(e.usage);
 
         await exitWithHooks(1,
-            shutdownHooks: globals.shutdownHooks, logger: globals.logger);
+            shutdownHooks: globals.shutdownHooks, logger: globals.logger,);
       }
     });
   }

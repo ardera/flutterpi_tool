@@ -84,7 +84,7 @@ void main() {
         EngineFlavor.debugUnopt,
         EngineFlavor.debug,
         EngineFlavor.profile,
-        EngineFlavor.release
+        EngineFlavor.release,
       },
       runtimeModes: {BuildMode.debug, BuildMode.release},
     );
@@ -181,7 +181,7 @@ void main() {
       host: FlutterpiHostPlatform.linuxX64,
       targets: {
         FlutterpiTargetPlatform.genericArmV7,
-        FlutterpiTargetPlatform.pi3
+        FlutterpiTargetPlatform.pi3,
       },
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
@@ -205,7 +205,7 @@ void main() {
       targets: {
         FlutterpiTargetPlatform.genericArmV7,
         FlutterpiTargetPlatform.pi3,
-        FlutterpiTargetPlatform.pi4_64
+        FlutterpiTargetPlatform.pi4_64,
       },
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
@@ -230,7 +230,7 @@ void main() {
       targets: {
         FlutterpiTargetPlatform.genericX64,
         FlutterpiTargetPlatform.pi3,
-        FlutterpiTargetPlatform.pi4_64
+        FlutterpiTargetPlatform.pi4_64,
       },
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},

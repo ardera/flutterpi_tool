@@ -20,7 +20,7 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
               buildMode: BuildMode.release,
               hostPlatform: hostPlatform,
               artifactPaths: artifactPaths,
-              includeDebugSymbols: debugSymbols),
+              includeDebugSymbols: debugSymbols,),
           CopyFlutterpiBinary(
             target: flutterpiTargetPlatform,
             buildMode: BuildMode.release,
@@ -155,7 +155,7 @@ class CopyFlutterpiBinary extends Target {
   List<Source> get inputs => <Source>[
         /// TODO: This should really be a Source.artifact(Artifact.flutterpiBinary)
         Source.pattern(
-            '{CACHE_DIR}/artifacts/flutter-pi/${target.triple}/$flutterpiBuildType/flutter-pi'),
+            '{CACHE_DIR}/artifacts/flutter-pi/${target.triple}/$flutterpiBuildType/flutter-pi',),
       ];
 
   @override
@@ -215,7 +215,7 @@ class CopyFlutterpiEngine extends Target {
   List<Source> get outputs => [
         const Source.pattern('{OUTPUT_DIR}/libflutter_engine.so'),
         if (includeDebugSymbols)
-          const Source.pattern('{OUTPUT_DIR}/libflutter_engine.dbgsyms')
+          const Source.pattern('{OUTPUT_DIR}/libflutter_engine.dbgsyms'),
       ];
 
   @override

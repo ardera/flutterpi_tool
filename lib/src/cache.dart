@@ -132,7 +132,7 @@ class FlutterpiBinaries extends ArtifactSet {
         }
       } on gh.GitHubError catch (e) {
         logger.printWarning(
-            'Failed to check for flutter-pi updates: ${e.message}');
+            'Failed to check for flutter-pi updates: ${e.message}',);
         return true;
       }
     }
@@ -180,7 +180,7 @@ class FlutterpiBinaries extends ArtifactSet {
       for (final triple in [
         'aarch64-linux-gnu',
         'arm-linux-gnueabihf',
-        'x86_64-linux-gnu'
+        'x86_64-linux-gnu',
       ])
         for (final type in ['release', 'debug'])
           (
@@ -195,8 +195,8 @@ class FlutterpiBinaries extends ArtifactSet {
       final url = Uri.parse(switch (asset?.browserDownloadUrl) {
         String url => url,
         null => throwToolExit(
-            'Failed to find asset "$assetName" in release "${release.tagName}" of repo ${repo.fullName}.'),
-      });
+            'Failed to find asset "$assetName" in release "${release.tagName}" of repo ${repo.fullName}.',),
+      },);
 
       final location = this
           .location
@@ -348,16 +348,16 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
     final updater = artifactUpdater as AuthenticatingArtifactUpdater;
 
     final dir = fileSystem.directory(
-        fileSystem.path.join(location.path, artifactDescription.cacheKey));
+        fileSystem.path.join(location.path, artifactDescription.cacheKey),);
     final url = await _findArtifact(storageKey, version!);
 
     if (url == null) {
       throwToolExit(
-          'Failed to find artifact $storageKey in run $runId of repo ${repo.fullName}');
+          'Failed to find artifact $storageKey in run $runId of repo ${repo.fullName}',);
     }
 
     await updater.downloadZipArchive('Downloading $storageKey...', url, dir,
-        authenticate: _authenticate);
+        authenticate: _authenticate,);
 
     makeFilesExecutable(dir, operatingSystemUtils);
   }
@@ -440,7 +440,7 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
   }
 
   Future<gh.ReleaseAsset?> _findReleaseAsset(
-      String name, String version) async {
+      String name, String version,) async {
     final release = await _findRelease(version);
     return release.findAsset(name);
   }
@@ -456,7 +456,7 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
     final updater = artifactUpdater as AuthenticatingArtifactUpdater;
 
     final dir = fileSystem.directory(
-        fileSystem.path.join(location.path, artifactDescription.cacheKey));
+        fileSystem.path.join(location.path, artifactDescription.cacheKey),);
 
     final asset = await _findReleaseAsset(storageKey, version!);
 
@@ -535,7 +535,7 @@ abstract class FlutterpiCache extends FlutterCache {
       fs: fileSystem,
       httpClient: pkgHttpHttpClient,
       logger: logger,
-    ));
+    ),);
   }
 
   @protected
@@ -591,7 +591,7 @@ abstract class FlutterpiCache extends FlutterCache {
           flavor,
           prefix: 'engine',
           cacheKey: 'flutterpi-engine-$target-$flavor',
-        ));
+        ),);
 
         descriptions.add(ArtifactDescription.target(
           target,
@@ -599,7 +599,7 @@ abstract class FlutterpiCache extends FlutterCache {
           prefix: 'engine-dbgsyms',
           cacheKey: 'flutterpi-engine-dbgsyms-$target-$flavor',
           includeDebugSymbols: true,
-        ));
+        ),);
       }
     }
 
@@ -623,7 +623,7 @@ abstract class FlutterpiCache extends FlutterCache {
             runtimeMode,
             prefix: 'gen-snapshot',
             cacheKey: 'flutterpi-gen-snapshot-$host-$target-$runtimeMode',
-          ));
+          ),);
         }
       }
     }
@@ -631,7 +631,7 @@ abstract class FlutterpiCache extends FlutterCache {
     descriptions.add(ArtifactDescription.universal(
       prefix: 'universal',
       cacheKey: 'flutterpi-universal',
-    ));
+    ),);
 
     return descriptions;
   }
@@ -678,7 +678,7 @@ abstract class FlutterpiCache extends FlutterCache {
             runtimeModes: runtimeModes,
             includeDebugSymbols: includeDebugSymbols,
           ))
-            artifact
+            artifact,
     };
   }
 
@@ -748,7 +748,7 @@ class GithubRepoReleasesFlutterpiCache extends FlutterpiCache {
         auth: auth,
         cache: this,
         artifactDescription: description,
-      ));
+      ),);
     }
   }
 
@@ -784,7 +784,7 @@ class GithubWorkflowRunFlutterpiCache extends FlutterpiCache {
         availableEngineVersion: availableEngineVersion,
         cache: this,
         artifactDescription: artifact,
-      ));
+      ),);
     }
   }
 
@@ -854,7 +854,7 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
   }) {
     return engineCacheDir
         .childDirectory(
-            'flutterpi-gen-snapshot-$hostPlatform-$target-$runtimeMode')
+            'flutterpi-gen-snapshot-$hostPlatform-$target-$runtimeMode',)
         .childFile('gen_snapshot');
   }
 
@@ -866,7 +866,7 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
     required EngineFlavor flavor,
   }) {
     return Source.pattern(
-        '{CACHE_DIR}/artifacts/$artifactSubDir/flutterpi-engine-$target-$flavor/libflutter_engine.so');
+        '{CACHE_DIR}/artifacts/$artifactSubDir/flutterpi-engine-$target-$flavor/libflutter_engine.so',);
   }
 
   Source getEngineDbgsymsSource({
@@ -876,7 +876,7 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
     required EngineFlavor flavor,
   }) {
     return Source.pattern(
-        '{CACHE_DIR}/artifacts/$artifactSubDir/flutterpi-engine-dbgsyms-$target-$flavor/libflutter_engine.dbgsyms');
+        '{CACHE_DIR}/artifacts/$artifactSubDir/flutterpi-engine-dbgsyms-$target-$flavor/libflutter_engine.dbgsyms',);
   }
 }
 

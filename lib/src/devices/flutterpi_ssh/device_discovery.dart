@@ -24,7 +24,7 @@ class FlutterpiSshDeviceDiscovery extends PollingDeviceDiscovery {
   bool get canListAnything => true;
 
   Future<Device?> getDeviceIfReachable(
-      {Duration? timeout, required DeviceConfigEntry configEntry}) async {
+      {Duration? timeout, required DeviceConfigEntry configEntry,}) async {
     final sshUtils = SshUtils(
       processUtils: this.sshUtils.processUtils,
       defaultRemote: configEntry.sshRemote,
