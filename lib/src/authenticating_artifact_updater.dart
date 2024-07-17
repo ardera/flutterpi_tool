@@ -35,7 +35,7 @@ String _legalizeName(String fileName) {
       if (substitutions[String.fromCharCode(codeUnit)] case String substitute)
         ...substitute.codeUnits
       else
-        codeUnit
+        codeUnit,
   ];
 
   return String.fromCharCodes(replaced);
@@ -73,7 +73,7 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
 
   static const Set<String> _denylistedBasenames = <String>{
     'entitlements.txt',
-    'without_entitlements.txt'
+    'without_entitlements.txt',
   };
   void _removeDenylistedFiles(Directory directory) {
     for (final FileSystemEntity entity in directory.listSync(recursive: true)) {
@@ -173,7 +173,7 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
 
         if (tries == 0) {
           throwToolExit(
-              'Failed to download $url. Ensure you have network connectivity and then try again.\n$err');
+              'Failed to download $url. Ensure you have network connectivity and then try again.\n$err',);
         }
         continue;
       } finally {
@@ -181,7 +181,7 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
       }
 
       final destination = location.childDirectory(
-          tempFile.fileSystem.path.basenameWithoutExtension(tempFile.path));
+          tempFile.fileSystem.path.basenameWithoutExtension(tempFile.path),);
 
       ErrorHandlingFileSystem.deleteIfExists(destination, recursive: true);
       location.createSync(recursive: true);
@@ -208,7 +208,7 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
   }
 
   Future<void> _download(Uri url, File file, Status status,
-      {void Function(io.HttpClientRequest)? authenticate}) async {
+      {void Function(io.HttpClientRequest)? authenticate,}) async {
     final allowed =
         _allowedBaseUrls.any((baseUrl) => url.toString().startsWith(baseUrl));
 

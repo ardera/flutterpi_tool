@@ -57,7 +57,7 @@ abstract class MoreOperatingSystemUtils implements OperatingSystemUtils {
 
   @override
   void unpack(File gzippedTarFile, Directory targetDirectory,
-      {ArchiveType? type, Archive Function(File)? decoder});
+      {ArchiveType? type, Archive Function(File)? decoder,});
 }
 
 class MoreOperatingSystemUtilsWrapper implements MoreOperatingSystemUtils {
@@ -296,7 +296,7 @@ class PosixMoreOsUtils extends DelegatingMoreOsUtils {
   }) {
     if (decoder != null) {
       return delegate.unpack(gzippedTarFile, targetDirectory,
-          decoder: decoder, type: type);
+          decoder: decoder, type: type,);
     }
 
     switch (type) {
@@ -316,7 +316,7 @@ class PosixMoreOsUtils extends DelegatingMoreOsUtils {
             '-x${formatArg}f',
             gzippedTarFile.path,
             '-C',
-            targetDirectory.path
+            targetDirectory.path,
           ],
           throwOnError: true,
         );
