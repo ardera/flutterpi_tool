@@ -123,7 +123,8 @@ class FlutterpiSshDevice extends Device {
         case 'x86_64':
           return FlutterpiTargetPlatform.genericX64;
         default:
-          throwToolExit('SSH device "$id" has unknown target platform. `uname -m`: $result');
+          throwToolExit(
+              'SSH device "$id" has unknown target platform. `uname -m`: $result');
       }
     } on SshException catch (e) {
       throwToolExit('Error querying ssh device "$id" target platform: $e');
@@ -139,7 +140,8 @@ class FlutterpiSshDevice extends Device {
   void clearLogs() {}
 
   @override
-  DeviceConnectionInterface get connectionInterface => DeviceConnectionInterface.wireless;
+  DeviceConnectionInterface get connectionInterface =>
+      DeviceConnectionInterface.wireless;
 
   @override
   Future<void> dispose() async {
@@ -154,16 +156,19 @@ class FlutterpiSshDevice extends Device {
   bool get ephemeral => false;
 
   @override
-  FutureOr<DeviceLogReader> getLogReader({ApplicationPackage? app, bool includePastLogs = false}) {
+  FutureOr<DeviceLogReader> getLogReader(
+      {ApplicationPackage? app, bool includePastLogs = false}) {
     if (app == null) {
       return globalLogReader;
     } else {
-      return logReaders.putIfAbsent(app.id, () => CustomDeviceLogReader(app.id));
+      return logReaders.putIfAbsent(
+          app.id, () => CustomDeviceLogReader(app.id));
     }
   }
 
   @override
-  Future<bool> installApp(covariant FlutterpiAppBundle app, {String? userIdentifier}) async {
+  Future<bool> installApp(covariant FlutterpiAppBundle app,
+      {String? userIdentifier}) async {
     final installDir = _getRemoteInstallPath(app);
 
     if (app is! PrebuiltFlutterpiAppBundle) {
@@ -176,7 +181,10 @@ class FlutterpiSshDevice extends Device {
       await uninstallApp(app);
 
       try {
-        await sshUtils.scp(localPath: app.directory.path, remotePath: installDir, throwOnError: true);
+        await sshUtils.scp(
+            localPath: app.directory.path,
+            remotePath: installDir,
+            throwOnError: true);
       } on SshException catch (e) {
         throwToolExit('Error installing app on SSH device "$id": $e');
       }
@@ -184,12 +192,14 @@ class FlutterpiSshDevice extends Device {
       status.stop();
     }
 
-    logger.printTrace('Installed app bundle "${app.directory.path}" on SSH device "$id".');
+    logger.printTrace(
+        'Installed app bundle "${app.directory.path}" on SSH device "$id".');
     return true;
   }
 
   @override
-  Future<bool> isAppInstalled(covariant FlutterpiAppBundle app, {String? userIdentifier}) async {
+  Future<bool> isAppInstalled(covariant FlutterpiAppBundle app,
+      {String? userIdentifier}) async {
     return false;
   }
 
@@ -390,7 +400,8 @@ class FlutterpiSshDevice extends Device {
           mainPath: mainPath,
           debuggingOptions: debuggingOptions,
         ),
-      dynamic _ => throwToolExit('Cannot start app on SSH device "$id" without an app bundle.'),
+      dynamic _ => throwToolExit(
+          'Cannot start app on SSH device "$id" without an app bundle.'),
     };
 
     await installApp(prebuiltApp, userIdentifier: userIdentifier);
@@ -410,7 +421,10 @@ class FlutterpiSshDevice extends Device {
 
     final List<String> command;
     try {
-      final engineArgs = buildEngineArgs(debuggingOptions: debuggingOptions, traceStartup: false, route: route);
+      final engineArgs = buildEngineArgs(
+          debuggingOptions: debuggingOptions,
+          traceStartup: false,
+          route: route);
 
       command = buildFlutterpiCommand(
         flutterpiExe: flutterpiExePath,
@@ -418,7 +432,8 @@ class FlutterpiSshDevice extends Device {
         runtimeMode: debuggingOptions.buildInfo.mode,
         engineArgs: [
           ...engineArgs,
-          if (debuggingOptions.deviceVmServicePort == null) '--vm-service-port=$devicePort',
+          if (debuggingOptions.deviceVmServicePort == null)
+            '--vm-service-port=$devicePort',
         ],
       );
     } on Exception catch (e) {
@@ -434,7 +449,8 @@ class FlutterpiSshDevice extends Device {
       exitOnForwardFailure: true,
     );
 
-    final logReader = logReaders.putIfAbsent(prebuiltApp.id, () => CustomDeviceLogReader(prebuiltApp.name));
+    final logReader = logReaders.putIfAbsent(
+        prebuiltApp.id, () => CustomDeviceLogReader(prebuiltApp.name));
     globalLogReader.listenToLinesStream(logReader.logLines);
     logReader.listenToProcessOutput(sshProcess);
 
@@ -468,7 +484,8 @@ class FlutterpiSshDevice extends Device {
                 .join(' ');
 
             uriCompleter.completeError(
-              Exception('Make sure all required runtime dependencies are installed on the device.\n'
+              Exception(
+                  'Make sure all required runtime dependencies are installed on the device.\n'
                   'For example, for targets runned debian-based distros, you can execute:\n'
                   '  $installDepsSshCommand'),
             );
@@ -481,7 +498,8 @@ class FlutterpiSshDevice extends Device {
             ));
           }
         } else {
-          uriCompleter.completeError(Exception('Process exited without providing a VM service URI.'));
+          uriCompleter.completeError(
+              Exception('Process exited without providing a VM service URI.'));
         }
       }
     });
@@ -501,7 +519,8 @@ class FlutterpiSshDevice extends Device {
   }
 
   @override
-  Future<bool> stopApp(covariant FlutterpiAppBundle? app, {String? userIdentifier}) async {
+  Future<bool> stopApp(covariant FlutterpiAppBundle? app,
+      {String? userIdentifier}) async {
     if (app == null) {
       final apps = runningApps.values.toList();
       runningApps.clear();
@@ -511,7 +530,8 @@ class FlutterpiSshDevice extends Device {
     } else {
       final runningApp = runningApps.remove(app.id);
       if (runningApp == null) {
-        logger.printTrace('Attempted to kill non-running app "${app.id}" on SSH device "$id".');
+        logger.printTrace(
+            'Attempted to kill non-running app "${app.id}" on SSH device "$id".');
         return false;
       }
 
@@ -554,7 +574,8 @@ class FlutterpiSshDevice extends Device {
   }
 
   @override
-  Future<TargetPlatform> get targetPlatform async => switch (await flutterpiTargetPlatform) {
+  Future<TargetPlatform> get targetPlatform async =>
+      switch (await flutterpiTargetPlatform) {
         FlutterpiTargetPlatform.genericArmV7 ||
         FlutterpiTargetPlatform.pi3 ||
         FlutterpiTargetPlatform.pi4 =>
@@ -567,7 +588,8 @@ class FlutterpiSshDevice extends Device {
       };
 
   @override
-  Future<bool> uninstallApp(covariant FlutterpiAppBundle app, {String? userIdentifier}) async {
+  Future<bool> uninstallApp(covariant FlutterpiAppBundle app,
+      {String? userIdentifier}) async {
     final path = _getRemoteInstallPath(app);
 
     try {
@@ -577,7 +599,8 @@ class FlutterpiSshDevice extends Device {
       return false;
     }
 
-    logger.printTrace('Uninstalled app bundle "${app.id}" from SSH device "$id".');
+    logger.printTrace(
+        'Uninstalled app bundle "${app.id}" from SSH device "$id".');
     return true;
   }
 }

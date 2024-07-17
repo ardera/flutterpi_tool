@@ -50,12 +50,14 @@ abstract class MoreOperatingSystemUtils implements OperatingSystemUtils {
     return moreOs;
   }
 
-  factory MoreOperatingSystemUtils.wrap(OperatingSystemUtils os) => MoreOperatingSystemUtilsWrapper(os: os);
+  factory MoreOperatingSystemUtils.wrap(OperatingSystemUtils os) =>
+      MoreOperatingSystemUtilsWrapper(os: os);
 
   FlutterpiHostPlatform get fpiHostPlatform;
 
   @override
-  void unpack(File gzippedTarFile, Directory targetDirectory, {ArchiveType? type, Archive Function(File)? decoder});
+  void unpack(File gzippedTarFile, Directory targetDirectory,
+      {ArchiveType? type, Archive Function(File)? decoder});
 }
 
 class MoreOperatingSystemUtilsWrapper implements MoreOperatingSystemUtils {
@@ -107,10 +109,14 @@ class MoreOperatingSystemUtilsWrapper implements MoreOperatingSystemUtils {
       return os.unpack(gzippedTarFile, targetDirectory);
     } else {
       decoder ??= switch (type) {
-        ArchiveType.tarXz => (file) => TarDecoder().decodeBytes(XZDecoder().decodeBytes(file.readAsBytesSync())),
-        ArchiveType.tarGz => (file) => TarDecoder().decodeBytes(GZipDecoder().decodeBytes(file.readAsBytesSync())),
-        ArchiveType.tar => (file) => TarDecoder().decodeBytes(file.readAsBytesSync()),
-        ArchiveType.zip => (file) => ZipDecoder().decodeBytes(file.readAsBytesSync()),
+        ArchiveType.tarXz => (file) => TarDecoder()
+            .decodeBytes(XZDecoder().decodeBytes(file.readAsBytesSync())),
+        ArchiveType.tarGz => (file) => TarDecoder()
+            .decodeBytes(GZipDecoder().decodeBytes(file.readAsBytesSync())),
+        ArchiveType.tar => (file) =>
+            TarDecoder().decodeBytes(file.readAsBytesSync()),
+        ArchiveType.zip => (file) =>
+            ZipDecoder().decodeBytes(file.readAsBytesSync()),
         null => throw 'unreachable',
       };
 
@@ -142,9 +148,11 @@ class MoreOperatingSystemUtilsWrapper implements MoreOperatingSystemUtils {
       //
       // See https://snyk.io/research/zip-slip-vulnerability for more context.
       final destinationFileCanonicalPath = fs.path.canonicalize(destFile.path);
-      final targetDirectoryCanonicalPath = fs.path.canonicalize(targetDirectory.path);
+      final targetDirectoryCanonicalPath =
+          fs.path.canonicalize(targetDirectory.path);
 
-      if (!destinationFileCanonicalPath.startsWith(targetDirectoryCanonicalPath)) {
+      if (!destinationFileCanonicalPath
+          .startsWith(targetDirectoryCanonicalPath)) {
         throw StateError(
           'Tried to extract the file $destinationFileCanonicalPath outside of the '
           'target directory $targetDirectoryCanonicalPath',
@@ -287,7 +295,8 @@ class PosixMoreOsUtils extends DelegatingMoreOsUtils {
     Archive Function(File)? decoder,
   }) {
     if (decoder != null) {
-      return delegate.unpack(gzippedTarFile, targetDirectory, decoder: decoder, type: type);
+      return delegate.unpack(gzippedTarFile, targetDirectory,
+          decoder: decoder, type: type);
     }
 
     switch (type) {
@@ -302,7 +311,13 @@ class PosixMoreOsUtils extends DelegatingMoreOsUtils {
         };
 
         processUtils.runSync(
-          <String>['tar', '-x${formatArg}f', gzippedTarFile.path, '-C', targetDirectory.path],
+          <String>[
+            'tar',
+            '-x${formatArg}f',
+            gzippedTarFile.path,
+            '-C',
+            targetDirectory.path
+          ],
           throwOnError: true,
         );
         break;

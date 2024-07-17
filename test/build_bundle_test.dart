@@ -6,7 +6,8 @@ import 'package:file/memory.dart';
 import 'package:flutterpi_tool/src/cli/command_runner.dart';
 
 import 'package:flutterpi_tool/src/fltool/common.dart';
-import 'package:flutterpi_tool/src/fltool/context_runner.dart' as context_runner;
+import 'package:flutterpi_tool/src/fltool/context_runner.dart'
+    as context_runner;
 import 'package:flutterpi_tool/src/cli/commands/build.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:test/test.dart';

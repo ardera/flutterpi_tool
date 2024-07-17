@@ -82,7 +82,11 @@ class LzmaDecoder {
   }
 
   // Reset the decoder.
-  void reset({int? positionBits, int? literalPositionBits, int? literalContextBits, bool resetDictionary = false}) {
+  void reset(
+      {int? positionBits,
+      int? literalPositionBits,
+      int? literalContextBits,
+      bool resetDictionary = false}) {
     _positionBits = positionBits ?? _positionBits;
     _literalPositionBits = literalPositionBits ?? _literalPositionBits;
     _literalContextBits = literalContextBits ?? _literalContextBits;
@@ -227,7 +231,8 @@ class LzmaDecoder {
         if (matched) {
           final matchBit = (prevByte >> 7) & 0x1;
           prevByte <<= 1;
-          b = _rc.readBit(matchBit == 0 ? matchTable0 : matchTable1, symbolPrefix | value);
+          b = _rc.readBit(
+              matchBit == 0 ? matchTable0 : matchTable1, symbolPrefix | value);
           matched = b == matchBit;
         } else {
           b = _rc.readBit(table, symbolPrefix | value);
@@ -284,7 +289,8 @@ class LzmaDecoder {
     _distance1 = _distance0;
     _distance0 = distance;
 
-    state = _prevPacketIsLiteral() ? _LzmaState.litMatch : _LzmaState.nonLitMatch;
+    state =
+        _prevPacketIsLiteral() ? _LzmaState.litMatch : _LzmaState.nonLitMatch;
   }
 
   // Decode a packet that repeats a match already done.
@@ -293,7 +299,9 @@ class LzmaDecoder {
     if (_rc.readBit(_repeat0Table, state.index) == 0) {
       if (_rc.readBit(_longRepeat0Tables[state.index], posState) == 0) {
         _repeatData(_distance0, 1);
-        state = _prevPacketIsLiteral() ? _LzmaState.litShortRep : _LzmaState.nonLitRep;
+        state = _prevPacketIsLiteral()
+            ? _LzmaState.litShortRep
+            : _LzmaState.nonLitRep;
         return;
       } else {
         distance = _distance0;
@@ -319,7 +327,8 @@ class LzmaDecoder {
     _repeatData(distance, length);
 
     // Update state.
-    state = _prevPacketIsLiteral() ? _LzmaState.litLongRep : _LzmaState.nonLitRep;
+    state =
+        _prevPacketIsLiteral() ? _LzmaState.litLongRep : _LzmaState.nonLitRep;
   }
 
   // Repeat decompressed data, starting [distance] bytes back from the end of
@@ -486,7 +495,8 @@ class _DistanceDecoder {
 
     // Short distances are stored in reverse bittree format.
     if (slot < 14) {
-      final result = (prefix << bitCount) | _input.readBittreeReverse(_shortTables[slot - 4], bitCount);
+      final result = (prefix << bitCount) |
+          _input.readBittreeReverse(_shortTables[slot - 4], bitCount);
       return result;
     }
 

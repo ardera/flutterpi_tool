@@ -31,7 +31,8 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
   final FlutterpiTargetPlatform flutterpiTargetPlatform;
 
   @override
-  String get name => 'release_bundle_flutterpi_${flutterpiTargetPlatform.shortName}_assets';
+  String get name =>
+      'release_bundle_flutterpi_${flutterpiTargetPlatform.shortName}_assets';
 }
 
 class ProfileBundleFlutterpiAssets extends CompositeTarget {
@@ -61,7 +62,8 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
   final FlutterpiTargetPlatform flutterpiTargetPlatform;
 
   @override
-  String get name => 'profile_bundle_flutterpi_${flutterpiTargetPlatform.shortName}_assets';
+  String get name =>
+      'profile_bundle_flutterpi_${flutterpiTargetPlatform.shortName}_assets';
 }
 
 class DebugBundleFlutterpiAssets extends CompositeTarget {
@@ -116,7 +118,8 @@ class CopyIcudtl extends Target {
 
   @override
   Future<void> build(Environment environment) async {
-    final icudtl = environment.fileSystem.file(environment.artifacts.getArtifactPath(Artifact.icuData));
+    final icudtl = environment.fileSystem
+        .file(environment.artifacts.getArtifactPath(Artifact.icuData));
     final outputFile = environment.outputDir.childFile('icudtl.dat');
     icudtl.copySync(outputFile.path);
   }
@@ -151,7 +154,8 @@ class CopyFlutterpiBinary extends Target {
   @override
   List<Source> get inputs => <Source>[
         /// TODO: This should really be a Source.artifact(Artifact.flutterpiBinary)
-        Source.pattern('{CACHE_DIR}/artifacts/flutter-pi/${target.triple}/$flutterpiBuildType/flutter-pi'),
+        Source.pattern(
+            '{CACHE_DIR}/artifacts/flutter-pi/${target.triple}/$flutterpiBuildType/flutter-pi'),
       ];
 
   @override
@@ -210,7 +214,8 @@ class CopyFlutterpiEngine extends Target {
   @override
   List<Source> get outputs => [
         const Source.pattern('{OUTPUT_DIR}/libflutter_engine.so'),
-        if (includeDebugSymbols) const Source.pattern('{OUTPUT_DIR}/libflutter_engine.dbgsyms')
+        if (includeDebugSymbols)
+          const Source.pattern('{OUTPUT_DIR}/libflutter_engine.dbgsyms')
       ];
 
   @override
@@ -222,7 +227,9 @@ class CopyFlutterpiEngine extends Target {
 
     _artifactPaths
         .getEngine(
-          engineCacheDir: environment.cacheDir.childDirectory('artifacts').childDirectory('engine'),
+          engineCacheDir: environment.cacheDir
+              .childDirectory('artifacts')
+              .childDirectory('engine'),
           hostPlatform: _hostPlatform,
           target: flutterpiTargetPlatform,
           flavor: _engineFlavor,
@@ -230,14 +237,17 @@ class CopyFlutterpiEngine extends Target {
         .copySync(outputFile.path);
 
     if (includeDebugSymbols) {
-      final dbgsymsOutputFile = environment.outputDir.childFile('libflutter_engine.dbgsyms');
+      final dbgsymsOutputFile =
+          environment.outputDir.childFile('libflutter_engine.dbgsyms');
       if (!dbgsymsOutputFile.parent.existsSync()) {
         dbgsymsOutputFile.parent.createSync(recursive: true);
       }
 
       (_artifactPaths as FlutterpiArtifactPathsV2)
           .getEngineDbgsyms(
-            engineCacheDir: environment.cacheDir.childDirectory('artifacts').childDirectory('engine'),
+            engineCacheDir: environment.cacheDir
+                .childDirectory('artifacts')
+                .childDirectory('engine'),
             target: flutterpiTargetPlatform,
             flavor: _engineFlavor,
           )

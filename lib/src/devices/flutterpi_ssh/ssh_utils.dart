@@ -66,7 +66,8 @@ class SshUtils {
   }
 
   List<String> buildUsermodAddGroupsCommand(Iterable<String> groups) {
-    if (groups.isEmpty) throw ArgumentError.value(groups, 'groups', 'Groups must not be empty.');
+    if (groups.isEmpty)
+      throw ArgumentError.value(groups, 'groups', 'Groups must not be empty.');
 
     return ['usermod', '-aG', groups.join(','), r'$USER'];
   }
@@ -202,7 +203,8 @@ class SshUtils {
   }) async {
     final timeoutSecondsCeiled = switch (timeout) {
       Duration(inMicroseconds: final micros) =>
-        (micros + Duration.microsecondsPerSecond - 1) ~/ Duration.microsecondsPerSecond,
+        (micros + Duration.microsecondsPerSecond - 1) ~/
+            Duration.microsecondsPerSecond,
       _ => null,
     };
 

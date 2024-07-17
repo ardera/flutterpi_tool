@@ -80,7 +80,12 @@ void main() {
         FlutterpiTargetPlatform.pi4,
         FlutterpiTargetPlatform.pi4_64,
       },
-      flavors: {EngineFlavor.debugUnopt, EngineFlavor.debug, EngineFlavor.profile, EngineFlavor.release},
+      flavors: {
+        EngineFlavor.debugUnopt,
+        EngineFlavor.debug,
+        EngineFlavor.profile,
+        EngineFlavor.release
+      },
       runtimeModes: {BuildMode.debug, BuildMode.release},
     );
 
@@ -174,7 +179,10 @@ void main() {
   test('specific artifact selection', () async {
     final artifacts = await getArtifactKeysFor(
       host: FlutterpiHostPlatform.linuxX64,
-      targets: {FlutterpiTargetPlatform.genericArmV7, FlutterpiTargetPlatform.pi3},
+      targets: {
+        FlutterpiTargetPlatform.genericArmV7,
+        FlutterpiTargetPlatform.pi3
+      },
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
     );
@@ -194,7 +202,11 @@ void main() {
   test('specific artifact selection', () async {
     final artifacts = await getArtifactKeysFor(
       host: FlutterpiHostPlatform.linuxX64,
-      targets: {FlutterpiTargetPlatform.genericArmV7, FlutterpiTargetPlatform.pi3, FlutterpiTargetPlatform.pi4_64},
+      targets: {
+        FlutterpiTargetPlatform.genericArmV7,
+        FlutterpiTargetPlatform.pi3,
+        FlutterpiTargetPlatform.pi4_64
+      },
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
     );
@@ -215,7 +227,11 @@ void main() {
   test('specific artifact selection', () async {
     final artifacts = await getArtifactKeysFor(
       host: FlutterpiHostPlatform.linuxX64,
-      targets: {FlutterpiTargetPlatform.genericX64, FlutterpiTargetPlatform.pi3, FlutterpiTargetPlatform.pi4_64},
+      targets: {
+        FlutterpiTargetPlatform.genericX64,
+        FlutterpiTargetPlatform.pi3,
+        FlutterpiTargetPlatform.pi4_64
+      },
       flavors: {EngineFlavor.debugUnopt, EngineFlavor.release},
       runtimeModes: {BuildMode.debug, BuildMode.release},
     );

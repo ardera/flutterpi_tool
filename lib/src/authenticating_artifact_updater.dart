@@ -32,7 +32,10 @@ String _legalizeName(String fileName) {
 
   final replaced = [
     for (final codeUnit in fileName.codeUnits)
-      if (substitutions[String.fromCharCode(codeUnit)] case String substitute) ...substitute.codeUnits else codeUnit
+      if (substitutions[String.fromCharCode(codeUnit)] case String substitute)
+        ...substitute.codeUnits
+      else
+        codeUnit
   ];
 
   return String.fromCharCodes(replaced);
@@ -68,7 +71,10 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
   @visibleForTesting
   final List<File> downloadedFiles = <File>[];
 
-  static const Set<String> _denylistedBasenames = <String>{'entitlements.txt', 'without_entitlements.txt'};
+  static const Set<String> _denylistedBasenames = <String>{
+    'entitlements.txt',
+    'without_entitlements.txt'
+  };
   void _removeDenylistedFiles(Directory directory) {
     for (final FileSystemEntity entity in directory.listSync(recursive: true)) {
       if (entity is! File) {
@@ -166,14 +172,16 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
         tries -= 1;
 
         if (tries == 0) {
-          throwToolExit('Failed to download $url. Ensure you have network connectivity and then try again.\n$err');
+          throwToolExit(
+              'Failed to download $url. Ensure you have network connectivity and then try again.\n$err');
         }
         continue;
       } finally {
         status.stop();
       }
 
-      final destination = location.childDirectory(tempFile.fileSystem.path.basenameWithoutExtension(tempFile.path));
+      final destination = location.childDirectory(
+          tempFile.fileSystem.path.basenameWithoutExtension(tempFile.path));
 
       ErrorHandlingFileSystem.deleteIfExists(destination, recursive: true);
       location.createSync(recursive: true);
@@ -199,8 +207,10 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
     }
   }
 
-  Future<void> _download(Uri url, File file, Status status, {void Function(io.HttpClientRequest)? authenticate}) async {
-    final allowed = _allowedBaseUrls.any((baseUrl) => url.toString().startsWith(baseUrl));
+  Future<void> _download(Uri url, File file, Status status,
+      {void Function(io.HttpClientRequest)? authenticate}) async {
+    final allowed =
+        _allowedBaseUrls.any((baseUrl) => url.toString().startsWith(baseUrl));
 
     // In tests make this a hard failure.
     assert(

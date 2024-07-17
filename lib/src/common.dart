@@ -13,8 +13,10 @@ enum FlutterpiHostPlatform {
   windowsX64.b64('windows-x64', 'Windows-X64'),
   windowsARM64.b64('windows-arm64', 'Windows-ARM64');
 
-  const FlutterpiHostPlatform.b32(this.name, this.githubName) : bitness = Bitness.b32;
-  const FlutterpiHostPlatform.b64(this.name, this.githubName) : bitness = Bitness.b64;
+  const FlutterpiHostPlatform.b32(this.name, this.githubName)
+      : bitness = Bitness.b32;
+  const FlutterpiHostPlatform.b64(this.name, this.githubName)
+      : bitness = Bitness.b64;
 
   final String name;
   final String githubName;
@@ -43,11 +45,13 @@ enum FlutterpiTargetPlatform {
         _genericVariantStr = null,
         bitness = Bitness.b32;
 
-  const FlutterpiTargetPlatform.tuned32(this.shortName, this._genericVariantStr, this.triple)
+  const FlutterpiTargetPlatform.tuned32(
+      this.shortName, this._genericVariantStr, this.triple)
       : isGeneric = false,
         bitness = Bitness.b32;
 
-  const FlutterpiTargetPlatform.tuned64(this.shortName, this._genericVariantStr, this.triple)
+  const FlutterpiTargetPlatform.tuned64(
+      this.shortName, this._genericVariantStr, this.triple)
       : isGeneric = false,
         bitness = Bitness.b64;
 
@@ -59,7 +63,8 @@ enum FlutterpiTargetPlatform {
 
   FlutterpiTargetPlatform get genericVariant {
     if (_genericVariantStr != null) {
-      return values.singleWhere((target) => target.shortName == _genericVariantStr);
+      return values
+          .singleWhere((target) => target.shortName == _genericVariantStr);
     } else {
       return this;
     }
@@ -77,7 +82,8 @@ enum EngineFlavor {
   profile._internal('profile', BuildMode.profile),
   release._internal('release', BuildMode.release);
 
-  const EngineFlavor._internal(this.name, this.buildMode, {this.unoptimized = false});
+  const EngineFlavor._internal(this.name, this.buildMode,
+      {this.unoptimized = false});
 
   factory EngineFlavor(BuildMode mode, bool unoptimized) {
     return switch ((mode, unoptimized)) {
@@ -85,8 +91,8 @@ enum EngineFlavor {
       (BuildMode.debug, false) => debug,
       (BuildMode.profile, false) => profile,
       (BuildMode.release, false) => release,
-      (_, true) => throw ArgumentError.value(
-          unoptimized, 'unoptimized', 'Unoptimized builds are only supported for debug engine.'),
+      (_, true) => throw ArgumentError.value(unoptimized, 'unoptimized',
+          'Unoptimized builds are only supported for debug engine.'),
       _ => throw ArgumentError.value(mode, 'mode', 'Illegal build mode'),
     };
   }

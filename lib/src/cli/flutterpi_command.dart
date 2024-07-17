@@ -79,7 +79,8 @@ mixin FlutterpiCommandMixin on FlutterCommand {
   void usesDisplaySizeArg() {
     argParser.addOption(
       'display-size',
-      help: 'The physical size of the device display in millimeters. This is used to calculate the device pixel ratio.',
+      help:
+          'The physical size of the device display in millimeters. This is used to calculate the device pixel ratio.',
       valueHelp: 'width x height',
     );
   }
@@ -92,13 +93,15 @@ mixin FlutterpiCommandMixin on FlutterCommand {
 
     final parts = size.split('x');
     if (parts.length != 2) {
-      usageException('Invalid --display-size: Expected two dimensions separated by "x".');
+      usageException(
+          'Invalid --display-size: Expected two dimensions separated by "x".');
     }
 
     try {
       return (int.parse(parts[0].trim()), int.parse(parts[1].trim()));
     } on FormatException {
-      usageException('Invalid --display-size: Expected both dimensions to be integers.');
+      usageException(
+          'Invalid --display-size: Expected both dimensions to be integers.');
     }
   }
 
@@ -111,7 +114,8 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     try {
       return double.parse(ratio);
     } on FormatException {
-      usageException('Invalid --pixel-ratio: Expected a floating point number.');
+      usageException(
+          'Invalid --pixel-ratio: Expected a floating point number.');
     }
   }
 
@@ -120,11 +124,14 @@ mixin FlutterpiCommandMixin on FlutterCommand {
       case [String id]:
         return id;
       case [String _, ...]:
-        throw UsageException('Too many non-option arguments specified: ${argResults!.rest.skip(1)}', usage);
+        throw UsageException(
+            'Too many non-option arguments specified: ${argResults!.rest.skip(1)}',
+            usage);
       case []:
         throw UsageException('Expected device id as non-option arg.', usage);
       default:
-        throw StateError('Unexpected non-option argument list: ${argResults!.rest}');
+        throw StateError(
+            'Unexpected non-option argument list: ${argResults!.rest}');
     }
   }
 
@@ -239,7 +246,8 @@ mixin FlutterpiCommandMixin on FlutterCommand {
 
     argParser.addFlag(
       'debug-unoptimized',
-      help: 'Build for debug mode and use unoptimized engine. (For stepping through engine code)',
+      help:
+          'Build for debug mode and use unoptimized engine. (For stepping through engine code)',
       negatable: false,
     );
   }
@@ -292,7 +300,8 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     }
 
     final targetPlatforms = {
-      for (final device in devices.whereType<FlutterpiSshDevice>()) await device.flutterpiTargetPlatform,
+      for (final device in devices.whereType<FlutterpiSshDevice>())
+        await device.flutterpiTargetPlatform,
     };
 
     return targetPlatforms.expand((p) => [p, p.genericVariant]).toSet();
@@ -305,7 +314,8 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     Set<BuildMode>? runtimeModes,
     bool? includeDebugSymbols,
   }) async {
-    hostPlatform ??= switch ((globals.os as MoreOperatingSystemUtils).fpiHostPlatform) {
+    hostPlatform ??=
+        switch ((globals.os as MoreOperatingSystemUtils).fpiHostPlatform) {
       FlutterpiHostPlatform.darwinARM64 => FlutterpiHostPlatform.darwinX64,
       FlutterpiHostPlatform.windowsARM64 => FlutterpiHostPlatform.windowsX64,
       FlutterpiHostPlatform other => other,
@@ -336,7 +346,8 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     bool excludeDebug = false,
     bool excludeRelease = false,
   }) {
-    throw UnsupportedError('This method is not supported in Flutterpi commands.');
+    throw UnsupportedError(
+        'This method is not supported in Flutterpi commands.');
   }
 
   @override
@@ -408,12 +419,14 @@ mixin FlutterpiCommandMixin on FlutterCommand {
           globals.printError(e.message!);
         }
 
-        await exitWithHooks(e.exitCode ?? 1, shutdownHooks: globals.shutdownHooks, logger: globals.logger);
+        await exitWithHooks(e.exitCode ?? 1,
+            shutdownHooks: globals.shutdownHooks, logger: globals.logger);
       } on UsageException catch (e) {
         globals.printError(e.message);
         globals.printStatus(e.usage);
 
-        await exitWithHooks(1, shutdownHooks: globals.shutdownHooks, logger: globals.logger);
+        await exitWithHooks(1,
+            shutdownHooks: globals.shutdownHooks, logger: globals.logger);
       }
     });
   }

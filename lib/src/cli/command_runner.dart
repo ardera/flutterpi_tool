@@ -5,7 +5,8 @@ import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 
-class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterCommandRunner {
+class FlutterpiToolCommandRunner extends CommandRunner<void>
+    implements FlutterCommandRunner {
   FlutterpiToolCommandRunner({bool verboseHelp = false})
       : super(
           'flutterpi_tool',
@@ -60,4 +61,5 @@ class FlutterpiToolCommandRunner extends CommandRunner<void> implements FlutterC
   }
 }
 
-abstract class FlutterpiCommand extends FlutterCommand with FlutterpiCommandMixin {}
+abstract class FlutterpiCommand extends FlutterCommand
+    with FlutterpiCommandMixin {}

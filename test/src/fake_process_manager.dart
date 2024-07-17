@@ -4,7 +4,13 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' as io show Process, ProcessResult, ProcessSignal, ProcessStartMode, systemEncoding;
+import 'dart:io' as io
+    show
+        Process,
+        ProcessResult,
+        ProcessSignal,
+        ProcessStartMode,
+        systemEncoding;
 
 import 'package:file/file.dart';
 import 'package:meta/meta.dart';
@@ -111,7 +117,8 @@ class FakeCommand {
     Encoding? encoding,
     io.ProcessStartMode? mode,
   ) {
-    final List<dynamic> matchers = this.command.map((Pattern x) => x is String ? x : matches(x)).toList();
+    final List<dynamic> matchers =
+        this.command.map((Pattern x) => x is String ? x : matches(x)).toList();
     expect(command, matchers);
     if (processStartMode != null) {
       expect(mode, processStartMode);
@@ -245,8 +252,10 @@ abstract class FakeProcessManager implements ProcessManager {
   /// [FakeCommand.onRun] to set a flag, or specify a sentinel command as your
   /// last command and verify its execution is successful, to ensure that all
   /// the specified commands are actually called.
-  factory FakeProcessManager.list(List<FakeCommand> commands) = _SequenceProcessManager;
-  factory FakeProcessManager.empty() => _SequenceProcessManager(<FakeCommand>[]);
+  factory FakeProcessManager.list(List<FakeCommand> commands) =
+      _SequenceProcessManager;
+  factory FakeProcessManager.empty() =>
+      _SequenceProcessManager(<FakeCommand>[]);
 
   FakeProcessManager._();
 
@@ -300,7 +309,8 @@ abstract class FakeProcessManager implements ProcessManager {
       mode,
     );
     if (fakeCommand.exception != null) {
-      assert(fakeCommand.exception is Exception || fakeCommand.exception is Error);
+      assert(
+          fakeCommand.exception is Exception || fakeCommand.exception is Error);
       throw fakeCommand.exception!; // ignore: only_throw_errors
     }
     if (fakeCommand.onRun != null) {
@@ -310,9 +320,11 @@ abstract class FakeProcessManager implements ProcessManager {
       duration: fakeCommand.duration,
       exitCode: fakeCommand.exitCode,
       pid: _pid,
-      stderr: encoding?.encode(fakeCommand.stderr) ?? fakeCommand.stderr.codeUnits,
+      stderr:
+          encoding?.encode(fakeCommand.stderr) ?? fakeCommand.stderr.codeUnits,
       stdin: fakeCommand.stdin,
-      stdout: encoding?.encode(fakeCommand.stdout) ?? fakeCommand.stdout.codeUnits,
+      stdout:
+          encoding?.encode(fakeCommand.stdout) ?? fakeCommand.stdout.codeUnits,
       completer: fakeCommand.completer,
       outputFollowsExit: fakeCommand.outputFollowsExit,
     );
@@ -363,8 +375,12 @@ abstract class FakeProcessManager implements ProcessManager {
     return io.ProcessResult(
       process.pid,
       process._exitCode,
-      stdoutEncoding == null ? process._stdout : await stdoutEncoding.decodeStream(process.stdout),
-      stderrEncoding == null ? process._stderr : await stderrEncoding.decodeStream(process.stderr),
+      stdoutEncoding == null
+          ? process._stdout
+          : await stdoutEncoding.decodeStream(process.stdout),
+      stderrEncoding == null
+          ? process._stderr
+          : await stderrEncoding.decodeStream(process.stderr),
     );
   }
 
@@ -387,14 +403,19 @@ abstract class FakeProcessManager implements ProcessManager {
     return io.ProcessResult(
       process.pid,
       process._exitCode,
-      stdoutEncoding == null ? process._stdout : stdoutEncoding.decode(process._stdout),
-      stderrEncoding == null ? process._stderr : stderrEncoding.decode(process._stderr),
+      stdoutEncoding == null
+          ? process._stdout
+          : stdoutEncoding.decode(process._stdout),
+      stderrEncoding == null
+          ? process._stderr
+          : stderrEncoding.decode(process._stderr),
     );
   }
 
   /// Returns false if executable in [excludedExecutables].
   @override
-  bool canRun(dynamic executable, {String? workingDirectory}) => !excludedExecutables.contains(executable);
+  bool canRun(dynamic executable, {String? workingDirectory}) =>
+      !excludedExecutables.contains(executable);
 
   Set<String> excludedExecutables = <String>{};
 
@@ -457,9 +478,11 @@ class _SequenceProcessManager extends FakeProcessManager {
     io.ProcessStartMode? mode,
   ) {
     expect(_commands, isNotEmpty,
-        reason: 'ProcessManager was told to execute $command (in $workingDirectory) '
+        reason:
+            'ProcessManager was told to execute $command (in $workingDirectory) '
             'but the FakeProcessManager.list expected no more processes.');
-    _commands.first._matches(command, workingDirectory, environment, encoding, mode);
+    _commands.first
+        ._matches(command, workingDirectory, environment, encoding, mode);
     return _commands.removeAt(0);
   }
 
