@@ -28,7 +28,8 @@ Future<FlutterpiAppBundle> buildFlutterpiApp({
 }) async {
   final buildDir = getBuildDirectory();
 
-  final outPath = globals.fs.path.join(buildDir, 'flutter-pi', target.toString());
+  final outPath =
+      globals.fs.path.join(buildDir, 'flutter-pi', target.toString());
   final outDir = globals.fs.directory(outPath);
 
   await buildFlutterpiBundle(
@@ -94,7 +95,9 @@ Future<void> buildFlutterpiBundle({
     buildDir: project.dartTool.childDirectory('flutter_build'),
     cacheDir: globals.cache.getRoot(),
     flutterRootDir: globals.fs.directory(Cache.flutterRoot),
-    engineVersion: globals.artifacts!.isLocalEngine ? null : globals.flutterVersion.engineRevision,
+    engineVersion: globals.artifacts!.isLocalEngine
+        ? null
+        : globals.flutterVersion.engineRevision,
     analytics: NoOpAnalytics(),
     defines: <String, String>{
       if (includeDebugSymbols) kExtraGenSnapshotOptions: '--no-strip',

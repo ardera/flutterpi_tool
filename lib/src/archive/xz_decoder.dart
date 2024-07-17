@@ -155,7 +155,8 @@ class _XZStreamDecoder {
     final actualCompressedLength = input.position - startPosition;
     final actualUncompressedLength = data.length - startDataLength;
 
-    if (compressedLength != null && compressedLength != actualCompressedLength) {
+    if (compressedLength != null &&
+        compressedLength != actualCompressedLength) {
       throw ArchiveException("Compressed data doesn't match expected length");
     }
 
@@ -214,7 +215,8 @@ class _XZStreamDecoder {
       case 0xa: // SHA-256
         final expectedCrc = input.readBytes(32).toUint8List();
         if (verify) {
-          final actualCrc = sha256.convert(data.toBytes().sublist(startDataLength)).bytes;
+          final actualCrc =
+              sha256.convert(data.toBytes().sublist(startDataLength)).bytes;
           for (var i = 0; i < 32; i++) {
             if (actualCrc[i] != expectedCrc[i]) {
               throw ArchiveException('SHA-256 check failed');
@@ -275,7 +277,10 @@ class _XZStreamDecoder {
         // 2 - reset state, properties
         // 3 - reset state, properties and dictionary
         final reset = (control >> 5) & 0x3;
-        final uncompressedLength = ((control & 0x1f) << 16 | input.readByte() << 8 | input.readByte()) + 1;
+        final uncompressedLength = ((control & 0x1f) << 16 |
+                input.readByte() << 8 |
+                input.readByte()) +
+            1;
         final compressedLength = (input.readByte() << 8 | input.readByte()) + 1;
         int? literalContextBits;
         int? literalPositionBits;
@@ -296,7 +301,8 @@ class _XZStreamDecoder {
               resetDictionary: reset == 3);
         }
 
-        data.add(decoder.decode(input.readBytes(compressedLength), uncompressedLength));
+        data.add(decoder.decode(
+            input.readBytes(compressedLength), uncompressedLength));
       }
     }
   }

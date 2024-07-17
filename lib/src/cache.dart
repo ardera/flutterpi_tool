@@ -76,7 +76,8 @@ class ArtifactDescription {
         (target == null || targets.contains(target)) &&
         (flavor == null || flavors.contains(flavor)) &&
         (runtimeMode == null || runtimeModes.contains(runtimeMode)) &&
-        (this.includeDebugSymbols == null || this.includeDebugSymbols == includeDebugSymbols);
+        (this.includeDebugSymbols == null ||
+            this.includeDebugSymbols == includeDebugSymbols);
   }
 
   @override
@@ -112,7 +113,8 @@ class FlutterpiBinaries extends ArtifactSet {
     final release = await _getLatestRelease();
     return switch (release.tagName) {
       String tagName => tagName,
-      null => throw gh.GitHubError(github, 'Failed to find latest release in $repo.'),
+      null =>
+        throw gh.GitHubError(github, 'Failed to find latest release in $repo.'),
     };
   }
 
@@ -129,7 +131,8 @@ class FlutterpiBinaries extends ArtifactSet {
           return false;
         }
       } on gh.GitHubError catch (e) {
-        logger.printWarning('Failed to check for flutter-pi updates: ${e.message}');
+        logger.printWarning(
+            'Failed to check for flutter-pi updates: ${e.message}');
         return true;
       }
     }
@@ -165,7 +168,8 @@ class FlutterpiBinaries extends ArtifactSet {
         location.createSync(recursive: true);
       } on FileSystemException catch (err) {
         logger.printError(err.toString());
-        throwToolExit('Failed to create directory for flutter cache at ${location.path}. '
+        throwToolExit(
+            'Failed to create directory for flutter cache at ${location.path}. '
             'Flutter may be missing permissions in its cache directory.');
       }
     }
@@ -173,7 +177,11 @@ class FlutterpiBinaries extends ArtifactSet {
     final release = await _getLatestRelease();
 
     final artifacts = [
-      for (final triple in ['aarch64-linux-gnu', 'arm-linux-gnueabihf', 'x86_64-linux-gnu'])
+      for (final triple in [
+        'aarch64-linux-gnu',
+        'arm-linux-gnueabihf',
+        'x86_64-linux-gnu'
+      ])
         for (final type in ['release', 'debug'])
           (
             'flutterpi-$triple-$type.tar.xz',
@@ -186,11 +194,14 @@ class FlutterpiBinaries extends ArtifactSet {
 
       final url = Uri.parse(switch (asset?.browserDownloadUrl) {
         String url => url,
-        null =>
-          throwToolExit('Failed to find asset "$assetName" in release "${release.tagName}" of repo ${repo.fullName}.'),
+        null => throwToolExit(
+            'Failed to find asset "$assetName" in release "${release.tagName}" of repo ${repo.fullName}.'),
       });
 
-      final location = this.location.fileSystem.directory(path.joinAll([this.location.path, ...subdirs]));
+      final location = this
+          .location
+          .fileSystem
+          .directory(path.joinAll([this.location.path, ...subdirs]));
 
       await artifactUpdater.downloadArchive(
         'Downloading $assetName...',
@@ -216,7 +227,8 @@ class FlutterpiBinaries extends ArtifactSet {
 }
 
 abstract class FlutterpiArtifact extends EngineCachedArtifact {
-  FlutterpiArtifact(String cacheKey, {required Cache cache}) : super(cacheKey, cache, DevelopmentArtifact.universal);
+  FlutterpiArtifact(String cacheKey, {required Cache cache})
+      : super(cacheKey, cache, DevelopmentArtifact.universal);
 
   String get storageKey;
 
@@ -335,14 +347,17 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
 
     final updater = artifactUpdater as AuthenticatingArtifactUpdater;
 
-    final dir = fileSystem.directory(fileSystem.path.join(location.path, artifactDescription.cacheKey));
+    final dir = fileSystem.directory(
+        fileSystem.path.join(location.path, artifactDescription.cacheKey));
     final url = await _findArtifact(storageKey, version!);
 
     if (url == null) {
-      throwToolExit('Failed to find artifact $storageKey in run $runId of repo ${repo.fullName}');
+      throwToolExit(
+          'Failed to find artifact $storageKey in run $runId of repo ${repo.fullName}');
     }
 
-    await updater.downloadZipArchive('Downloading $storageKey...', url, dir, authenticate: _authenticate);
+    await updater.downloadZipArchive('Downloading $storageKey...', url, dir,
+        authenticate: _authenticate);
 
     makeFilesExecutable(dir, operatingSystemUtils);
   }
@@ -417,13 +432,15 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
     }
 
     final tagName = 'engine/$hash';
-    final release = await github.repositories.getReleaseByTagName(repo, tagName);
+    final release =
+        await github.repositories.getReleaseByTagName(repo, tagName);
 
     _releaseCache[hash] = release;
     return release;
   }
 
-  Future<gh.ReleaseAsset?> _findReleaseAsset(String name, String version) async {
+  Future<gh.ReleaseAsset?> _findReleaseAsset(
+      String name, String version) async {
     final release = await _findRelease(version);
     return release.findAsset(name);
   }
@@ -438,7 +455,8 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
 
     final updater = artifactUpdater as AuthenticatingArtifactUpdater;
 
-    final dir = fileSystem.directory(fileSystem.path.join(location.path, artifactDescription.cacheKey));
+    final dir = fileSystem.directory(
+        fileSystem.path.join(location.path, artifactDescription.cacheKey));
 
     final asset = await _findReleaseAsset(storageKey, version!);
 
@@ -812,7 +830,9 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
     required FlutterpiTargetPlatform target,
     required EngineFlavor flavor,
   }) {
-    return engineCacheDir.childDirectory('flutterpi-engine-$target-$flavor').childFile('libflutter_engine.so');
+    return engineCacheDir
+        .childDirectory('flutterpi-engine-$target-$flavor')
+        .childFile('libflutter_engine.so');
   }
 
   File getEngineDbgsyms({
@@ -833,7 +853,8 @@ class FlutterpiArtifactPathsV2 extends FlutterpiArtifactPaths {
     required BuildMode runtimeMode,
   }) {
     return engineCacheDir
-        .childDirectory('flutterpi-gen-snapshot-$hostPlatform-$target-$runtimeMode')
+        .childDirectory(
+            'flutterpi-gen-snapshot-$hostPlatform-$target-$runtimeMode')
         .childFile('gen_snapshot');
   }
 
@@ -927,7 +948,8 @@ class OverrideGenSnapshotArtifacts implements Artifacts {
   }
 
   @override
-  String getEngineType(TargetPlatform platform, [BuildMode? mode]) => parent.getEngineType(platform, mode);
+  String getEngineType(TargetPlatform platform, [BuildMode? mode]) =>
+      parent.getEngineType(platform, mode);
 
   @override
   bool get isLocalEngine => parent.isLocalEngine;
@@ -942,7 +964,8 @@ Future<String> getFlutterRoot() async {
   final pkgconfig = await findPackageConfigUri(io.Platform.script);
   pkgconfig!;
 
-  final flutterToolsPath = pkgconfig.resolve(Uri.parse('package:flutter_tools/'))!.toFilePath();
+  final flutterToolsPath =
+      pkgconfig.resolve(Uri.parse('package:flutter_tools/'))!.toFilePath();
 
   const dirname = path.dirname;
 

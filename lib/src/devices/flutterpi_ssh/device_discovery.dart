@@ -23,7 +23,8 @@ class FlutterpiSshDeviceDiscovery extends PollingDeviceDiscovery {
   @override
   bool get canListAnything => true;
 
-  Future<Device?> getDeviceIfReachable({Duration? timeout, required DeviceConfigEntry configEntry}) async {
+  Future<Device?> getDeviceIfReachable(
+      {Duration? timeout, required DeviceConfigEntry configEntry}) async {
     final sshUtils = SshUtils(
       processUtils: this.sshUtils.processUtils,
       defaultRemote: configEntry.sshRemote,
@@ -54,7 +55,8 @@ class FlutterpiSshDeviceDiscovery extends PollingDeviceDiscovery {
     final entries = config.getDevices();
 
     final devices = await Future.wait([
-      for (final entry in entries) getDeviceIfReachable(configEntry: entry, timeout: timeout),
+      for (final entry in entries)
+        getDeviceIfReachable(configEntry: entry, timeout: timeout),
     ]);
 
     devices.removeWhere((element) => element == null);

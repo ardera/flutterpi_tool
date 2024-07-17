@@ -15,7 +15,8 @@ class PrecacheCommand extends FlutterpiCommand {
   String get name => 'precache';
 
   @override
-  String get description => 'Populate the flutterpi_tool\'s cache of binary artifacts.';
+  String get description =>
+      'Populate the flutterpi_tool\'s cache of binary artifacts.';
 
   @override
   final String category = 'Flutter-Pi Tool';
@@ -24,7 +25,8 @@ class PrecacheCommand extends FlutterpiCommand {
   Future<FlutterCommandResult> runCommand() async {
     final os = switch (globals.os) {
       MoreOperatingSystemUtils os => os,
-      _ => throw StateError('Operating system utils is not an FPiOperatingSystemUtils'),
+      _ => throw StateError(
+          'Operating system utils is not an FPiOperatingSystemUtils'),
     };
 
     final host = switch (os.fpiHostPlatform) {

@@ -35,6 +35,7 @@ class FlutterpiToolDeviceManager extends DeviceManager {
 
   @override
   set specifiedDeviceId(String? deviceId) {
-    throw UnsupportedError('Attempted to set device ID on FlutterPiToolDeviceManager.');
+    throw UnsupportedError(
+        'Attempted to set device ID on FlutterPiToolDeviceManager.');
   }
 }

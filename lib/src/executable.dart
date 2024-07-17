@@ -10,7 +10,8 @@ import 'package:flutterpi_tool/src/cli/commands/precache.dart';
 import 'package:flutterpi_tool/src/cli/commands/run.dart';
 
 Future<void> main(List<String> args) async {
-  final verbose = args.contains('-v') || args.contains('--verbose') || args.contains('-vv');
+  final verbose =
+      args.contains('-v') || args.contains('--verbose') || args.contains('-vv');
   final powershellHelpIndex = args.indexOf('-?');
   if (powershellHelpIndex != -1) {
     args[powershellHelpIndex] = '-h';

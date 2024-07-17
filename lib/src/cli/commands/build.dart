@@ -18,7 +18,8 @@ class BuildCommand extends FlutterpiCommand {
   static const cpus = ['generic', 'pi3', 'pi4'];
 
   BuildCommand({bool verboseHelp = false}) {
-    argParser.addSeparator('Runtime mode options (Defaults to debug. At most one can be specified)');
+    argParser.addSeparator(
+        'Runtime mode options (Defaults to debug. At most one can be specified)');
 
     usesEngineFlavorOption();
 
@@ -26,7 +27,8 @@ class BuildCommand extends FlutterpiCommand {
       ..addSeparator('Build options')
       ..addFlag(
         'tree-shake-icons',
-        help: 'Tree shake icon fonts so that only glyphs used by the application remain.',
+        help:
+            'Tree shake icon fonts so that only glyphs used by the application remain.',
       );
 
     usesDebugSymbolsOption();
@@ -78,7 +80,8 @@ class BuildCommand extends FlutterpiCommand {
   String get category => FlutterCommandCategory.project;
 
   @override
-  FlutterpiToolCommandRunner? get runner => super.runner as FlutterpiToolCommandRunner;
+  FlutterpiToolCommandRunner? get runner =>
+      super.runner as FlutterpiToolCommandRunner;
 
   EngineFlavor get defaultFlavor => EngineFlavor.debug;
 
@@ -120,7 +123,8 @@ class BuildCommand extends FlutterpiCommand {
 
     final os = switch (globals.os) {
       MoreOperatingSystemUtils os => os,
-      _ => throw StateError('Operating system utils is not an FPiOperatingSystemUtils'),
+      _ => throw StateError(
+          'Operating system utils is not an FPiOperatingSystemUtils'),
     };
 
     // for windows arm64, darwin arm64, we just use the x64 variant

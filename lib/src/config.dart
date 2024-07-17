@@ -38,8 +38,10 @@ class DeviceConfigEntry {
       'sshExecutable': sshExecutable,
       'sshRemote': sshRemote,
       'remoteInstallPath': remoteInstallPath,
-      if (displaySizeMillimeters case (final width, final height)) 'displaySizeMillimeters': [width, height],
-      if (devicePixelRatio case int devicePixelRatio) 'devicePixelRatio': devicePixelRatio,
+      if (displaySizeMillimeters case (final width, final height))
+        'displaySizeMillimeters': [width, height],
+      if (devicePixelRatio case int devicePixelRatio)
+        'devicePixelRatio': devicePixelRatio,
     };
   }
 
@@ -60,8 +62,8 @@ class DeviceConfigEntry {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, sshExecutable, sshRemote, remoteInstallPath, displaySizeMillimeters, devicePixelRatio);
+  int get hashCode => Object.hash(id, sshExecutable, sshRemote,
+      remoteInstallPath, displaySizeMillimeters, devicePixelRatio);
 }
 
 class FlutterPiToolConfig {

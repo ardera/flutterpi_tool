@@ -2,7 +2,8 @@ import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 
-class FlutterpiApplicationPackageFactory implements FlutterApplicationPackageFactory {
+class FlutterpiApplicationPackageFactory
+    implements FlutterApplicationPackageFactory {
   @override
   Future<ApplicationPackage?> getPackageForPlatform(
     TargetPlatform platform, {
