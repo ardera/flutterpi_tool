@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:file/memory.dart';
+import 'package:github/github.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart' as http;
 import 'package:test/test.dart';
@@ -10,6 +11,7 @@ import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 
+import 'fake_github.dart';
 import 'src/fake_process_manager.dart';
 
 const githubApiResponse = '''
@@ -282,7 +284,7 @@ Future<Set<String>> getArtifactKeysFor({
   final platform = FakePlatform();
   final hooks = ShutdownHooks();
 
-  final cache = GithubRepoReleasesFlutterpiCache(
+  final cache = FlutterpiCache(
     logger: logger,
     fileSystem: fs,
     platform: platform,
@@ -298,6 +300,7 @@ Future<Set<String>> getArtifactKeysFor({
     ),
     hooks: hooks,
     processManager: FakeProcessManager.any(),
+    github: FakeGithub(),
   );
 
   final result = cache
@@ -510,10 +513,60 @@ void main() {
     );
   });
 
+  group('engine artifacts update checking', () {
+    late BufferLogger logger;
+    late MemoryFileSystem fs;
+    late FakePlatform platform;
+    late FakeGithub github;
+    late Cache cache;
+
+    setUp(() {
+      logger = BufferLogger.test();
+      fs = MemoryFileSystem.test();
+      platform = FakePlatform();
+      github = FakeGithub();
+
+      cache = Cache.test(
+        processManager: FakeProcessManager.any(),
+      );
+    });
+
+    /// TODO: Implement
+    test('check for updates', () async {
+      final artifact = GithubReleaseArtifact(
+        cache: cache,
+        github: github,
+        artifactDescription: EngineArtifactDescription.universal(
+          prefix: 'universal',
+          cacheKey: 'flutterpi-universal',
+        ),
+        repo: RepositorySlug('abc', 'def'),
+      );
+
+      var lookedUpTagName = false;
+      github.getReleaseByTagNameFn = (tagName, {required repo}) async {
+        expect(tagName, 'engine/abcdef');
+        expect(repo.fullName, 'abc/def');
+        lookedUpTagName = true;
+
+        return Release(
+          assets: [
+            ReleaseAsset(name: 'universal.tar.xz'),
+          ],
+        );
+      };
+
+      await expectLater(artifact.isUpToDate(fs), completes);
+
+      expect(lookedUpTagName, isTrue);
+    });
+  });
+
   group('flutter-pi update checking', () {
     late BufferLogger logger;
     late MemoryFileSystem fs;
     late FakePlatform platform;
+    late FakeGithub github;
     late FakeProcessManager cacheProcessManager, binariesProcessManager;
     late bool gitWasCalled;
     late bool apiWasCalled;
@@ -531,6 +584,13 @@ void main() {
       logger = BufferLogger.test();
       fs = MemoryFileSystem.test();
       platform = FakePlatform();
+      github = FakeGithub();
+
+      github.getLatestReleaseFn = (repo) async {
+        expect(repo.fullName, 'ardera/flutter-pi');
+        apiWasCalled = true;
+        return Release(tagName: 'release/1.0.0');
+      };
 
       cacheProcessManager = FakeProcessManager.list([
         FakeCommand(command: ['chmod', '755', 'cache/bin/cache']),
@@ -562,14 +622,8 @@ void main() {
 
       apiWasCalled = false;
       httpClient = http.MockClient((req) async {
-        expect(
-          req.url.toString(),
-          'https://api.github.com/repos/ardera/flutter-pi/releases/latest',
-        );
-
-        apiWasCalled = true;
-
-        return http.Response(githubApiResponse, 200);
+        neverCalled();
+        throw UnimplementedError();
       });
 
       artifacts = [];
@@ -588,6 +642,7 @@ void main() {
         httpClient: httpClient,
         logger: logger,
         processManager: binariesProcessManager,
+        github: github,
       );
 
       artifacts.add(binaries);

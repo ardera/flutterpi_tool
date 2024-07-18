@@ -6,6 +6,7 @@ import 'dart:io' as io;
 
 import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/authenticating_artifact_updater.dart';
+import 'package:flutterpi_tool/src/github.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:github/github.dart' as gh;
 import 'package:http/http.dart' as http;
@@ -30,8 +31,8 @@ extension GithubReleaseFindAsset on gh.Release {
   }
 }
 
-class ArtifactDescription {
-  ArtifactDescription.target(
+class EngineArtifactDescription {
+  EngineArtifactDescription.target(
     FlutterpiTargetPlatform this.target,
     EngineFlavor this.flavor, {
     required this.prefix,
@@ -40,7 +41,7 @@ class ArtifactDescription {
   })  : host = null,
         runtimeMode = null;
 
-  ArtifactDescription.hostTarget(
+  EngineArtifactDescription.hostTarget(
     FlutterpiHostPlatform this.host,
     FlutterpiTargetPlatform this.target,
     BuildMode this.runtimeMode, {
@@ -49,7 +50,7 @@ class ArtifactDescription {
   })  : flavor = null,
         includeDebugSymbols = null;
 
-  ArtifactDescription.universal({
+  EngineArtifactDescription.universal({
     required this.prefix,
     required this.cacheKey,
   })  : host = null,
@@ -99,6 +100,7 @@ class FlutterpiBinaries extends ArtifactSet {
     required this.httpClient,
     required this.logger,
     required this.processManager,
+    required this.github,
   }) : super(DevelopmentArtifact.universal);
 
   final Cache cache;
@@ -107,7 +109,7 @@ class FlutterpiBinaries extends ArtifactSet {
   final Logger logger;
   final ProcessManager processManager;
   final gh.RepositorySlug repo = gh.RepositorySlug('ardera', 'flutter-pi');
-  late final gh.GitHub github = gh.GitHub(client: httpClient);
+  final MyGithub github;
 
   Future<String?> _getLatestReleaseTag() async {
     final allReleases = await processManager.run([
@@ -155,15 +157,17 @@ class FlutterpiBinaries extends ArtifactSet {
   }
 
   Future<gh.Release> _getLatestGitHubRelease() async {
-    return await github.repositories.getLatestRelease(repo);
+    return await github.getLatestRelease(repo);
   }
 
   Future<String> _getLatestVersion() async {
     final release = await _getLatestGitHubRelease();
     return switch (release.tagName) {
       String tagName => tagName,
-      null =>
-        throw gh.GitHubError(github, 'Failed to find latest release in $repo.'),
+      null => throw gh.GitHubError(
+          github.github,
+          'Failed to find latest release in $repo.',
+        ),
     };
   }
 
@@ -357,31 +361,28 @@ abstract class FlutterpiArtifact extends EngineCachedArtifact {
 
 class GithubWorkflowRunArtifact extends FlutterpiArtifact {
   GithubWorkflowRunArtifact({
-    required this.httpClient,
+    required this.myGithub,
     gh.RepositorySlug? repo,
-    gh.Authentication? auth,
     required this.runId,
     this.availableEngineVersion,
     required super.cache,
     required this.artifactDescription,
   })  : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci'),
-        auth = auth ?? const gh.Authentication.anonymous(),
         storageKey = _getStorageKeyForArtifact(artifactDescription),
         super(artifactDescription.cacheKey);
 
   @override
   final String storageKey;
 
-  final ArtifactDescription artifactDescription;
+  final EngineArtifactDescription artifactDescription;
 
-  final http.Client httpClient;
-  late final gh.GitHub github = gh.GitHub(client: httpClient, auth: auth);
+  final MyGithub myGithub;
   final gh.RepositorySlug repo;
-  final gh.Authentication auth;
   final String runId;
   final String? availableEngineVersion;
 
-  static String _getStorageKeyForArtifact(ArtifactDescription description) {
+  static String _getStorageKeyForArtifact(
+      EngineArtifactDescription description) {
     return [
       description.prefix,
       if (description.host case FlutterpiHostPlatform host) host.githubName,
@@ -396,25 +397,13 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
       return null;
     }
 
-    final response = await github.getJSON(
-      '/repos/${repo.fullName}/actions/runs/$runId/artifacts',
-      params: {'name': name},
+    final artifact = await myGithub.getWorkflowRunArtifact(
+      name,
+      repo: repo,
+      runId: int.parse(runId),
     );
 
-    switch (response['total_count']) {
-      case 1:
-        break;
-      case _:
-        // 0 or more than 1 artifacts found.
-        return null;
-    }
-
-    switch (response['artifacts'][0]['archive_download_url']) {
-      case String url:
-        return Uri.tryParse(url);
-      case _:
-        return null;
-    }
+    return artifact?.archiveDownloadUrl;
   }
 
   @override
@@ -442,16 +431,10 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
       'Downloading $storageKey...',
       url,
       dir,
-      authenticate: _authenticate,
+      authenticate: myGithub.authenticate,
     );
 
     makeFilesExecutable(dir, operatingSystemUtils);
-  }
-
-  void _authenticate(io.HttpClientRequest request) {
-    if (auth.authorizationHeaderValue() case String header) {
-      request.headers.add('Authorization', header);
-    }
   }
 
   @override
@@ -479,27 +462,24 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
 
 class GithubReleaseArtifact extends FlutterpiArtifact {
   GithubReleaseArtifact({
-    required this.httpClient,
     gh.RepositorySlug? repo,
-    gh.Authentication? auth,
     required super.cache,
+    required this.github,
     required this.artifactDescription,
   })  : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci'),
-        auth = auth ?? const gh.Authentication.anonymous(),
-        storageKey = _getStorageKeyForArtifact(artifactDescription),
+        storageKey = getStorageKeyForArtifact(artifactDescription),
         super(artifactDescription.cacheKey);
 
   @override
   final String storageKey;
 
-  final ArtifactDescription artifactDescription;
+  final EngineArtifactDescription artifactDescription;
 
-  final http.Client httpClient;
-  late final gh.GitHub github = gh.GitHub(client: httpClient, auth: auth);
+  final MyGithub github;
   final gh.RepositorySlug repo;
-  final gh.Authentication auth;
 
-  static String _getStorageKeyForArtifact(ArtifactDescription artifact) {
+  @visibleForTesting
+  static String getStorageKeyForArtifact(EngineArtifactDescription artifact) {
     final basename = [
       artifact.prefix,
       if (artifact.host != null) artifact.host!.githubName,
@@ -510,18 +490,14 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
     return '$basename.tar.xz';
   }
 
-  final Map<String, gh.Release> _releaseCache = {};
+  @visibleForTesting
+  String tagNameFromEngineHash(String hash) => 'engine/$hash';
 
   Future<gh.Release> _findRelease(String hash) async {
-    if (_releaseCache.containsKey(hash)) {
-      return _releaseCache[hash]!;
-    }
+    final tagName = tagNameFromEngineHash(hash);
 
-    final tagName = 'engine/$hash';
-    final release =
-        await github.repositories.getReleaseByTagName(repo, tagName);
+    final release = await github.getReleaseByTagName(tagName, repo: repo);
 
-    _releaseCache[hash] = release;
     return release;
   }
 
@@ -561,18 +537,11 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
       'Downloading $storageKey...',
       url,
       dir,
-      authenticate: _authenticate,
+      authenticate: github.authenticate,
       archiveType: ArchiveType.tarXz,
     );
 
     makeFilesExecutable(dir, operatingSystemUtils);
-  }
-
-  void _authenticate(io.HttpClientRequest request) {
-    if (auth.authorizationHeaderValue() case String header) {
-      request.headers.add('Authorization', header);
-      print('Authorization header added: $header');
-    }
   }
 
   @override
@@ -598,8 +567,9 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
   }
 }
 
-abstract class FlutterpiCache extends FlutterCache {
-  FlutterpiCache({
+class FlutterpiCache extends FlutterCache {
+  @protected
+  FlutterpiCache.withoutEngineArtifacts({
     required this.logger,
     required this.fileSystem,
     required this.platform,
@@ -607,6 +577,7 @@ abstract class FlutterpiCache extends FlutterCache {
     required super.projectFactory,
     required ProcessManager processManager,
     required ShutdownHooks hooks,
+    required MyGithub github,
     io.HttpClient? httpClient,
   })  : httpClient = httpClient ?? io.HttpClient(),
         super(
@@ -627,8 +598,91 @@ abstract class FlutterpiCache extends FlutterCache {
         httpClient: pkgHttpHttpClient,
         logger: logger,
         processManager: processManager,
+        github: github,
       ),
     );
+  }
+
+  factory FlutterpiCache({
+    required Logger logger,
+    required FileSystem fileSystem,
+    required Platform platform,
+    required MoreOperatingSystemUtils osUtils,
+    required FlutterProjectFactory projectFactory,
+    required ProcessManager processManager,
+    required ShutdownHooks hooks,
+    required MyGithub github,
+    io.HttpClient? httpClient,
+    gh.RepositorySlug? repo,
+  }) {
+    repo ??= gh.RepositorySlug('ardera', 'flutter-ci');
+
+    final cache = FlutterpiCache.withoutEngineArtifacts(
+      logger: logger,
+      fileSystem: fileSystem,
+      platform: platform,
+      osUtils: osUtils,
+      projectFactory: projectFactory,
+      hooks: hooks,
+      processManager: processManager,
+      github: github,
+    );
+
+    for (final description in generateDescriptions()) {
+      cache.registerArtifact(
+        GithubReleaseArtifact(
+          cache: cache,
+          artifactDescription: description,
+          github: github,
+          repo: repo,
+        ),
+      );
+    }
+
+    return cache;
+  }
+
+  factory FlutterpiCache.fromWorkflow({
+    required Logger logger,
+    required FileSystem fileSystem,
+    required Platform platform,
+    required MoreOperatingSystemUtils osUtils,
+    required FlutterProjectFactory projectFactory,
+    required ProcessManager processManager,
+    required ShutdownHooks hooks,
+    required MyGithub github,
+    gh.RepositorySlug? repo,
+    required String runId,
+    String? availableEngineVersion,
+    io.HttpClient? httpClient,
+  }) {
+    repo ??= gh.RepositorySlug('ardera', 'flutter-ci');
+
+    final cache = FlutterpiCache.withoutEngineArtifacts(
+      logger: logger,
+      fileSystem: fileSystem,
+      platform: platform,
+      osUtils: osUtils,
+      projectFactory: projectFactory,
+      processManager: processManager,
+      hooks: hooks,
+      github: github,
+    );
+
+    for (final artifact in generateDescriptions()) {
+      cache.registerArtifact(
+        GithubWorkflowRunArtifact(
+          myGithub: github,
+          repo: repo,
+          runId: runId,
+          availableEngineVersion: availableEngineVersion,
+          cache: cache,
+          artifactDescription: artifact,
+        ),
+      );
+    }
+
+    return cache;
   }
 
   @protected
@@ -654,7 +708,7 @@ abstract class FlutterpiCache extends FlutterCache {
   }
 
   @protected
-  List<ArtifactDescription> generateDescriptions() {
+  static List<EngineArtifactDescription> generateDescriptions() {
     final hosts = {
       FlutterpiHostPlatform.darwinX64,
       FlutterpiHostPlatform.linuxARM,
@@ -670,7 +724,7 @@ abstract class FlutterpiCache extends FlutterCache {
       BuildMode.release,
     ];
 
-    final descriptions = <ArtifactDescription>[];
+    final descriptions = <EngineArtifactDescription>[];
 
     for (final target in targets) {
       for (final flavor in flavors) {
@@ -680,7 +734,7 @@ abstract class FlutterpiCache extends FlutterCache {
         }
 
         descriptions.add(
-          ArtifactDescription.target(
+          EngineArtifactDescription.target(
             target,
             flavor,
             prefix: 'engine',
@@ -689,7 +743,7 @@ abstract class FlutterpiCache extends FlutterCache {
         );
 
         descriptions.add(
-          ArtifactDescription.target(
+          EngineArtifactDescription.target(
             target,
             flavor,
             prefix: 'engine-dbgsyms',
@@ -715,7 +769,7 @@ abstract class FlutterpiCache extends FlutterCache {
 
         for (final runtimeMode in aotRuntimeModes) {
           descriptions.add(
-            ArtifactDescription.hostTarget(
+            EngineArtifactDescription.hostTarget(
               host,
               target,
               runtimeMode,
@@ -728,7 +782,7 @@ abstract class FlutterpiCache extends FlutterCache {
     }
 
     descriptions.add(
-      ArtifactDescription.universal(
+      EngineArtifactDescription.universal(
         prefix: 'universal',
         cacheKey: 'flutterpi-universal',
       ),
@@ -828,80 +882,6 @@ abstract class FlutterpiCache extends FlutterCache {
       );
     }
   }
-}
-
-class GithubRepoReleasesFlutterpiCache extends FlutterpiCache {
-  GithubRepoReleasesFlutterpiCache({
-    required super.logger,
-    required super.fileSystem,
-    required super.platform,
-    required super.osUtils,
-    required super.projectFactory,
-    required super.hooks,
-    required super.processManager,
-    super.httpClient,
-    gh.RepositorySlug? repo,
-    gh.Authentication? auth,
-  }) : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci') {
-    for (final description in generateDescriptions()) {
-      registerArtifact(
-        GithubReleaseArtifact(
-          httpClient: pkgHttpHttpClient,
-          repo: repo,
-          auth: auth,
-          cache: this,
-          artifactDescription: description,
-        ),
-      );
-    }
-  }
-
-  final gh.RepositorySlug repo;
-
-  @override
-  List<String> get allowedBaseUrls => [
-        ...super.allowedBaseUrls,
-        'https://github.com/${repo.fullName}/releases/download',
-      ];
-}
-
-class GithubWorkflowRunFlutterpiCache extends FlutterpiCache {
-  GithubWorkflowRunFlutterpiCache({
-    required super.logger,
-    required super.fileSystem,
-    required super.platform,
-    required super.osUtils,
-    required super.projectFactory,
-    required super.hooks,
-    required super.processManager,
-    gh.RepositorySlug? repo,
-    gh.Authentication? auth,
-    required String runId,
-    String? availableEngineVersion,
-    super.httpClient,
-  }) : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci') {
-    for (final artifact in generateDescriptions()) {
-      registerArtifact(
-        GithubWorkflowRunArtifact(
-          httpClient: pkgHttpHttpClient,
-          repo: repo,
-          auth: auth,
-          runId: runId,
-          availableEngineVersion: availableEngineVersion,
-          cache: this,
-          artifactDescription: artifact,
-        ),
-      );
-    }
-  }
-
-  final gh.RepositorySlug repo;
-
-  @override
-  List<String> get allowedBaseUrls => [
-        ...super.allowedBaseUrls,
-        'https://api.github.com/repos/${repo.fullName}/actions/artifacts/',
-      ];
 }
 
 abstract class FlutterpiArtifactPaths {
