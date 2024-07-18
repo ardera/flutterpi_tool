@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/application_package_factory.dart';
@@ -10,13 +11,32 @@ import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/config.dart';
+import 'package:flutterpi_tool/src/github.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 import 'package:flutterpi_tool/src/shutdown_hooks.dart';
 import 'package:github/github.dart' as gh;
+import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart' as http;
 import 'package:process/process.dart';
 
 mixin FlutterpiCommandMixin on FlutterCommand {
+  MyGithub createGithub({http.Client? httpClient}) {
+    httpClient ??= http.Client();
+
+    final String? token;
+    if (argParser.options.containsKey('github-artifacts-auth-token')) {
+      token = stringArg('github-artifacts-auth-token');
+    } else {
+      token = null;
+    }
+
+    return MyGithub.caching(
+      httpClient: httpClient,
+      auth: token != null ? gh.Authentication.bearerToken(token) : null,
+    );
+  }
+
   FlutterpiCache createCustomCache({
     required FileSystem fs,
     required ShutdownHooks shutdownHooks,
@@ -25,14 +45,14 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     required MoreOperatingSystemUtils os,
     required FlutterProjectFactory projectFactory,
     required ProcessManager processManager,
+    http.Client? httpClient,
   }) {
     final repo = stringArg('github-artifacts-repo');
     final runId = stringArg('github-artifacts-runid');
     final githubEngineHash = stringArg('github-artifacts-engine-version');
-    final token = stringArg('github-artifacts-auth-token');
 
     if (runId != null) {
-      return GithubWorkflowRunFlutterpiCache(
+      return FlutterpiCache.fromWorkflow(
         hooks: shutdownHooks,
         logger: logger,
         fileSystem: fs,
@@ -42,11 +62,11 @@ mixin FlutterpiCommandMixin on FlutterCommand {
         processManager: processManager,
         repo: repo != null ? gh.RepositorySlug.full(repo) : null,
         runId: runId,
-        auth: token != null ? gh.Authentication.bearerToken(token) : null,
         availableEngineVersion: githubEngineHash,
+        github: createGithub(httpClient: httpClient),
       );
     } else {
-      return GithubRepoReleasesFlutterpiCache(
+      return FlutterpiCache(
         hooks: shutdownHooks,
         logger: logger,
         fileSystem: fs,
@@ -55,7 +75,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
         projectFactory: projectFactory,
         processManager: processManager,
         repo: repo != null ? gh.RepositorySlug.full(repo) : null,
-        auth: token != null ? gh.Authentication.bearerToken(token) : null,
+        github: createGithub(httpClient: httpClient),
       );
     }
   }
@@ -378,7 +398,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
       fn,
       overrides: {
         TemplateRenderer: () => const MustacheTemplateRenderer(),
-        FlutterpiCache: () => GithubRepoReleasesFlutterpiCache(
+        FlutterpiCache: () => FlutterpiCache(
               hooks: globals.shutdownHooks,
               logger: globals.logger,
               fileSystem: globals.fs,
@@ -386,6 +406,11 @@ mixin FlutterpiCommandMixin on FlutterCommand {
               osUtils: globals.os as MoreOperatingSystemUtils,
               projectFactory: globals.projectFactory,
               processManager: globals.processManager,
+              github: createGithub(
+                httpClient: http.IOClient(
+                  globals.httpClientFactory?.call() ?? HttpClient(),
+                ),
+              ),
             ),
         Cache: () => globals.flutterpiCache,
         OperatingSystemUtils: () => MoreOperatingSystemUtils(
