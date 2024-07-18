@@ -1,6 +1,7 @@
 // ignore_for_file: implementation_imports
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:file/file.dart';
@@ -16,6 +17,7 @@ import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:package_config/package_config.dart';
 import 'package:path/path.dart' as path;
+import 'package:process/process.dart';
 
 FlutterpiCache get flutterpiCache => globals.cache as FlutterpiCache;
 
@@ -96,26 +98,95 @@ class FlutterpiBinaries extends ArtifactSet {
     required this.fs,
     required this.httpClient,
     required this.logger,
+    required this.processManager,
   }) : super(DevelopmentArtifact.universal);
 
-  final FlutterpiCache cache;
+  final Cache cache;
   final FileSystem fs;
   final http.Client httpClient;
   final Logger logger;
+  final ProcessManager processManager;
   final gh.RepositorySlug repo = gh.RepositorySlug('ardera', 'flutter-pi');
   late final gh.GitHub github = gh.GitHub(client: httpClient);
 
-  Future<gh.Release> _getLatestRelease() async {
+  Future<String?> _getLatestReleaseTag() async {
+    final allReleases = await processManager.run([
+      'git',
+      '-c',
+      'gc.autoDetach=false',
+      '-c',
+      'core.pager=cat',
+      '-c',
+      'safe.bareRepository=all',
+      'ls-remote',
+      '--tags',
+      '--sort=-v:refname:lstrip=3',
+      'https://github.com/${repo.fullName}.git',
+      'refs/tags/release/*',
+    ]);
+
+    final lines = const LineSplitter().convert(allReleases.stdout as String);
+    for (final line in lines) {
+      const prefix = 'refs/tags/release/';
+
+      String tag;
+      try {
+        [_, tag] = line.split('\t');
+      } on StateError {
+        continue;
+      }
+
+      if (!tag.startsWith(prefix)) {
+        logger.printTrace(
+          'Encountered non-release tag in `git ls-remote` output: $tag',
+        );
+        continue;
+      }
+
+      // remove the refs/tags/release/ prefix (and add release/ again)
+      tag = 'release/${tag.substring(prefix.length)}';
+
+      // we sorted the output in the git ls-remote invocation, so the first
+      // valid release tag is the latest version.
+      return tag;
+    }
+
+    return null;
+  }
+
+  Future<gh.Release> _getLatestGitHubRelease() async {
     return await github.repositories.getLatestRelease(repo);
   }
 
   Future<String> _getLatestVersion() async {
-    final release = await _getLatestRelease();
+    final release = await _getLatestGitHubRelease();
     return switch (release.tagName) {
       String tagName => tagName,
       null =>
         throw gh.GitHubError(github, 'Failed to find latest release in $repo.'),
     };
+  }
+
+  Future<bool> _isLatestVersion(String version) async {
+    final latestReleaseTag = await _getLatestReleaseTag();
+    if (latestReleaseTag != version) {
+      logger.printTrace(
+        'The latest flutter-pi release tag is $latestReleaseTag, but the '
+        'current version is $version, so there might be a new GitHub release. '
+        'Checking with GitHub API...',
+      );
+
+      final latestRelease = await _getLatestVersion();
+      if (latestRelease != version) {
+        logger.printTrace(
+          'There is a new flutter-pi release available: $latestRelease. '
+          'Current version: $version',
+        );
+        return false;
+      }
+    }
+
+    return true;
   }
 
   @override
@@ -126,13 +197,18 @@ class FlutterpiBinaries extends ArtifactSet {
 
     if (!offline) {
       try {
-        final version = await _getLatestVersion();
-        if (version != cache.getStampFor(stampName)) {
+        final version = cache.getStampFor(stampName);
+        if (version == null || !await _isLatestVersion(version)) {
           return false;
         }
       } on gh.GitHubError catch (e) {
         logger.printWarning(
           'Failed to check for flutter-pi updates: ${e.message}',
+        );
+        return true;
+      } on io.ProcessException catch (e) {
+        logger.printWarning(
+          'Failed to run git to check for flutter-pi updates: ${e.message}',
         );
         return true;
       }
@@ -175,7 +251,7 @@ class FlutterpiBinaries extends ArtifactSet {
       }
     }
 
-    final release = await _getLatestRelease();
+    final release = await _getLatestGitHubRelease();
 
     final artifacts = [
       for (final triple in [
@@ -529,6 +605,7 @@ abstract class FlutterpiCache extends FlutterCache {
     required this.platform,
     required this.osUtils,
     required super.projectFactory,
+    required ProcessManager processManager,
     required ShutdownHooks hooks,
     io.HttpClient? httpClient,
   })  : httpClient = httpClient ?? io.HttpClient(),
@@ -549,6 +626,7 @@ abstract class FlutterpiCache extends FlutterCache {
         fs: fileSystem,
         httpClient: pkgHttpHttpClient,
         logger: logger,
+        processManager: processManager,
       ),
     );
   }
@@ -760,6 +838,7 @@ class GithubRepoReleasesFlutterpiCache extends FlutterpiCache {
     required super.osUtils,
     required super.projectFactory,
     required super.hooks,
+    required super.processManager,
     super.httpClient,
     gh.RepositorySlug? repo,
     gh.Authentication? auth,
@@ -794,6 +873,7 @@ class GithubWorkflowRunFlutterpiCache extends FlutterpiCache {
     required super.osUtils,
     required super.projectFactory,
     required super.hooks,
+    required super.processManager,
     gh.RepositorySlug? repo,
     gh.Authentication? auth,
     required String runId,

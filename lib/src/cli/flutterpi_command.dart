@@ -14,6 +14,7 @@ import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 import 'package:flutterpi_tool/src/shutdown_hooks.dart';
 import 'package:github/github.dart' as gh;
+import 'package:process/process.dart';
 
 mixin FlutterpiCommandMixin on FlutterCommand {
   FlutterpiCache createCustomCache({
@@ -23,6 +24,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     required Platform platform,
     required MoreOperatingSystemUtils os,
     required FlutterProjectFactory projectFactory,
+    required ProcessManager processManager,
   }) {
     final repo = stringArg('github-artifacts-repo');
     final runId = stringArg('github-artifacts-runid');
@@ -37,6 +39,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
         platform: platform,
         osUtils: os,
         projectFactory: projectFactory,
+        processManager: processManager,
         repo: repo != null ? gh.RepositorySlug.full(repo) : null,
         runId: runId,
         auth: token != null ? gh.Authentication.bearerToken(token) : null,
@@ -50,6 +53,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
         platform: platform,
         osUtils: os,
         projectFactory: projectFactory,
+        processManager: processManager,
         repo: repo != null ? gh.RepositorySlug.full(repo) : null,
         auth: token != null ? gh.Authentication.bearerToken(token) : null,
       );
@@ -202,6 +206,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
         platform: globals.platform,
         os: globals.os as MoreOperatingSystemUtils,
         projectFactory: globals.projectFactory,
+        processManager: globals.processManager,
       ),
     );
   }
@@ -380,6 +385,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
               platform: globals.platform,
               osUtils: globals.os as MoreOperatingSystemUtils,
               projectFactory: globals.projectFactory,
+              processManager: globals.processManager,
             ),
         Cache: () => globals.flutterpiCache,
         OperatingSystemUtils: () => MoreOperatingSystemUtils(
