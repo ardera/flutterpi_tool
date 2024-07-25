@@ -270,6 +270,7 @@ class FlutterpiSshDevice extends Device {
       buildInfo: debuggingOptions.buildInfo,
       artifactPaths: cache.artifactPaths,
       mainPath: mainPath,
+      operatingSystemUtils: os,
     );
   }
 

@@ -3,9 +3,12 @@
 import 'dart:async';
 
 import 'package:file/file.dart';
+import 'package:flutterpi_tool/src/build_system/extended_environment.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
+import 'package:flutterpi_tool/src/fltool/globals.dart';
+import 'package:flutterpi_tool/src/more_os_utils.dart';
 
 class ReleaseBundleFlutterpiAssets extends CompositeTarget {
   ReleaseBundleFlutterpiAssets({
@@ -127,6 +130,51 @@ class CopyIcudtl extends Target {
   }
 }
 
+extension _FileExecutableBits on File {
+  (bool owner, bool group, bool other) getExecutableBits() {
+    // ignore: constant_identifier_names
+    const S_IXUSR = 00100, S_IXGRP = 00010, S_IXOTH = 00001;
+
+    final stat = statSync();
+    final mode = stat.mode;
+
+    return (
+      (mode & S_IXUSR) != 0,
+      (mode & S_IXGRP) != 0,
+      (mode & S_IXOTH) != 0
+    );
+  }
+}
+
+void fixupExePermissions(
+  File input,
+  File output, {
+  required Platform platform,
+  required Logger logger,
+  required MoreOperatingSystemUtils os,
+}) {
+  if (platform.isLinux || platform.isMacOS) {
+    final inputExeBits = input.getExecutableBits();
+    final outputExeBits = output.getExecutableBits();
+
+    if (outputExeBits != (true, true, true)) {
+      if (inputExeBits == outputExeBits) {
+        logger.printTrace(
+          '${input.basename} in cache was not universally executable. '
+          'Changing permissions...',
+        );
+      } else {
+        logger.printTrace(
+          'Copying ${input.basename} from cache to output directory did not preserve executable bit. '
+          'Changing permissions...',
+        );
+      }
+
+      os.chmod(output, 'ugo+x');
+    }
+  }
+}
+
 class CopyFlutterpiBinary extends Target {
   CopyFlutterpiBinary({
     required this.target,
@@ -147,7 +195,31 @@ class CopyFlutterpiBinary extends Target {
 
     final outputFile = environment.outputDir.childFile('flutter-pi');
 
+    if (!outputFile.parent.existsSync()) {
+      outputFile.parent.createSync(recursive: true);
+    }
     file.copySync(outputFile.path);
+
+    if (environment.platform.isLinux || environment.platform.isMacOS) {
+      final inputExeBits = file.getExecutableBits();
+      final outputExeBits = outputFile.getExecutableBits();
+
+      if (outputExeBits != (true, true, true)) {
+        if (inputExeBits == outputExeBits) {
+          environment.logger.printTrace(
+            'flutter-pi binary in cache was not universally executable. '
+            'Changing permissions...',
+          );
+        } else {
+          environment.logger.printTrace(
+            'Copying flutter-pi binary from cache to output directory did not preserve executable bit. '
+            'Changing permissions...',
+          );
+        }
+
+        os.chmod(outputFile, 'ugo+x');
+      }
+    }
   }
 
   @override
@@ -222,22 +294,30 @@ class CopyFlutterpiEngine extends Target {
       ];
 
   @override
-  Future<void> build(Environment environment) async {
+  Future<void> build(covariant ExtendedEnvironment environment) async {
     final outputFile = environment.outputDir.childFile('libflutter_engine.so');
     if (!outputFile.parent.existsSync()) {
       outputFile.parent.createSync(recursive: true);
     }
 
-    _artifactPaths
-        .getEngine(
-          engineCacheDir: environment.cacheDir
-              .childDirectory('artifacts')
-              .childDirectory('engine'),
-          hostPlatform: _hostPlatform,
-          target: flutterpiTargetPlatform,
-          flavor: _engineFlavor,
-        )
-        .copySync(outputFile.path);
+    final engine = _artifactPaths.getEngine(
+      engineCacheDir: environment.cacheDir
+          .childDirectory('artifacts')
+          .childDirectory('engine'),
+      hostPlatform: _hostPlatform,
+      target: flutterpiTargetPlatform,
+      flavor: _engineFlavor,
+    );
+
+    engine.copySync(outputFile.path);
+
+    fixupExePermissions(
+      engine,
+      outputFile,
+      platform: environment.platform,
+      logger: environment.logger,
+      os: environment.operatingSystemUtils,
+    );
 
     if (includeDebugSymbols) {
       final dbgsymsOutputFile =
@@ -246,15 +326,24 @@ class CopyFlutterpiEngine extends Target {
         dbgsymsOutputFile.parent.createSync(recursive: true);
       }
 
-      (_artifactPaths as FlutterpiArtifactPathsV2)
-          .getEngineDbgsyms(
-            engineCacheDir: environment.cacheDir
-                .childDirectory('artifacts')
-                .childDirectory('engine'),
-            target: flutterpiTargetPlatform,
-            flavor: _engineFlavor,
-          )
-          .copySync(dbgsymsOutputFile.path);
+      final dbgsyms =
+          (_artifactPaths as FlutterpiArtifactPathsV2).getEngineDbgsyms(
+        engineCacheDir: environment.cacheDir
+            .childDirectory('artifacts')
+            .childDirectory('engine'),
+        target: flutterpiTargetPlatform,
+        flavor: _engineFlavor,
+      );
+
+      dbgsyms.copySync(dbgsymsOutputFile.path);
+
+      fixupExePermissions(
+        dbgsyms,
+        dbgsymsOutputFile,
+        platform: environment.platform,
+        logger: environment.logger,
+        os: environment.operatingSystemUtils,
+      );
     }
   }
 }
@@ -286,9 +375,19 @@ class FlutterpiAppElf extends Target {
       ];
 
   @override
-  Future<void> build(Environment environment) async {
-    final File outputFile = environment.buildDir.childFile('app.so');
-    outputFile.copySync(environment.outputDir.childFile('app.so').path);
+  Future<void> build(covariant ExtendedEnvironment environment) async {
+    final appElf = environment.buildDir.childFile('app.so');
+    final outputFile = environment.outputDir.childFile('app.so');
+
+    appElf.copySync(outputFile.path);
+
+    fixupExePermissions(
+      appElf,
+      outputFile,
+      platform: environment.platform,
+      logger: logger,
+      os: environment.operatingSystemUtils,
+    );
   }
 }
 
