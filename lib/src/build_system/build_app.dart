@@ -2,12 +2,14 @@
 
 import 'dart:async';
 import 'package:file/file.dart';
+import 'package:flutterpi_tool/src/build_system/extended_environment.dart';
 import 'package:flutterpi_tool/src/build_system/targets.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
+import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:unified_analytics/unified_analytics.dart';
 
 Future<FlutterpiAppBundle> buildFlutterpiApp({
@@ -16,6 +18,7 @@ Future<FlutterpiAppBundle> buildFlutterpiApp({
   required FlutterpiTargetPlatform target,
   required BuildInfo buildInfo,
   required FlutterpiArtifactPaths artifactPaths,
+  required MoreOperatingSystemUtils operatingSystemUtils,
   FlutterProject? project,
   String? mainPath,
   String manifestPath = defaultManifestPath,
@@ -38,6 +41,7 @@ Future<FlutterpiAppBundle> buildFlutterpiApp({
     buildInfo: buildInfo,
     artifactPaths: artifactPaths,
     outDir: outDir,
+    operatingSystemUtils: operatingSystemUtils,
   );
 
   return PrebuiltFlutterpiAppBundle(
@@ -53,6 +57,7 @@ Future<void> buildFlutterpiBundle({
   required FlutterpiTargetPlatform target,
   required BuildInfo buildInfo,
   required FlutterpiArtifactPaths artifactPaths,
+  required MoreOperatingSystemUtils operatingSystemUtils,
   FlutterProject? project,
   String? mainPath,
   String manifestPath = defaultManifestPath,
@@ -89,7 +94,7 @@ Future<void> buildFlutterpiBundle({
   }
 
   // If the precompiled flag was not passed, force us into debug mode.
-  final environment = Environment(
+  final environment = ExtendedEnvironment(
     projectDir: project.directory,
     outputDir: outDir,
     buildDir: project.dartTool.childDirectory('flutter_build'),
@@ -127,6 +132,7 @@ Future<void> buildFlutterpiBundle({
     usage: globals.flutterUsage,
     platform: globals.platform,
     generateDartPluginRegistry: true,
+    operatingSystemUtils: operatingSystemUtils,
   );
 
   final buildTarget = switch (buildInfo.mode) {
