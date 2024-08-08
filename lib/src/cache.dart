@@ -382,7 +382,8 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
   final String? availableEngineVersion;
 
   static String _getStorageKeyForArtifact(
-      EngineArtifactDescription description) {
+    EngineArtifactDescription description,
+  ) {
     return [
       description.prefix,
       if (description.host case FlutterpiHostPlatform host) host.githubName,
