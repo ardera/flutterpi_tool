@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:file/memory.dart';
 import 'package:github/github.dart';
-import 'package:http/http.dart' as http;
 import 'package:http/testing.dart' as http;
 import 'package:test/test.dart';
 
@@ -514,16 +513,12 @@ void main() {
   });
 
   group('engine artifacts update checking', () {
-    late BufferLogger logger;
     late MemoryFileSystem fs;
-    late FakePlatform platform;
     late FakeGithub github;
     late Cache cache;
 
     setUp(() {
-      logger = BufferLogger.test();
       fs = MemoryFileSystem.test();
-      platform = FakePlatform();
       github = FakeGithub();
 
       cache = Cache.test(
