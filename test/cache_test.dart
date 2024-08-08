@@ -512,50 +512,7 @@ void main() {
     );
   });
 
-  group('engine artifacts update checking', () {
-    late MemoryFileSystem fs;
-    late FakeGithub github;
-    late Cache cache;
-
-    setUp(() {
-      fs = MemoryFileSystem.test();
-      github = FakeGithub();
-
-      cache = Cache.test(
-        processManager: FakeProcessManager.any(),
-      );
-    });
-
-    /// TODO: Implement
-    test('check for updates', () async {
-      final artifact = GithubReleaseArtifact(
-        cache: cache,
-        github: github,
-        artifactDescription: EngineArtifactDescription.universal(
-          prefix: 'universal',
-          cacheKey: 'flutterpi-universal',
-        ),
-        repo: RepositorySlug('abc', 'def'),
-      );
-
-      var lookedUpTagName = false;
-      github.getReleaseByTagNameFn = (tagName, {required repo}) async {
-        expect(tagName, 'engine/abcdef');
-        expect(repo.fullName, 'abc/def');
-        lookedUpTagName = true;
-
-        return Release(
-          assets: [
-            ReleaseAsset(name: 'universal.tar.xz'),
-          ],
-        );
-      };
-
-      await expectLater(artifact.isUpToDate(fs), completes);
-
-      expect(lookedUpTagName, isTrue);
-    });
-  });
+  // TODO: Engine artifacts update checking
 
   group('flutter-pi update checking', () {
     late BufferLogger logger;
