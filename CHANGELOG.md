@@ -1,3 +1,9 @@
+## [0.5.1] - 2024-08-08
+- Expand remote user permissions check to `render` group, since that's necessary as well to use the hardware GPU.
+- Added a workaround for an issue where the executable permission of certain files would be lost when copying them to the output directory, causing errors when trying to run the app on the target.
+- Reduced the amount of GitHub API traffic generated when checking for updates to flutter-pi, to avoid rate limiting.
+- Changed the severity of the `failed to check for flutter-pi updates` message to a warning to avoid confusion.
+
 ## [0.5.0] - 2024-06-26
 
 - add `run` and `devices` subcommands
