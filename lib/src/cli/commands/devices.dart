@@ -463,13 +463,13 @@ class DevicesAddCommand extends FlutterpiCommand {
       }
 
       final hasPermissions =
-          await ssh.remoteUserBelongsToGroups(['video', 'input']);
+          await ssh.remoteUserBelongsToGroups(['video', 'input', 'render']);
       if (!hasPermissions) {
         final addGroupsCommand = ssh
             .buildSshCommand(
               interactive: null,
               allocateTTY: true,
-              command: r"'sudo usermod -aG video,input $USER'",
+              command: r"'sudo usermod -aG video,input,render $USER'",
             )
             .join(' ');
 
@@ -479,7 +479,7 @@ class DevicesAddCommand extends FlutterpiCommand {
                 'The remote user needs permission to use display and input devices.',
             message:
                 'To add the necessary permissions, run the following command in your terminal.\n'
-                'NOTE: This gives any app running as the remote user access to the display and input devices. '
+                'NOTE: This gives any app running as the remote user access to the display, input and render devices. '
                 'If you\'re running untrusted code, consider the security implications.\n',
             command: addGroupsCommand,
           ),
