@@ -1,3 +1,7 @@
+## [0.5.2] - 2024-08-09
+- Flutter 3.24 compatibility
+- Print a nicer error message if engine artifacts are not yet available
+
 ## [0.5.1] - 2024-08-08
 - Expand remote user permissions check to `render` group, since that's necessary as well to use the hardware GPU.
 - Added a workaround for an issue where the executable permission of certain files would be lost when copying them to the output directory, causing errors when trying to run the app on the target.
