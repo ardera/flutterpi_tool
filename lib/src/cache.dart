@@ -524,7 +524,13 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
       fileSystem.path.join(location.path, artifactDescription.cacheKey),
     );
 
-    final asset = await _findReleaseAsset(storageKey, version!);
+    final gh.ReleaseAsset? asset;
+
+    try {
+      asset = await _findReleaseAsset(storageKey, version!);
+    } on gh.ReleaseNotFound catch (_) {
+      throwToolExit('Artifacts for engine $version are not yet available.');
+    }
 
     final url = switch (asset?.browserDownloadUrl) {
       String url => Uri.tryParse(url),
