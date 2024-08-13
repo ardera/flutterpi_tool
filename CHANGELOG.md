@@ -1,3 +1,6 @@
+## [0.5.3] - 2024-08-13
+- Fix artifact finding when github API results are paginated
+
 ## [0.5.2] - 2024-08-09
 - Flutter 3.24 compatibility
 - Print a nicer error message if engine artifacts are not yet available
