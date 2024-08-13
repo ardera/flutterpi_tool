@@ -1,15 +1,29 @@
-// ignore: implementation_imports
+// ignore_for_file: implementation_imports
+
 import 'package:flutter_tools/src/commands/run.dart' as fltool;
-// ignore: implementation_imports
+import 'package:flutter_tools/src/device.dart';
 import 'package:flutter_tools/src/runner/flutter_command.dart';
 
 import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
+import 'package:meta/meta.dart';
 
 class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
   RunCommand() {
     usesDeviceManager();
     usesEngineFlavorOption();
     usesDebugSymbolsOption();
+  }
+
+  @protected
+  @override
+  Future<DebuggingOptions> createDebuggingOptions(bool webMode) async {
+    final buildInfo = await getBuildInfo();
+
+    if (buildInfo.mode.isRelease) {
+      return DebuggingOptions.disabled(buildInfo);
+    } else {
+      return DebuggingOptions.enabled(buildInfo);
+    }
   }
 
   @override
