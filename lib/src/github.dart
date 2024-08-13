@@ -75,9 +75,8 @@ abstract class MyGithub {
     final artifacts = await getWorkflowRunArtifacts(
       repo: repo,
       runId: runId,
-      nameFilter: name,
     );
-    return artifacts.singleOrNull;
+    return artifacts.where((a) => a.name == name).firstOrNull;
   }
 
   void authenticate(io.HttpClientRequest request);
@@ -128,12 +127,30 @@ class MyGithubImpl extends MyGithub {
   }) async {
     final path = workflowRunArtifactsUrlPath(repo, runId);
 
-    final response = await github.getJSON(path);
-
     final results = <GithubArtifact>[];
-    for (final artifact in response['artifacts']) {
-      results.add(GithubArtifact.fromJson(artifact));
-    }
+
+    int? total;
+    var page = 1;
+    var fetched = 0;
+    do {
+      final response = await github.getJSON(
+        path,
+        params: {
+          if (nameFilter != null) 'name': nameFilter,
+          'page': page.toString(),
+          'per_page': '100',
+        },
+      );
+
+      total ??= response['total_count'] as int;
+
+      for (final artifact in response['artifacts']) {
+        results.add(GithubArtifact.fromJson(artifact));
+      }
+
+      fetched += (response['artifacts'] as Iterable).length;
+      page++;
+    } while (fetched < total);
 
     return results;
   }

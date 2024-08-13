@@ -619,7 +619,6 @@ class FlutterpiCache extends FlutterCache {
     required ProcessManager processManager,
     required ShutdownHooks hooks,
     required MyGithub github,
-    io.HttpClient? httpClient,
     gh.RepositorySlug? repo,
   }) {
     repo ??= gh.RepositorySlug('ardera', 'flutter-ci');
@@ -661,7 +660,6 @@ class FlutterpiCache extends FlutterCache {
     gh.RepositorySlug? repo,
     required String runId,
     String? availableEngineVersion,
-    io.HttpClient? httpClient,
   }) {
     repo ??= gh.RepositorySlug('ardera', 'flutter-ci');
 
@@ -806,6 +804,7 @@ class FlutterpiCache extends FlutterCache {
         cipdBaseUrl,
         storageBaseUrl,
         'https://github.com/ardera/flutter-pi',
+        'https://api.github.com/repos/ardera/flutter-ci/',
       ];
 
   /// This has to be lazy because it requires FLUTTER_ROOT to be initialized.
