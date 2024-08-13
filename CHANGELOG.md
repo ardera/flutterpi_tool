@@ -1,3 +1,6 @@
+## [0.5.4] - 2024-08-13
+- fix `flutterpi_tool run -d` command for flutter 3.24
+
 ## [0.5.3] - 2024-08-13
 - Fix artifact finding when github API results are paginated
 
