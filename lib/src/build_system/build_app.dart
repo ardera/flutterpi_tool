@@ -96,6 +96,7 @@ Future<void> buildFlutterpiBundle({
   // If the precompiled flag was not passed, force us into debug mode.
   final environment = ExtendedEnvironment(
     projectDir: project.directory,
+    packageConfigPath: buildInfo.packageConfigPath,
     outputDir: outDir,
     buildDir: project.dartTool.childDirectory('flutter_build'),
     cacheDir: globals.cache.getRoot(),
