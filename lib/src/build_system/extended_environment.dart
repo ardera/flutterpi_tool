@@ -7,6 +7,7 @@ import 'package:unified_analytics/unified_analytics.dart';
 class ExtendedEnvironment implements Environment {
   factory ExtendedEnvironment({
     required Directory projectDir,
+    required String packageConfigPath,
     required Directory outputDir,
     required Directory cacheDir,
     required Directory flutterRootDir,
@@ -28,6 +29,7 @@ class ExtendedEnvironment implements Environment {
       operatingSystemUtils: operatingSystemUtils,
       delegate: Environment(
         projectDir: projectDir,
+        packageConfigPath: packageConfigPath,
         outputDir: outputDir,
         cacheDir: cacheDir,
         flutterRootDir: flutterRootDir,
@@ -101,6 +103,9 @@ class ExtendedEnvironment implements Environment {
 
   @override
   Directory get projectDir => _delegate.projectDir;
+
+  @override
+  String get packageConfigPath => _delegate.packageConfigPath;
 
   @override
   Directory get rootBuildDir => _delegate.rootBuildDir;
