@@ -803,7 +803,9 @@ class FlutterpiCache extends FlutterCache {
   List<String> get allowedBaseUrls => [
         cipdBaseUrl,
         storageBaseUrl,
-        'https://github.com/ardera/flutter-pi',
+        'https://github.com/ardera/flutter-pi/',
+        'https://github.com/ardera/flutter-ci/',
+        'https://api.github.com/repos/ardera/flutter-pi/',
         'https://api.github.com/repos/ardera/flutter-ci/',
       ];
 
