@@ -1,3 +1,7 @@
+## [0.6.0] - 2024-01-13
+- fix "artifact may not be available in some environments" warnings
+- 3.27 compatibility
+
 ## [0.5.4] - 2024-08-13
 - fix `flutterpi_tool run -d` command for flutter 3.24
 
