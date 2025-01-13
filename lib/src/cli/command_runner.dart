@@ -24,6 +24,15 @@ class FlutterpiToolCommandRunner extends CommandRunner<void>
       abbr: 'd',
       help: 'Target device id or name (prefixes allowed).',
     );
+
+    argParser.addOption(
+      FlutterGlobalOptions.kLocalWebSDKOption,
+      hide: !verboseHelp,
+      help:
+          'Name of a build output within the engine out directory, if you are building Flutter locally.\n'
+          'Use this to select a specific version of the web sdk if you have built multiple engine targets.\n'
+          'This path is relative to "--local-engine-src-path" (see above).',
+    );
   }
 
   @override
