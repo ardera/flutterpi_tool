@@ -92,6 +92,7 @@ class FlutterpiSshDevice extends Device {
           category: Category.mobile,
           platformType: PlatformType.custom,
           ephemeral: false,
+          logger: logger,
         );
 
   final SshUtils sshUtils;
