@@ -1,11 +1,11 @@
 name: flutterpi_tool
 description: A tool to make development & distribution of flutter-pi apps easier.
-version: 0.5.4
+version: 0.6.0
 repository: https://github.com/ardera/flutterpi_tool
 
 environment:
   sdk: ^3.0.5
-  flutter: ">=3.22.0"
+  flutter: ">=3.27.0"
 
 executables:
   # TODO(ardera): Maybe add an alias `flutterpi-tool` here?
@@ -20,7 +20,7 @@ dependencies:
   file: ">=6.1.4 <8.0.0"
   path: ^1.8.3
   args: ^2.4.0
-  http: ">=0.13.6 <1.2.3"
+  http: ">=0.13.6 <2.0.0"
   meta: ^1.10.0
   process: ^5.0.0
   unified_analytics: ">=5.8.0 <7.0.0"
