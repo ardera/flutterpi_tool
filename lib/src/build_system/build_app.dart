@@ -101,7 +101,7 @@ Future<void> buildFlutterpiBundle({
     buildDir: project.dartTool.childDirectory('flutter_build'),
     cacheDir: globals.cache.getRoot(),
     flutterRootDir: globals.fs.directory(Cache.flutterRoot),
-    engineVersion: globals.artifacts!.isLocalEngine
+    engineVersion: globals.artifacts!.usesLocalArtifacts
         ? null
         : globals.flutterVersion.engineRevision,
     analytics: NoOpAnalytics(),
