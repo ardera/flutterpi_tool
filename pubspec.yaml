@@ -23,7 +23,7 @@ dependencies:
   http: ">=0.13.6 <2.0.0"
   meta: ^1.10.0
   process: ^5.0.0
-  unified_analytics: ">=5.8.0 <7.0.0"
+  unified_analytics: ^7.0.0
   archive: ^3.3.2
   crypto: ^3.0.3
 

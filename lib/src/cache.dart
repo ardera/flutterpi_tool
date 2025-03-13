@@ -1050,7 +1050,7 @@ class OverrideGenSnapshotArtifacts implements Artifacts {
       parent.getEngineType(platform, mode);
 
   @override
-  bool get isLocalEngine => parent.isLocalEngine;
+  bool get usesLocalArtifacts => parent.usesLocalArtifacts;
 
   @override
   FileSystemEntity getHostArtifact(HostArtifact artifact) {
