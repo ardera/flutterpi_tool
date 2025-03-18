@@ -5,7 +5,7 @@ repository: https://github.com/ardera/flutterpi_tool
 
 environment:
   sdk: ^3.0.5
-  flutter: ">=3.27.0"
+  flutter: ">=3.29.0"
 
 executables:
   # TODO(ardera): Maybe add an alias `flutterpi-tool` here?
