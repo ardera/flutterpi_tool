@@ -586,6 +586,7 @@ void main() {
         platform: platform,
         processManager: cacheProcessManager,
         artifacts: artifacts,
+        rootOverride: fs.directory("cache"),
       );
 
       binaries = FlutterpiBinaries(
