@@ -1,3 +1,6 @@
+## 0.7.0 - 2025-03-20
+- flutter 3.29 compatibility
+
 ## [0.6.0] - 2024-01-13
 - fix "artifact may not be available in some environments" warnings
 - 3.27 compatibility
