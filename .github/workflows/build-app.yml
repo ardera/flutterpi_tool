@@ -45,7 +45,18 @@ jobs:
       - name: Run flutterpi_tool build
         working-directory: test_app
         run: |
+          echo '::group::flutterpi_tool build ... --debug-unoptimized'
           flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --debug-unoptimized --debug-symbols
+          echo '::endgroup::'
+
+          echo '::group::flutterpi_tool build ... --debug'
           flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --debug --debug-symbols
+          echo '::endgroup::'
+          
+          echo '::group::flutterpi_tool build ... --profile'
           flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --profile --debug-symbols
+          echo '::endgroup::'
+
+          echo '::group::flutterpi_tool build ... --release'
           flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --release --debug-symbols
+          echo '::endgroup::'
