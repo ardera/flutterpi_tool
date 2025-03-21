@@ -51,7 +51,7 @@ class BuildCommand extends FlutterpiCommand {
           'arm': 'Build for 32-bit ARM. (armv7-linux-gnueabihf)',
           'arm64': 'Build for 64-bit ARM. (aarch64-linux-gnu)',
           'x64': 'Build for x86-64. (x86_64-linux-gnu)',
-          'riscv64': 'Build for 64-bit RISC-V. (riscv64-linux-gnu)'
+          'riscv64': 'Build for 64-bit RISC-V. (riscv64-linux-gnu)',
         },
       )
       ..addOption(
