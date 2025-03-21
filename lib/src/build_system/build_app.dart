@@ -55,7 +55,7 @@ Future<FlutterpiAppBundle> buildFlutterpiApp({
       outDir.childFile('flutter-pi'),
       outDir.childFile('libflutter_engine.so'),
       if (outDir.childFile('libflutter_engine.so.dbgsyms').existsSync())
-        outDir.childFile('libflutter_engine.so.dbgsyms')
+        outDir.childFile('libflutter_engine.so.dbgsyms'),
     ],
   );
 }
