@@ -372,6 +372,8 @@ class LinuxMoreOsUtils extends PosixMoreOsUtils {
       return FlutterpiHostPlatform.linuxARM64;
     } else if (machine == 'armv7l' || machine == 'arm') {
       return FlutterpiHostPlatform.linuxARM;
+    } else if (machine == 'riscv64') {
+      return FlutterpiHostPlatform.linuxRV64;
     } else {
       logger.printError(
         'Unrecognized host platform: uname -m: $machine\n'

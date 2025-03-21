@@ -10,6 +10,7 @@ enum FlutterpiHostPlatform {
   linuxX64.b64('linux-x64', 'Linux-X64', linux: true),
   linuxARM.b32('linux-arm', 'Linux-ARM', linux: true),
   linuxARM64.b64('linux-arm64', 'Linux-ARM64', linux: true),
+  linuxRV64.b64('linux-riscv64', 'Linux-RISCV64', linux: true),
   windowsX64.b64('windows-x64', 'Windows-X64', windows: true),
   windowsARM64.b64('windows-arm64', 'Windows-ARM64', windows: true);
 
@@ -61,6 +62,7 @@ enum FlutterpiTargetPlatform {
   genericArmV7.generic32('armv7-generic', 'arm-linux-gnueabihf'),
   genericAArch64.generic64('aarch64-generic', 'aarch64-linux-gnu'),
   genericX64.generic64('x64-generic', 'x86_64-linux-gnu'),
+  genericRiscv64.generic64('riscv64-generic', 'riscv64-linux-gnu'),
   pi3.tuned32('pi3', 'armv7-generic', 'arm-linux-gnueabihf'),
   pi3_64.tuned64('pi3-64', 'aarch64-generic', 'aarch64-linux-gnu'),
   pi4.tuned32('pi4', 'armv7-generic', 'arm-linux-gnueabihf'),

@@ -1,0 +1,65 @@
+name: Build Test App
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build Flutter-Pi Bundle (${{ matrix.arch }}, ${{ matrix.cpu}})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - arm
+          - arm64
+          - x64
+          - riscv64
+        cpu:
+          - generic
+        include:
+          - arch: arm
+            cpu: pi3
+          - arch: arm
+            cpu: pi4
+          - arch: arm64
+            cpu: pi3
+          - arch: arm64
+            cpu: pi4
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          cache: true
+          channel: stable
+          flutter-version: 3.29.x
+      
+      - name: Install dependencies & Activate as global executable
+        run: |
+          flutter pub get
+          flutter pub global activate -spath .
+
+      - name: Create test app
+        run: flutter create test_app
+
+      - name: Run flutterpi_tool build
+        working-directory: test_app
+        run: |
+          echo '::group::flutterpi_tool build ... --debug-unoptimized'
+          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --debug-unoptimized --debug-symbols
+          echo '::endgroup::'
+
+          echo '::group::flutterpi_tool build ... --debug'
+          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --debug --debug-symbols
+          echo '::endgroup::'
+          
+          echo '::group::flutterpi_tool build ... --profile'
+          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --profile --debug-symbols
+          echo '::endgroup::'
+
+          echo '::group::flutterpi_tool build ... --release'
+          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --release --debug-symbols
+          echo '::endgroup::'

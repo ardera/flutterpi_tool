@@ -95,6 +95,8 @@ class _RunningApp {
       if (result.exitCode == 0) {
         return true;
       }
+    } else {
+      return true;
     }
 
     logger.printWarning('Could not terminate app on remote device.');
@@ -150,6 +152,8 @@ class FlutterpiSshDevice extends Device {
           return FlutterpiTargetPlatform.genericAArch64;
         case 'x86_64':
           return FlutterpiTargetPlatform.genericX64;
+        case 'riscv64':
+          return FlutterpiTargetPlatform.genericRiscv64;
         default:
           throwToolExit(
             'SSH device "$id" has unknown target platform. `uname -m`: $result',
@@ -661,6 +665,7 @@ class FlutterpiSshDevice extends Device {
         FlutterpiTargetPlatform.pi3 ||
         FlutterpiTargetPlatform.pi4 =>
           TargetPlatform.linux_arm64,
+        FlutterpiTargetPlatform.genericRiscv64 => TargetPlatform.linux_arm64,
         FlutterpiTargetPlatform.genericAArch64 ||
         FlutterpiTargetPlatform.pi3_64 ||
         FlutterpiTargetPlatform.pi4_64 =>
