@@ -1,3 +1,7 @@
+## 0.7.1 - 2025-03-21
+- fix missing executable permissions when running from windows
+- fix app not terminating when running from windows
+
 ## 0.7.0 - 2025-03-20
 - flutter 3.29 compatibility
 
