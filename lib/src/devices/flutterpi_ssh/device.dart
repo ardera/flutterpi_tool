@@ -38,9 +38,11 @@ class PrebuiltFlutterpiAppBundle extends FlutterpiAppBundle {
     required String name,
     required String displayName,
     required this.directory,
+    required this.binaries,
   }) : super(id: id, name: name, displayName: displayName);
 
   final Directory directory;
+  final List<File> binaries;
 }
 
 class _RunningApp {
@@ -196,6 +198,25 @@ class FlutterpiSshDevice extends Device {
         );
       } on SshException catch (e) {
         throwToolExit('Error installing app on SSH device "$id": $e');
+      }
+
+      // make all the binaries executable on the remote device.
+      final remoteBinaries = <String>[];
+      for (final file in app.binaries) {
+        final relative = path.relative(file.path, from: app.directory.path);
+        final binaryPosix =
+            path.posix.joinAll([installDir, ...path.split(relative)]);
+
+        remoteBinaries.add(binaryPosix);
+      }
+
+      try {
+        await sshUtils.makeExecutable(args: remoteBinaries);
+      } on SshException catch (e) {
+        throwToolExit(
+          'Error making $remoteBinaries binaries executable on SSH device "$id": '
+          '$e',
+        );
       }
     } finally {
       status.stop();
