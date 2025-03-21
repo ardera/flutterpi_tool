@@ -95,6 +95,8 @@ class _RunningApp {
       if (result.exitCode == 0) {
         return true;
       }
+    } else {
+      return true;
     }
 
     logger.printWarning('Could not terminate app on remote device.');
