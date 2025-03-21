@@ -49,6 +49,14 @@ Future<FlutterpiAppBundle> buildFlutterpiApp({
     name: id,
     displayName: id,
     directory: outDir,
+
+    // FIXME: This should be populated by the build targets instead.
+    binaries: [
+      outDir.childFile('flutter-pi'),
+      outDir.childFile('libflutter_engine.so'),
+      if (outDir.childFile('libflutter_engine.so.dbgsyms').existsSync())
+        outDir.childFile('libflutter_engine.so.dbgsyms')
+    ],
   );
 }
 

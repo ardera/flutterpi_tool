@@ -265,6 +265,19 @@ class SshUtils {
     return result.stdout.trim();
   }
 
+  Future<void> makeExecutable({
+    Iterable<String>? args,
+    Duration? timeout,
+  }) async {
+    final command = ['chmod', '+x', ...?args].join(' ');
+
+    await runSsh(
+      command: command,
+      throwOnError: true,
+      timeout: timeout,
+    );
+  }
+
   Future<bool> remoteUserBelongsToGroups(Iterable<String> groups) async {
     final result = await id(args: ['-nG']);
     final userGroups = result.split(' ');
