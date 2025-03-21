@@ -16,14 +16,17 @@ jobs:
           - arm
           - arm64
           - x64
+          - riscv64
         cpu:
           - generic
-          - pi3
-          - pi4
-        exclude:
-          - arch: x64
+        include:
+          - arch: arm
             cpu: pi3
-          - arch: x64
+          - arch: arm
+            cpu: pi4
+          - arch: arm64
+            cpu: pi3
+          - arch: arm64
             cpu: pi4
     steps:
       - uses: actions/checkout@v4
