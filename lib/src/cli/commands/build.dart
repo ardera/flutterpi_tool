@@ -13,7 +13,7 @@ import '../../more_os_utils.dart';
 import '../../common.dart';
 
 class BuildCommand extends FlutterpiCommand {
-  static const archs = ['arm', 'arm64', 'x64'];
+  static const archs = ['arm', 'arm64', 'x64', 'riscv64'];
 
   static const cpus = ['generic', 'pi3', 'pi4'];
 
@@ -51,6 +51,7 @@ class BuildCommand extends FlutterpiCommand {
           'arm': 'Build for 32-bit ARM. (armv7-linux-gnueabihf)',
           'arm64': 'Build for 64-bit ARM. (aarch64-linux-gnu)',
           'x64': 'Build for x86-64. (x86_64-linux-gnu)',
+          'riscv64': 'Build for 64-bit RISC-V. (riscv64-linux-gnu)'
         },
       )
       ..addOption(
@@ -108,6 +109,7 @@ class BuildCommand extends FlutterpiCommand {
       ('arm64', 'pi3') => FlutterpiTargetPlatform.pi3_64,
       ('arm64', 'pi4') => FlutterpiTargetPlatform.pi4_64,
       ('x64', 'generic') => FlutterpiTargetPlatform.genericX64,
+      ('riscv64', 'generic') => FlutterpiTargetPlatform.genericRiscv64,
       (final arch, final cpu) => throw UsageException(
           'Unsupported target arch & cpu combination: architecture "$arch" is not supported for cpu "$cpu"',
           usage,

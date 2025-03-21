@@ -262,6 +262,7 @@ class FlutterpiBinaries extends ArtifactSet {
         'aarch64-linux-gnu',
         'arm-linux-gnueabihf',
         'x86_64-linux-gnu',
+        'riscv64-linux-gnu',
       ])
         for (final type in ['release', 'debug'])
           (
