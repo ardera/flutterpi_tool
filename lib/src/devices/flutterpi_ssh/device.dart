@@ -5,6 +5,7 @@ import 'package:flutterpi_tool/src/build_system/build_app.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
+import 'package:flutterpi_tool/src/fltool/globals.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 import 'package:meta/meta.dart';
@@ -50,29 +51,53 @@ class _RunningApp {
     required this.app,
     required this.sshProcess,
     required this.logReader,
+    required this.sshUtils,
+    required this.os,
   });
 
   final FlutterpiAppBundle app;
   final Process sshProcess;
   final DeviceLogReader logReader;
+  final SshUtils sshUtils;
+  final MoreOperatingSystemUtils os;
 
-  Future<bool> stop({Duration timeout = const Duration(seconds: 5)}) async {
-    logReader.dispose();
-
+  Future<bool> _stopSSH({Duration timeout = const Duration(seconds: 5)}) async {
     sshProcess.kill(ProcessSignal.sigint);
-
     try {
       await sshProcess.exitCode.timeout(timeout);
       return true;
     } on TimeoutException catch (_) {}
 
     sshProcess.kill(ProcessSignal.sigterm);
-
     try {
       await sshProcess.exitCode.timeout(timeout);
       return true;
     } on TimeoutException catch (_) {}
 
+    return false;
+  }
+
+  Future<bool> stop({Duration timeout = const Duration(seconds: 5)}) async {
+    logReader.dispose();
+
+    final sshStopResult = await _stopSSH(timeout: timeout);
+
+    if (os.fpiHostPlatform.isWindows || !sshStopResult) {
+      // On windows, forcing ssh to allocate a PTY (so the flutter-pi process
+      // receives a SIGHUP on ssh exit and quits automatically) might not always
+      // work.
+      //
+      // So let's just kill every flutter-pi on the remote on exit.
+      final result = await sshUtils.runSsh(
+        command: 'killall flutter-pi',
+        timeout: timeout,
+      );
+      if (result.exitCode == 0) {
+        return true;
+      }
+    }
+
+    logger.printWarning('Could not terminate app on remote device.');
     return false;
   }
 }
@@ -496,6 +521,8 @@ class FlutterpiSshDevice extends Device {
       app: prebuiltApp,
       sshProcess: sshProcess,
       logReader: logReader,
+      sshUtils: sshUtils,
+      os: os,
     );
 
     final discovery = ProtocolDiscovery.vmService(
@@ -565,12 +592,22 @@ class FlutterpiSshDevice extends Device {
     String? userIdentifier,
   }) async {
     if (app == null) {
-      final apps = runningApps.values.toList();
+      logger.printTrace('Stopping all apps on SSH device "$id": $runningApps');
+
+      final apps = List.of(runningApps.values);
       runningApps.clear();
 
-      final results = await Future.wait(apps.map((app) => app.stop()));
+      final results = await Future.wait(
+        apps.map((app) async {
+          logger.printTrace('Stopping app "${app.app.id}" on SSH device "$id"');
+          return await app.stop();
+        }),
+      );
       return results.any((result) => !result);
     } else {
+      logger
+          .printTrace('Attempting to stop app "${app.id}" on SSH device "$id"');
+
       final runningApp = runningApps.remove(app.id);
       if (runningApp == null) {
         logger.printTrace(

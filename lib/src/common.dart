@@ -5,22 +5,53 @@ import 'package:flutterpi_tool/src/fltool/common.dart' show BuildMode;
 enum Bitness { b32, b64 }
 
 enum FlutterpiHostPlatform {
-  darwinX64.b64('darwin-x64', 'macOS-X64'),
-  darwinARM64.b64('darwin-arm64', 'macOS-ARM64'),
-  linuxX64.b64('linux-x64', 'Linux-X64'),
-  linuxARM.b32('linux-arm', 'Linux-ARM'),
-  linuxARM64.b64('linux-arm64', 'Linux-ARM64'),
-  windowsX64.b64('windows-x64', 'Windows-X64'),
-  windowsARM64.b64('windows-arm64', 'Windows-ARM64');
+  darwinX64.b64('darwin-x64', 'macOS-X64', darwin: true),
+  darwinARM64.b64('darwin-arm64', 'macOS-ARM64', darwin: true),
+  linuxX64.b64('linux-x64', 'Linux-X64', linux: true),
+  linuxARM.b32('linux-arm', 'Linux-ARM', linux: true),
+  linuxARM64.b64('linux-arm64', 'Linux-ARM64', linux: true),
+  windowsX64.b64('windows-x64', 'Windows-X64', windows: true),
+  windowsARM64.b64('windows-arm64', 'Windows-ARM64', windows: true);
 
-  const FlutterpiHostPlatform.b32(this.name, this.githubName)
-      : bitness = Bitness.b32;
-  const FlutterpiHostPlatform.b64(this.name, this.githubName)
-      : bitness = Bitness.b64;
+  const FlutterpiHostPlatform.b32(
+    this.name,
+    this.githubName, {
+    bool darwin = false,
+    bool linux = false,
+    bool windows = false,
+  })  : bitness = Bitness.b32,
+        isDarwin = darwin,
+        isLinux = linux,
+        isWindows = windows,
+        isPosix = linux || darwin,
+        assert(
+          (darwin ? 1 : 0) + (linux ? 1 : 0) + (windows ? 1 : 0) == 1,
+          'Exactly one of darwin, linux, or windows must be specified.',
+        );
+
+  const FlutterpiHostPlatform.b64(
+    this.name,
+    this.githubName, {
+    bool darwin = false,
+    bool linux = false,
+    bool windows = false,
+  })  : bitness = Bitness.b64,
+        isDarwin = darwin,
+        isLinux = linux,
+        isWindows = windows,
+        isPosix = linux || darwin,
+        assert(
+          (darwin ? 1 : 0) + (linux ? 1 : 0) + (windows ? 1 : 0) == 1,
+          'Exactly one of darwin, linux, or windows must be specified.',
+        );
 
   final String name;
   final String githubName;
   final Bitness bitness;
+  final bool isDarwin;
+  final bool isLinux;
+  final bool isPosix;
+  final bool isWindows;
 
   @override
   String toString() => name;
