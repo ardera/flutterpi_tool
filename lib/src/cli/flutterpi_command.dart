@@ -174,6 +174,18 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     return remote.contains('@') ? remote.split('@').first : null;
   }
 
+  int get rotation {
+    final rotationString = stringArg('rotation');
+    if (rotationString == null) {
+      return 0;
+    }
+    final rotationInt = int.tryParse(rotationString);
+    if (rotationInt == null) {
+      usageException('Invalid --rotation: Expected an integer in degrees. ');
+    }
+    return rotationInt;
+  }
+
   final _contextOverrides = <Type, dynamic Function()>{};
 
   void addContextOverride<T>(dynamic Function() fn) {
@@ -249,6 +261,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
           fs: globals.fs,
           logger: globals.logger,
           platform: globals.platform,
+          rotation: rotation,
         ),
         deviceId: stringArg(FlutterGlobalOptions.kDeviceIdOption, global: true),
       ),
@@ -287,6 +300,18 @@ mixin FlutterpiCommandMixin on FlutterCommand {
       'debug-symbols',
       help: 'Include debug symbols in the output.',
       negatable: false,
+    );
+  }
+
+  void usesRotationOption() {
+    argParser.addOption(
+      'rotation',
+      abbr: 'r',
+      help: 'Start the app with this rotation. This is just an '
+        'alternative, more intuitive way to specify the '
+        'startup orientation. The angle is in degrees and clock-wise',
+      allowed: ['0', '90', '180', '270'],
+      defaultsTo: '0',
     );
   }
 
@@ -431,6 +456,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
               fs: globals.fs,
               logger: globals.logger,
               platform: globals.platform,
+              rotation: rotation,
             ),
         BuildTargets: () => const BuildTargetsImpl(),
         ApplicationPackageFactory: () => FlutterpiApplicationPackageFactory(),

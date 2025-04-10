@@ -12,6 +12,7 @@ class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
     usesDeviceManager();
     usesEngineFlavorOption();
     usesDebugSymbolsOption();
+    usesRotationOption();
   }
 
   @protected
@@ -39,7 +40,6 @@ class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
   @override
   Future<FlutterCommandResult> runCommand() async {
     await populateCache();
-
     return super.runCommand();
   }
 }
