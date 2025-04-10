@@ -350,7 +350,7 @@ class FlutterpiSshDevice extends Device {
         '--dimensions',
         '$width,$height',
       ],
-      "--rotation", rotation.toString(),
+      '--rotation', rotation.toString(),
       if (runtimeModeArg != null) runtimeModeArg,
       bundlePath,
       ...engineArgs,
