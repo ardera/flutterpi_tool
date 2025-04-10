@@ -290,6 +290,18 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     );
   }
 
+  void usesRotationOption() {
+    argParser.addOption(
+      "rotation",
+      abbr: "r",
+      help: "Start the app with this rotation. This is just an "
+        "alternative, more intuitive way to specify the "
+        "startup orientation. The angle is in degrees and clock-wise",
+      allowed: ["0", "90", "180", "270"],
+      defaultsTo: "0",
+    );
+  }
+
   bool getIncludeDebugSymbols() {
     return boolArg('debug-symbols');
   }
