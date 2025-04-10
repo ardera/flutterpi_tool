@@ -174,6 +174,18 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     return remote.contains('@') ? remote.split('@').first : null;
   }
 
+  int get rotation {
+    final rotationString = stringArg('rotation');
+    if (rotationString == null) {
+      return 0;
+    }
+    final rotationInt = int.tryParse(rotationString);
+    if (rotationInt == null) {
+      usageException("Invalid --rotation: Expected an integer in degrees. ");
+    }
+    return rotationInt;
+  }
+
   final _contextOverrides = <Type, dynamic Function()>{};
 
   void addContextOverride<T>(dynamic Function() fn) {
@@ -249,6 +261,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
           fs: globals.fs,
           logger: globals.logger,
           platform: globals.platform,
+          rotation: rotation,
         ),
         deviceId: stringArg(FlutterGlobalOptions.kDeviceIdOption, global: true),
       ),
@@ -443,6 +456,7 @@ mixin FlutterpiCommandMixin on FlutterCommand {
               fs: globals.fs,
               logger: globals.logger,
               platform: globals.platform,
+              rotation: rotation,
             ),
         BuildTargets: () => const BuildTargetsImpl(),
         ApplicationPackageFactory: () => FlutterpiApplicationPackageFactory(),

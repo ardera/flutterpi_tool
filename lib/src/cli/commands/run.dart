@@ -40,10 +40,6 @@ class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
   @override
   Future<FlutterCommandResult> runCommand() async {
     await populateCache();
-    // Using ! here because [usesRotationOption] only allows 0, 90, 180, and 270.
-    final rotation = int.tryParse(stringArg("rotation")!)!;
-    print("You asked for a rotation of $rotation");
-    throw "All done";
     return super.runCommand();
   }
 }

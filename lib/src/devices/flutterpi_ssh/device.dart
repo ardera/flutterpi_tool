@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutterpi_tool/src/build_system/build_app.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
+import 'package:flutterpi_tool/src/config.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
@@ -109,6 +110,7 @@ class FlutterpiSshDevice extends Device {
     required String id,
     required this.name,
     required this.sshUtils,
+    required this.config,
     required String? remoteInstallPath,
     required this.logger,
     required this.os,
@@ -129,6 +131,7 @@ class FlutterpiSshDevice extends Device {
   final Logger logger;
   final FlutterpiCache cache;
   final MoreOperatingSystemUtils os;
+  final FlutterPiToolConfig config;
 
   final runningApps = <String, _RunningApp>{};
   final logReaders = <String, CustomDeviceLogReader>{};
@@ -330,6 +333,7 @@ class FlutterpiSshDevice extends Device {
     required String flutterpiExe,
     required String bundlePath,
     required BuildMode runtimeMode,
+    required int rotation,
     Iterable<String> engineArgs = const [],
     Iterable<String> dartCmdlineArgs = const [],
   }) {
@@ -346,6 +350,7 @@ class FlutterpiSshDevice extends Device {
         '--dimensions',
         '$width,$height',
       ],
+      "--rotation", rotation.toString(),
       if (runtimeModeArg != null) runtimeModeArg,
       bundlePath,
       ...engineArgs,
@@ -495,6 +500,7 @@ class FlutterpiSshDevice extends Device {
         flutterpiExe: flutterpiExePath,
         bundlePath: remoteInstallPath,
         runtimeMode: debuggingOptions.buildInfo.mode,
+        rotation: config.rotation,
         engineArgs: [
           ...engineArgs,
           if (debuggingOptions.deviceVmServicePort == null)

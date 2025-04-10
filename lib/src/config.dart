@@ -77,6 +77,7 @@ class FlutterPiToolConfig {
     required this.fs,
     required this.logger,
     required this.platform,
+    required this.rotation,
   }) : _config = Config(
           'flutterpi_tool_config',
           fileSystem: fs,
@@ -88,6 +89,7 @@ class FlutterPiToolConfig {
   final Logger logger;
   final Platform platform;
   final Config _config;
+  final int rotation;
 
   List<DeviceConfigEntry> getDevices() {
     final entries = _config.getValue('devices');

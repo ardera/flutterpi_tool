@@ -47,6 +47,7 @@ class FlutterpiSshDeviceDiscovery extends PollingDeviceDiscovery {
       os: os,
       explicitDisplaySizeMillimeters: configEntry.displaySizeMillimeters,
       explicitDevicePixelRatio: null,
+      config: config,
     );
   }
 
