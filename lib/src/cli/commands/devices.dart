@@ -409,6 +409,7 @@ class DevicesAddCommand extends FlutterpiCommand {
     );
 
     usesDisplaySizeArg();
+    usesDummyDisplayArg();
     usesSshRemoteNonOptionArg();
   }
 
@@ -494,6 +495,8 @@ class DevicesAddCommand extends FlutterpiCommand {
         sshRemote: remote,
         remoteInstallPath: remoteInstallPath,
         displaySizeMillimeters: displaySize,
+        useDummyDisplay: useDummyDisplay,
+        dummyDisplaySize: dummyDisplaySize,
       ),
     );
 

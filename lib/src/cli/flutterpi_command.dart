@@ -109,6 +109,16 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     );
   }
 
+  void usesDummyDisplayArg() {
+    argParser.addOption(
+      'dummy-display',
+      help: 'Simulate a dummy display (if no real display is connected). '
+          'Optionally specify the size in pixels of the dummy display.',
+      valueHelp: 'width x height',
+      defaultsTo: '',
+    );
+  }
+
   (int, int)? get displaySize {
     final size = stringArg('display-size');
     if (size == null) {
@@ -129,6 +139,37 @@ mixin FlutterpiCommandMixin on FlutterCommand {
         'Invalid --display-size: Expected both dimensions to be integers.',
       );
     }
+  }
+
+  (int, int)? get dummyDisplaySize {
+    final size = stringArg('dummy-display');
+    if (size == null || size == '') {
+      return null;
+    }
+
+    final parts = size.split('x');
+    if (parts.length != 2) {
+      usageException(
+        'Invalid --dummy-display: Expected two dimensions separated by "x".',
+      );
+    }
+
+    try {
+      return (int.parse(parts[0].trim()), int.parse(parts[1].trim()));
+    } on FormatException {
+      usageException(
+        'Invalid --dummy-display: Expected both dimensions to be integers.',
+      );
+    }
+  }
+
+  bool get useDummyDisplay {
+    final dummyDisplay = stringArg('dummy-display');
+    if (dummyDisplay != null) {
+      return true;
+    }
+
+    return false;
   }
 
   double? get pixelRatio {

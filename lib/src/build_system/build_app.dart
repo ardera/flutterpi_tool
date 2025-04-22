@@ -40,8 +40,16 @@ Future<FlutterpiAppBundle> buildFlutterpiApp({
     target: target,
     buildInfo: buildInfo,
     artifactPaths: artifactPaths,
-    outDir: outDir,
     operatingSystemUtils: operatingSystemUtils,
+    mainPath: mainPath,
+    manifestPath: manifestPath,
+    applicationKernelFilePath: applicationKernelFilePath,
+    depfilePath: depfilePath,
+    outDir: outDir,
+    artifacts: artifacts,
+    buildSystem: buildSystem,
+    unoptimized: unoptimized,
+    includeDebugSymbols: includeDebugSymbols,
   );
 
   return PrebuiltFlutterpiAppBundle(

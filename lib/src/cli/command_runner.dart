@@ -33,6 +33,14 @@ class FlutterpiToolCommandRunner extends CommandRunner<void>
           'Use this to select a specific version of the web sdk if you have built multiple engine targets.\n'
           'This path is relative to "--local-engine-src-path" (see above).',
     );
+
+    argParser.addFlag(
+      FlutterGlobalOptions.kPrintDtd,
+      negatable: false,
+      help:
+          'Print the address of the Dart Tooling Daemon, if one is hosted by the Flutter CLI.',
+      hide: !verboseHelp,
+    );
   }
 
   @override

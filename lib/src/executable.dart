@@ -8,6 +8,7 @@ import 'package:flutterpi_tool/src/cli/command_runner.dart';
 import 'package:flutterpi_tool/src/cli/commands/devices.dart';
 import 'package:flutterpi_tool/src/cli/commands/precache.dart';
 import 'package:flutterpi_tool/src/cli/commands/run.dart';
+import 'package:flutterpi_tool/src/cli/commands/test.dart';
 
 Future<void> main(List<String> args) async {
   final verbose =
@@ -29,6 +30,7 @@ Future<void> main(List<String> args) async {
   runner.addCommand(PrecacheCommand(verboseHelp: verboseHelp));
   runner.addCommand(DevicesCommand(verboseHelp: verboseHelp));
   runner.addCommand(RunCommand());
+  runner.addCommand(TestCommand());
 
   runner.argParser
     ..addSeparator('Other options')

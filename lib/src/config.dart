@@ -9,6 +9,8 @@ class DeviceConfigEntry {
     required this.remoteInstallPath,
     this.displaySizeMillimeters,
     this.devicePixelRatio,
+    this.useDummyDisplay,
+    this.dummyDisplaySize,
   });
 
   final String id;
@@ -17,6 +19,8 @@ class DeviceConfigEntry {
   final String? remoteInstallPath;
   final (int, int)? displaySizeMillimeters;
   final double? devicePixelRatio;
+  final bool? useDummyDisplay;
+  final (int, int)? dummyDisplaySize;
 
   static DeviceConfigEntry fromMap(Map<String, dynamic> map) {
     return DeviceConfigEntry(
@@ -29,6 +33,11 @@ class DeviceConfigEntry {
         _ => null,
       },
       devicePixelRatio: (map['devicePixelRatio'] as num?)?.toDouble(),
+      useDummyDisplay: map['useDummyDisplay'] as bool?,
+      dummyDisplaySize: switch (map['dummyDisplaySize']) {
+        [num width, num height] => (width.round(), height.round()),
+        _ => null,
+      },
     );
   }
 
@@ -42,6 +51,10 @@ class DeviceConfigEntry {
         'displaySizeMillimeters': [width, height],
       if (devicePixelRatio case int devicePixelRatio)
         'devicePixelRatio': devicePixelRatio,
+      if (useDummyDisplay case bool useDummyDisplay)
+        'useDummyDisplay': useDummyDisplay,
+      if (dummyDisplaySize case (final width, final height))
+        'dummyDisplaySize': [width, height],
     };
   }
 
@@ -58,7 +71,9 @@ class DeviceConfigEntry {
         sshRemote == otherEntry.sshRemote &&
         remoteInstallPath == otherEntry.remoteInstallPath &&
         displaySizeMillimeters == otherEntry.displaySizeMillimeters &&
-        devicePixelRatio == otherEntry.devicePixelRatio;
+        devicePixelRatio == otherEntry.devicePixelRatio &&
+        useDummyDisplay == otherEntry.useDummyDisplay &&
+        dummyDisplaySize == otherEntry.dummyDisplaySize;
   }
 
   @override
@@ -69,6 +84,8 @@ class DeviceConfigEntry {
         remoteInstallPath,
         displaySizeMillimeters,
         devicePixelRatio,
+        useDummyDisplay,
+        dummyDisplaySize,
       );
 }
 

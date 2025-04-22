@@ -104,6 +104,18 @@ class _RunningApp {
   }
 }
 
+class FlutterpiArgs {
+  const FlutterpiArgs({
+    this.explicitDisplaySizeMillimeters,
+    this.useDummyDisplay = false,
+    this.dummyDisplaySize,
+  });
+
+  final (int, int)? explicitDisplaySizeMillimeters;
+  final bool useDummyDisplay;
+  final (int, int)? dummyDisplaySize;
+}
+
 class FlutterpiSshDevice extends Device {
   FlutterpiSshDevice({
     required String id,
@@ -113,8 +125,7 @@ class FlutterpiSshDevice extends Device {
     required this.logger,
     required this.os,
     required this.cache,
-    this.explicitDevicePixelRatio,
-    this.explicitDisplaySizeMillimeters,
+    this.args = const FlutterpiArgs(),
   })  : remoteInstallPath = remoteInstallPath ?? '/tmp/',
         super(
           id,
@@ -129,13 +140,11 @@ class FlutterpiSshDevice extends Device {
   final Logger logger;
   final FlutterpiCache cache;
   final MoreOperatingSystemUtils os;
+  final FlutterpiArgs args;
 
   final runningApps = <String, _RunningApp>{};
   final logReaders = <String, CustomDeviceLogReader>{};
   final globalLogReader = CustomDeviceLogReader('FlutterPi');
-
-  final double? explicitDevicePixelRatio;
-  final (int, int)? explicitDisplaySizeMillimeters;
 
   String _getRemoteInstallPath(FlutterpiAppBundle bundle) {
     return path.posix.join(remoteInstallPath, bundle.id);
@@ -342,10 +351,14 @@ class FlutterpiSshDevice extends Device {
 
     return [
       flutterpiExe,
-      if (explicitDisplaySizeMillimeters case (final width, final height)) ...[
+      if (args.explicitDisplaySizeMillimeters
+          case (final width, final height)) ...[
         '--dimensions',
         '$width,$height',
       ],
+      if (args.useDummyDisplay) '--dummy-display',
+      if (args.dummyDisplaySize case (final width, final height))
+        '--dummy-display-size=$width,$height',
       if (runtimeModeArg != null) runtimeModeArg,
       bundlePath,
       ...engineArgs,
