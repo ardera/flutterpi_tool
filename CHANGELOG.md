@@ -1,3 +1,10 @@
+## 0.7.2 - 2025-04-29
+- add `flutterpi_tool test` subcommand
+- supports running integration tests on registered devices, e.g.
+  - `flutterpi_tool test integration_test -d pi`
+- add `--dummy-display` and `--dummy-display-size` args for `flutterpi_tool devices add`
+  - allows simulating a display, useful if no real display is attached
+
 ## 0.7.1 - 2025-03-21
 - fix missing executable permissions when running from windows
 - fix app not terminating when running from windows
