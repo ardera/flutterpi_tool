@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/application_package_factory.dart';
@@ -110,12 +111,17 @@ mixin FlutterpiCommandMixin on FlutterCommand {
   }
 
   void usesDummyDisplayArg() {
-    argParser.addOption(
+    argParser.addFlag(
       'dummy-display',
-      help: 'Simulate a dummy display (if no real display is connected). '
-          'Optionally specify the size in pixels of the dummy display.',
+      help:
+          'Simulate a dummy display. (Useful if no real display is connected)',
+    );
+
+    argParser.addOption(
+      'dummy-display-size',
+      help:
+          'Simulate a dummy display with a specific size in physical pixels. (Useful if no real display is connected)',
       valueHelp: 'width x height',
-      defaultsTo: '',
     );
   }
 
@@ -142,15 +148,15 @@ mixin FlutterpiCommandMixin on FlutterCommand {
   }
 
   (int, int)? get dummyDisplaySize {
-    final size = stringArg('dummy-display');
-    if (size == null || size == '') {
+    final size = stringArg('dummy-display-size');
+    if (size == null) {
       return null;
     }
 
     final parts = size.split('x');
     if (parts.length != 2) {
       usageException(
-        'Invalid --dummy-display: Expected two dimensions separated by "x".',
+        'Invalid --dummy-display-size: Expected two dimensions separated by "x".',
       );
     }
 
@@ -158,14 +164,15 @@ mixin FlutterpiCommandMixin on FlutterCommand {
       return (int.parse(parts[0].trim()), int.parse(parts[1].trim()));
     } on FormatException {
       usageException(
-        'Invalid --dummy-display: Expected both dimensions to be integers.',
+        'Invalid --dummy-display-size: Expected both dimensions to be integers.',
       );
     }
   }
 
   bool get useDummyDisplay {
-    final dummyDisplay = stringArg('dummy-display');
-    if (dummyDisplay != null) {
+    final dummyDisplay = boolArg('dummy-display');
+    final dummyDisplaySize = stringArg('dummy-display-size');
+    if (dummyDisplay || dummyDisplaySize != null) {
       return true;
     }
 
