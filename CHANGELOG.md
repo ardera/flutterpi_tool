@@ -1,3 +1,10 @@
+## 0.7.3 - 2025-04-29
+- add `flutterpi_tool test` subcommand
+- supports running integration tests on registered devices, e.g.
+  - `flutterpi_tool test integration_test -d pi`
+- add `--dummy-display` and `--dummy-display-size` args for `flutterpi_tool devices add`
+  - allows simulating a display, useful if no real display is attached
+
 ## 0.7.2 - 2025-04-29
 - add `flutterpi_tool test` subcommand
 - supports running integration tests on registered devices, e.g.
