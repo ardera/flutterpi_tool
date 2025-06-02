@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/build_system/build_app.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
-import 'package:flutterpi_tool/src/fltool/globals.dart';
+import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
+
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 
@@ -99,7 +101,7 @@ class _RunningApp {
       return true;
     }
 
-    logger.printWarning('Could not terminate app on remote device.');
+    globals.printWarning('Could not terminate app on remote device.');
     return false;
   }
 }
@@ -319,18 +321,37 @@ class FlutterpiSshDevice extends Device {
     String? mainPath,
     required DebuggingOptions debuggingOptions,
   }) async {
+    /// TODO: This is partially duplicated.
+    final host = switch (os.fpiHostPlatform) {
+      FlutterpiHostPlatform.darwinARM64 => FlutterpiHostPlatform.darwinX64,
+      FlutterpiHostPlatform.windowsARM64 => FlutterpiHostPlatform.windowsX64,
+      FlutterpiHostPlatform other => other,
+    };
+
+    var target = await flutterpiTargetPlatform;
+    if (!target.isGeneric &&
+        debuggingOptions.buildInfo.mode == BuildMode.debug) {
+      logger.printTrace(
+        'Non-generic target platform ($target) is not supported for debug mode, '
+        'using generic variant ${target.genericVariant}.',
+      );
+      target = target.genericVariant;
+    }
+
+    final artifacts = FlutterToFlutterpiArtifactsForwarder(
+      inner: globals.flutterpiArtifacts,
+      host: host,
+      target: target,
+    );
+
     return await buildFlutterpiApp(
       id: id,
-      host: switch (os.fpiHostPlatform) {
-        FlutterpiHostPlatform.darwinARM64 => FlutterpiHostPlatform.darwinX64,
-        FlutterpiHostPlatform.windowsARM64 => FlutterpiHostPlatform.windowsX64,
-        FlutterpiHostPlatform other => other,
-      },
-      target: await flutterpiTargetPlatform,
+      host: host,
+      target: target,
       buildInfo: debuggingOptions.buildInfo,
-      artifactPaths: cache.artifactPaths,
       mainPath: mainPath,
       operatingSystemUtils: os,
+      artifacts: artifacts,
     );
   }
 

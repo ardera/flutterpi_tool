@@ -29,7 +29,7 @@ Future<void> main(List<String> args) async {
   runner.addCommand(BuildCommand(verboseHelp: verboseHelp));
   runner.addCommand(PrecacheCommand(verboseHelp: verboseHelp));
   runner.addCommand(DevicesCommand(verboseHelp: verboseHelp));
-  runner.addCommand(RunCommand());
+  runner.addCommand(RunCommand(verboseHelp: verboseHelp));
   runner.addCommand(TestCommand());
 
   runner.argParser

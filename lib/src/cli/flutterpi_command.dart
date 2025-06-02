@@ -1,8 +1,10 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' as io;
+
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/application_package_factory.dart';
+import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/devices/device_manager.dart';
@@ -121,6 +123,16 @@ mixin FlutterpiCommandMixin on FlutterCommand {
       help:
           'Simulate a dummy display with a specific size in physical pixels. (Useful if no real display is connected)',
       valueHelp: 'width x height',
+    );
+  }
+
+  void usesLocalFlutterpiExecutableArg({bool verboseHelp = false}) {
+    argParser.addOption(
+      'flutterpi-binary',
+      help:
+          'Use a custom, pre-built flutter-pi executable instead of download one from the Flutter-Pi CI.',
+      valueHelp: 'path',
+      hide: !verboseHelp,
     );
   }
 
@@ -369,6 +381,22 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     }
   }
 
+  File? getLocalFlutterpiExecutable() {
+    final path = stringArg('flutterpi-binary');
+    if (path == null) {
+      return null;
+    }
+
+    if (!globals.fs.isFileSync(path)) {
+      usageException(
+        'The specified flutter-pi binary does not exist, '
+        'or is not a file: $path',
+      );
+    }
+
+    return globals.fs.file(path);
+  }
+
   Future<Set<FlutterpiTargetPlatform>> getDeviceBasedTargetPlatforms() async {
     final devices = await globals.deviceManager!.getDevices(
       filter: DeviceDiscoveryFilter(excludeDisconnected: false),
@@ -455,23 +483,28 @@ mixin FlutterpiCommandMixin on FlutterCommand {
               processManager: globals.processManager,
               github: createGithub(
                 httpClient: http.IOClient(
-                  globals.httpClientFactory?.call() ?? HttpClient(),
+                  globals.httpClientFactory?.call() ?? io.HttpClient(),
                 ),
               ),
             ),
         Cache: () => globals.flutterpiCache,
-        OperatingSystemUtils: () => MoreOperatingSystemUtils(
+        MoreOperatingSystemUtils: () => MoreOperatingSystemUtils(
               fileSystem: globals.fs,
               logger: globals.logger,
               platform: globals.platform,
               processManager: globals.processManager,
             ),
+        OperatingSystemUtils: () => globals.moreOs,
         Logger: createLogger,
-        Artifacts: () => CachedArtifacts(
-              fileSystem: globals.fs,
-              platform: globals.platform,
-              cache: globals.cache,
-              operatingSystemUtils: globals.os,
+        Artifacts: () => globals.flutterpiArtifacts,
+        FlutterpiArtifacts: () => CachedFlutterpiArtifacts(
+              inner: CachedArtifacts(
+                fileSystem: globals.fs,
+                platform: globals.platform,
+                cache: globals.cache,
+                operatingSystemUtils: globals.os,
+              ),
+              cache: globals.flutterpiCache,
             ),
         Usage: () => DisabledUsage(),
         FlutterPiToolConfig: () => FlutterPiToolConfig(
