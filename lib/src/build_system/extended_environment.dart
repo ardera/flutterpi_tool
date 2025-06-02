@@ -1,4 +1,5 @@
 import 'package:file/file.dart';
+import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:process/process.dart';
@@ -13,7 +14,7 @@ class ExtendedEnvironment implements Environment {
     required Directory flutterRootDir,
     required FileSystem fileSystem,
     required Logger logger,
-    required Artifacts artifacts,
+    required FlutterpiArtifacts artifacts,
     required ProcessManager processManager,
     required Platform platform,
     required Usage usage,
@@ -27,6 +28,7 @@ class ExtendedEnvironment implements Environment {
   }) {
     return ExtendedEnvironment.wrap(
       operatingSystemUtils: operatingSystemUtils,
+      artifacts: artifacts,
       delegate: Environment(
         projectDir: projectDir,
         packageConfigPath: packageConfigPath,
@@ -51,6 +53,7 @@ class ExtendedEnvironment implements Environment {
 
   ExtendedEnvironment.wrap({
     required this.operatingSystemUtils,
+    required this.artifacts,
     required Environment delegate,
   }) : _delegate = delegate;
 
@@ -58,9 +61,6 @@ class ExtendedEnvironment implements Environment {
 
   @override
   Analytics get analytics => _delegate.analytics;
-
-  @override
-  Artifacts get artifacts => _delegate.artifacts;
 
   @override
   Directory get buildDir => _delegate.buildDir;
@@ -112,6 +112,9 @@ class ExtendedEnvironment implements Environment {
 
   @override
   Usage get usage => _delegate.usage;
+
+  @override
+  final FlutterpiArtifacts artifacts;
 
   final MoreOperatingSystemUtils operatingSystemUtils;
 }

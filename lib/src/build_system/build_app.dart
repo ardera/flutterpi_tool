@@ -2,9 +2,9 @@
 
 import 'dart:async';
 import 'package:file/file.dart';
+import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/build_system/extended_environment.dart';
 import 'package:flutterpi_tool/src/build_system/targets.dart';
-import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
@@ -17,14 +17,13 @@ Future<FlutterpiAppBundle> buildFlutterpiApp({
   required FlutterpiHostPlatform host,
   required FlutterpiTargetPlatform target,
   required BuildInfo buildInfo,
-  required FlutterpiArtifactPaths artifactPaths,
   required MoreOperatingSystemUtils operatingSystemUtils,
+  required FlutterpiArtifacts artifacts,
   FlutterProject? project,
   String? mainPath,
   String manifestPath = defaultManifestPath,
   String? applicationKernelFilePath,
   String? depfilePath,
-  Artifacts? artifacts,
   BuildSystem? buildSystem,
   bool unoptimized = false,
   bool includeDebugSymbols = false,
@@ -39,7 +38,6 @@ Future<FlutterpiAppBundle> buildFlutterpiApp({
     host: host,
     target: target,
     buildInfo: buildInfo,
-    artifactPaths: artifactPaths,
     operatingSystemUtils: operatingSystemUtils,
     mainPath: mainPath,
     manifestPath: manifestPath,
@@ -72,15 +70,14 @@ Future<void> buildFlutterpiBundle({
   required FlutterpiHostPlatform host,
   required FlutterpiTargetPlatform target,
   required BuildInfo buildInfo,
-  required FlutterpiArtifactPaths artifactPaths,
   required MoreOperatingSystemUtils operatingSystemUtils,
+  required FlutterpiArtifacts artifacts,
   FlutterProject? project,
   String? mainPath,
   String manifestPath = defaultManifestPath,
   String? applicationKernelFilePath,
   String? depfilePath,
   Directory? outDir,
-  Artifacts? artifacts,
   BuildSystem? buildSystem,
   bool unoptimized = false,
   bool includeDebugSymbols = false,
@@ -90,14 +87,6 @@ Future<void> buildFlutterpiBundle({
   depfilePath ??= defaultDepfilePath;
   buildSystem ??= globals.buildSystem;
   outDir ??= globals.fs.directory(getAssetBuildDirectory());
-
-  artifacts = OverrideGenSnapshotArtifacts.fromArtifactPaths(
-    parent: artifacts ?? globals.artifacts!,
-    engineCacheDir: flutterpiCache.getArtifactDirectory('engine'),
-    host: host,
-    target: target.genericVariant,
-    artifactPaths: artifactPaths,
-  );
 
   // We can still build debug for non-generic platforms of course, the correct
   // (generic) target must be chosen in the caller in that case.
@@ -154,22 +143,16 @@ Future<void> buildFlutterpiBundle({
 
   final buildTarget = switch (buildInfo.mode) {
     BuildMode.debug => DebugBundleFlutterpiAssets(
-        flutterpiTargetPlatform: target,
-        hostPlatform: host,
+        target: target,
         unoptimized: unoptimized,
-        artifactPaths: artifactPaths,
         debugSymbols: includeDebugSymbols,
       ),
     BuildMode.profile => ProfileBundleFlutterpiAssets(
-        flutterpiTargetPlatform: target,
-        hostPlatform: host,
-        artifactPaths: artifactPaths,
+        target: target,
         debugSymbols: includeDebugSymbols,
       ),
     BuildMode.release => ReleaseBundleFlutterpiAssets(
-        flutterpiTargetPlatform: target,
-        hostPlatform: host,
-        artifactPaths: artifactPaths,
+        target: target,
         debugSymbols: includeDebugSymbols,
       ),
     _ => throwToolExit('Unsupported build mode: ${buildInfo.mode}'),

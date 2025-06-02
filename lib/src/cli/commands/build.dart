@@ -3,13 +3,14 @@
 import 'dart:async';
 
 import 'package:args/command_runner.dart';
+import 'package:file/file.dart';
+import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/build_system/build_app.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/cli/command_runner.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 
-import '../../more_os_utils.dart';
 import '../../common.dart';
 
 class BuildCommand extends FlutterpiCommand {
@@ -38,6 +39,7 @@ class BuildCommand extends FlutterpiCommand {
     usesDartDefineOption();
     usesTargetOption();
     usesCustomCache(verboseHelp: verboseHelp);
+    usesLocalFlutterpiExecutableArg(verboseHelp: verboseHelp);
 
     argParser
       ..addSeparator('Target options')
@@ -124,12 +126,7 @@ class BuildCommand extends FlutterpiCommand {
     final debugSymbols = getIncludeDebugSymbols();
     final buildInfo = await getBuildInfo();
 
-    final os = switch (globals.os) {
-      MoreOperatingSystemUtils os => os,
-      _ => throw StateError(
-          'Operating system utils is not an FPiOperatingSystemUtils',
-        ),
-    };
+    final os = globals.moreOs;
 
     // for windows arm64, darwin arm64, we just use the x64 variant
     final host = switch (os.fpiHostPlatform) {
@@ -160,6 +157,18 @@ class BuildCommand extends FlutterpiCommand {
       includeDebugSymbols: debugSymbols,
     );
 
+    FlutterpiArtifacts artifacts = FlutterToFlutterpiArtifactsForwarder(
+      inner: globals.flutterpiArtifacts,
+      host: host,
+      target: targetPlatform,
+    );
+    if (getLocalFlutterpiExecutable() case File file) {
+      artifacts = LocalFlutterpiBinaryOverride(
+        inner: artifacts,
+        flutterpiBinary: file,
+      );
+    }
+
     // actually build the flutter bundle
     try {
       await buildFlutterpiBundle(
@@ -167,7 +176,8 @@ class BuildCommand extends FlutterpiCommand {
         target: targetPlatform,
         buildInfo: buildInfo,
         mainPath: targetFile,
-        artifactPaths: flutterpiCache.artifactPaths,
+        artifacts: artifacts,
+
         operatingSystemUtils: os,
 
         // for `--debug-unoptimized` build mode

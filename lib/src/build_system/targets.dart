@@ -3,8 +3,8 @@
 import 'dart:async';
 
 import 'package:file/file.dart';
+import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/build_system/extended_environment.dart';
-import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart';
@@ -12,91 +12,76 @@ import 'package:flutterpi_tool/src/more_os_utils.dart';
 
 class ReleaseBundleFlutterpiAssets extends CompositeTarget {
   ReleaseBundleFlutterpiAssets({
-    required this.flutterpiTargetPlatform,
-    required FlutterpiHostPlatform hostPlatform,
-    required FlutterpiArtifactPaths artifactPaths,
+    required this.target,
     bool debugSymbols = false,
   }) : super([
           const CopyFlutterAssets(),
           const CopyIcudtl(),
           CopyFlutterpiEngine(
-            flutterpiTargetPlatform,
-            buildMode: BuildMode.release,
-            hostPlatform: hostPlatform,
-            artifactPaths: artifactPaths,
+            target: target,
+            flavor: EngineFlavor.release,
             includeDebugSymbols: debugSymbols,
           ),
           CopyFlutterpiBinary(
-            target: flutterpiTargetPlatform,
+            target: target,
             buildMode: BuildMode.release,
           ),
           const FlutterpiAppElf(AotElfRelease(TargetPlatform.linux_arm64)),
         ]);
 
-  final FlutterpiTargetPlatform flutterpiTargetPlatform;
+  final FlutterpiTargetPlatform target;
 
   @override
-  String get name =>
-      'release_bundle_flutterpi_${flutterpiTargetPlatform.shortName}_assets';
+  String get name => 'release_bundle_flutterpi_${target.shortName}_assets';
 }
 
 class ProfileBundleFlutterpiAssets extends CompositeTarget {
   ProfileBundleFlutterpiAssets({
-    required this.flutterpiTargetPlatform,
-    required FlutterpiHostPlatform hostPlatform,
-    required FlutterpiArtifactPaths artifactPaths,
+    required this.target,
     bool debugSymbols = false,
     String? flutterpiBinaryPathOverride,
   }) : super([
           const CopyFlutterAssets(),
           const CopyIcudtl(),
           CopyFlutterpiEngine(
-            flutterpiTargetPlatform,
-            buildMode: BuildMode.profile,
-            hostPlatform: hostPlatform,
-            artifactPaths: artifactPaths,
+            target: target,
+            flavor: EngineFlavor.profile,
             includeDebugSymbols: debugSymbols,
           ),
           CopyFlutterpiBinary(
-            target: flutterpiTargetPlatform,
+            target: target,
             buildMode: BuildMode.profile,
           ),
           const FlutterpiAppElf(AotElfProfile(TargetPlatform.linux_arm64)),
         ]);
 
-  final FlutterpiTargetPlatform flutterpiTargetPlatform;
+  final FlutterpiTargetPlatform target;
 
   @override
-  String get name =>
-      'profile_bundle_flutterpi_${flutterpiTargetPlatform.shortName}_assets';
+  String get name => 'profile_bundle_flutterpi_${target.shortName}_assets';
 }
 
 class DebugBundleFlutterpiAssets extends CompositeTarget {
   DebugBundleFlutterpiAssets({
-    required this.flutterpiTargetPlatform,
-    required FlutterpiHostPlatform hostPlatform,
+    required this.target,
     bool unoptimized = false,
     bool debugSymbols = false,
-    required FlutterpiArtifactPaths artifactPaths,
     String? flutterpiBinaryPathOverride,
   }) : super([
           const CopyFlutterAssets(),
           const CopyIcudtl(),
           CopyFlutterpiEngine(
-            flutterpiTargetPlatform,
-            buildMode: BuildMode.debug,
-            hostPlatform: hostPlatform,
-            unoptimized: unoptimized,
-            artifactPaths: artifactPaths,
+            target: target,
+            flavor: unoptimized ? EngineFlavor.debugUnopt : EngineFlavor.debug,
             includeDebugSymbols: debugSymbols,
           ),
           CopyFlutterpiBinary(
-            target: flutterpiTargetPlatform,
+            target: target,
             buildMode: BuildMode.debug,
           ),
         ]);
 
-  final FlutterpiTargetPlatform flutterpiTargetPlatform;
+  final FlutterpiTargetPlatform target;
 
   @override
   String get name => 'debug_bundle_flutterpi_assets';
@@ -178,20 +163,26 @@ void fixupExePermissions(
 class CopyFlutterpiBinary extends Target {
   CopyFlutterpiBinary({
     required this.target,
-    required BuildMode buildMode,
-  }) : flutterpiBuildType = buildMode == BuildMode.debug ? 'debug' : 'release';
+    required this.buildMode,
+  });
 
   final FlutterpiTargetPlatform target;
-  final String flutterpiBuildType;
+  final BuildMode buildMode;
 
   @override
   Future<void> build(Environment environment) async {
-    final file = environment.cacheDir
-        .childDirectory('artifacts')
-        .childDirectory('flutter-pi')
-        .childDirectory(target.triple)
-        .childDirectory(flutterpiBuildType)
-        .childFile('flutter-pi');
+    final artifacts = environment.artifacts;
+    if (artifacts is! FlutterpiArtifacts) {
+      throw StateError(
+        'Expected artifacts to be a FlutterpiArtifacts, '
+        'but got ${artifacts.runtimeType}.',
+      );
+    }
+
+    final file = artifacts
+        .getFlutterpiArtifact(FlutterpiBinary(target: target, mode: buildMode));
+
+    assert(file.fileSystem == environment.fileSystem);
 
     final outputFile = environment.outputDir.childFile('flutter-pi');
 
@@ -227,9 +218,8 @@ class CopyFlutterpiBinary extends Target {
 
   @override
   List<Source> get inputs => <Source>[
-        /// TODO: This should really be a Source.artifact(Artifact.flutterpiBinary)
-        Source.pattern(
-          '{CACHE_DIR}/artifacts/flutter-pi/${target.triple}/$flutterpiBuildType/flutter-pi',
+        FlutterpiArtifactSource(
+          FlutterpiBinary(target: target, mode: buildMode),
         ),
       ];
 
@@ -243,48 +233,37 @@ class CopyFlutterpiBinary extends Target {
 }
 
 class CopyFlutterpiEngine extends Target {
-  const CopyFlutterpiEngine(
-    this.flutterpiTargetPlatform, {
-    required BuildMode buildMode,
-    required FlutterpiHostPlatform hostPlatform,
-    bool unoptimized = false,
+  CopyFlutterpiEngine({
+    required this.target,
+    required this.flavor,
     this.includeDebugSymbols = false,
-    required FlutterpiArtifactPaths artifactPaths,
-  })  : _buildMode = buildMode,
-        _hostPlatform = hostPlatform,
-        _unoptimized = unoptimized,
-        _artifactPaths = artifactPaths;
+  })  : _engine = Engine(
+          target: target,
+          flavor: flavor,
+        ),
+        _debugSymbols = EngineDebugSymbols(
+          target: target,
+          flavor: flavor,
+        );
 
-  final FlutterpiTargetPlatform flutterpiTargetPlatform;
-  final BuildMode _buildMode;
-  final FlutterpiHostPlatform _hostPlatform;
-  final bool _unoptimized;
-  final FlutterpiArtifactPaths _artifactPaths;
+  final FlutterpiTargetPlatform target;
+  final EngineFlavor flavor;
   final bool includeDebugSymbols;
 
-  EngineFlavor get _engineFlavor => EngineFlavor(_buildMode, _unoptimized);
+  final FlutterpiArtifact _engine;
+  final FlutterpiArtifact _debugSymbols;
 
   @override
   List<Target> get dependencies => [];
 
   @override
   List<Source> get inputs => [
-        _artifactPaths.getEngineSource(
-          hostPlatform: _hostPlatform,
-          target: flutterpiTargetPlatform,
-          flavor: _engineFlavor,
-        ),
-        if (includeDebugSymbols)
-          (_artifactPaths as FlutterpiArtifactPathsV2).getEngineDbgsymsSource(
-            hostPlatform: _hostPlatform,
-            target: flutterpiTargetPlatform,
-            flavor: _engineFlavor,
-          ),
+        FlutterpiArtifactSource(_engine),
+        if (includeDebugSymbols) FlutterpiArtifactSource(_debugSymbols),
       ];
 
   @override
-  String get name =>
-      'copy_flutterpi_engine_${flutterpiTargetPlatform.shortName}_$_buildMode${_unoptimized ? '_unopt' : ''}';
+  String get name => 'copy_flutterpi_engine_${target.shortName}_$flavor';
 
   @override
   List<Source> get outputs => [
@@ -300,14 +279,7 @@ class CopyFlutterpiEngine extends Target {
       outputFile.parent.createSync(recursive: true);
     }
 
-    final engine = _artifactPaths.getEngine(
-      engineCacheDir: environment.cacheDir
-          .childDirectory('artifacts')
-          .childDirectory('engine'),
-      hostPlatform: _hostPlatform,
-      target: flutterpiTargetPlatform,
-      flavor: _engineFlavor,
-    );
+    final engine = environment.artifacts.getFlutterpiArtifact(_engine);
 
     engine.copySync(outputFile.path);
 
@@ -326,14 +298,7 @@ class CopyFlutterpiEngine extends Target {
         dbgsymsOutputFile.parent.createSync(recursive: true);
       }
 
-      final dbgsyms =
-          (_artifactPaths as FlutterpiArtifactPathsV2).getEngineDbgsyms(
-        engineCacheDir: environment.cacheDir
-            .childDirectory('artifacts')
-            .childDirectory('engine'),
-        target: flutterpiTargetPlatform,
-        flavor: _engineFlavor,
-      );
+      final dbgsyms = environment.artifacts.getFlutterpiArtifact(_debugSymbols);
 
       dbgsyms.copySync(dbgsymsOutputFile.path);
 

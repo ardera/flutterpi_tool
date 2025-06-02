@@ -1,28 +1,32 @@
 // ignore_for_file: implementation_imports
 
-import 'package:flutter_tools/src/commands/run.dart' as fltool;
-import 'package:flutter_tools/src/device.dart';
-import 'package:flutter_tools/src/runner/flutter_command.dart';
-
-import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
+import 'package:file/file.dart';
 import 'package:meta/meta.dart';
 
+import 'package:flutterpi_tool/src/fltool/common.dart' as fltool;
+import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
+import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
+
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
+import 'package:flutterpi_tool/src/artifacts.dart';
+
 class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
-  RunCommand() {
+  RunCommand({bool verboseHelp = false}) {
     usesDeviceManager();
     usesEngineFlavorOption();
     usesDebugSymbolsOption();
+    usesLocalFlutterpiExecutableArg(verboseHelp: verboseHelp);
   }
 
   @protected
   @override
-  Future<DebuggingOptions> createDebuggingOptions(bool webMode) async {
+  Future<fltool.DebuggingOptions> createDebuggingOptions(bool webMode) async {
     final buildInfo = await getBuildInfo();
 
     if (buildInfo.mode.isRelease) {
-      return DebuggingOptions.disabled(buildInfo);
+      return fltool.DebuggingOptions.disabled(buildInfo);
     } else {
-      return DebuggingOptions.enabled(buildInfo);
+      return fltool.DebuggingOptions.enabled(buildInfo);
     }
   }
 
@@ -37,9 +41,23 @@ class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
   }
 
   @override
-  Future<FlutterCommandResult> runCommand() async {
+  Future<fltool.FlutterCommandResult> runCommand() async {
     await populateCache();
 
-    return super.runCommand();
+    FlutterpiArtifacts artifacts = globals.flutterpiArtifacts;
+    if (getLocalFlutterpiExecutable() case File file) {
+      artifacts = LocalFlutterpiBinaryOverride(
+        inner: artifacts,
+        flutterpiBinary: file,
+      );
+    }
+
+    return fltool.runInContext(
+      super.runCommand,
+      overrides: {
+        fltool.Artifacts: () => artifacts,
+        FlutterpiArtifacts: () => artifacts,
+      },
+    );
   }
 }
