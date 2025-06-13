@@ -32,3 +32,5 @@ export 'package:flutter_tools/src/base/terminal.dart';
 export 'package:flutter_tools/src/commands/run.dart';
 export 'package:flutter_tools/src/commands/test.dart';
 export 'package:flutter_tools/src/commands/devices.dart' hide DevicesCommand;
+export 'package:flutter_tools/src/version.dart';
+export 'package:flutter_tools/src/base/time.dart';

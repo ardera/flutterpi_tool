@@ -12,6 +12,8 @@ import 'package:flutterpi_tool/src/cli/commands/build.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:test/test.dart';
 
+import 'src/fake_flutter_version.dart';
+
 class MockCommandRunner extends FlutterpiToolCommandRunner {}
 
 class MockBuildCommand extends BuildCommand {
@@ -51,6 +53,7 @@ Future<void> testBuildCommand(
     overrides: {
       Logger: () => logger,
       FileSystem: () => fileSystem,
+      FlutterVersion: () => FakeFlutterVersion(),
     },
   );
 }
