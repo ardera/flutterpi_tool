@@ -36,8 +36,9 @@ class FakeFlutterVersion implements fltool.FlutterVersion {
   final fltool.FlutterVersion? nextFlutterVersion;
 
   @override
-  fltool.FlutterVersion fetchTagsAndGetVersion(
-      {fltool.SystemClock clock = const fltool.SystemClock()}) {
+  fltool.FlutterVersion fetchTagsAndGetVersion({
+    fltool.SystemClock clock = const fltool.SystemClock(),
+  }) {
     _didFetchTagsAndUpdate = true;
     return nextFlutterVersion ?? this;
   }
