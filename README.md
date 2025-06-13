@@ -2,8 +2,9 @@
 A tool to make developing &amp; distributing flutter apps for https://github.com/ardera/flutter-pi easier.
 
 ## 📰 News
-- flutterpi_tool now supports running apps on devices directly.
-- Windows and Linux armv7/arm64 are now supported for running flutterpi_tool.
+- RISC-V 64-bit is now supported as a target & host platform.
+- The flutter-pi binary to bundle can now be explicitly specified using
+  `--flutterpi-binary=...`
 
 ## Setup
 Setting up is as simple as:
