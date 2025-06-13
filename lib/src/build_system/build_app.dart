@@ -135,7 +135,6 @@ Future<void> buildFlutterpiBundle({
     fileSystem: globals.fs,
     logger: globals.logger,
     processManager: globals.processManager,
-    usage: globals.flutterUsage,
     platform: globals.platform,
     generateDartPluginRegistry: true,
     operatingSystemUtils: operatingSystemUtils,
