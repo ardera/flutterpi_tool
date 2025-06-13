@@ -1,3 +1,9 @@
+## 0.8.0 - 2025-06-13
+- add `--flutterpi-binary` argument to bundle a custom flutter-pi binary
+  with the app
+- flutter 3.32 compatibility
+- internal artifact resolving refactors
+
 ## 0.7.3 - 2025-04-29
 - add `flutterpi_tool test` subcommand
 - supports running integration tests on registered devices, e.g.
