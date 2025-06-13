@@ -354,6 +354,14 @@ mixin FlutterpiCommandMixin on FlutterCommand {
   }
 
   EngineFlavor getEngineFlavor() {
+    // If we don't have any of the engine flavor options, default to debug.
+    if (!argParser.options.containsKey('debug') &&
+        !argParser.options.containsKey('profile') &&
+        !argParser.options.containsKey('release') &&
+        !argParser.options.containsKey('debug-unoptimized')) {
+      return EngineFlavor.debug;
+    }
+
     final debug = boolArg('debug');
     final profile = boolArg('profile');
     final release = boolArg('release');

@@ -17,7 +17,6 @@ class ExtendedEnvironment implements Environment {
     required FlutterpiArtifacts artifacts,
     required ProcessManager processManager,
     required Platform platform,
-    required Usage usage,
     required Analytics analytics,
     String? engineVersion,
     required bool generateDartPluginRegistry,
@@ -40,7 +39,6 @@ class ExtendedEnvironment implements Environment {
         artifacts: artifacts,
         processManager: processManager,
         platform: platform,
-        usage: usage,
         analytics: analytics,
         engineVersion: engineVersion,
         generateDartPluginRegistry: generateDartPluginRegistry,
@@ -109,9 +107,6 @@ class ExtendedEnvironment implements Environment {
 
   @override
   Directory get rootBuildDir => _delegate.rootBuildDir;
-
-  @override
-  Usage get usage => _delegate.usage;
 
   @override
   final FlutterpiArtifacts artifacts;
