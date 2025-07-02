@@ -1,9 +1,14 @@
 // ignore_for_file: avoid_print, implementation_imports
 
 import 'package:args/command_runner.dart';
+import 'package:args/src/arg_parser.dart';
 import 'package:file/file.dart';
+import 'package:meta/meta.dart';
+
 import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
+import 'package:flutterpi_tool/src/cli/throwing_flutter_command.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
+import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 
 class FlutterpiToolCommandRunner extends CommandRunner<void>
     implements FlutterCommandRunner {
@@ -78,5 +83,67 @@ class FlutterpiToolCommandRunner extends CommandRunner<void>
   }
 }
 
-abstract class FlutterpiCommand extends FlutterCommand
-    with FlutterpiCommandMixin {}
+class ExtensibleFlutterCommandImpl extends ThrowingFlutterCommand
+    implements ExtensibleCommandBase {
+  ExtensibleFlutterCommandImpl() {
+    addArgs(argParser);
+    addContextOverrides(overrides);
+  }
+
+  @override
+  late final ArgParser argParser = ArgParser();
+
+  @protected
+  final Map<Type, Function()> overrides = <Type, Function()>{};
+
+  @override
+  void validateNonOptionArgs() {
+    if (argResults!.rest.isNotEmpty) {
+      throw UsageException(
+        'Too many non-option arguments specified: ${argResults!.rest}',
+        usage,
+      );
+    }
+  }
+
+  @override
+  void validateArgs() {}
+
+  @override
+  Future<void> run() {
+    final startTime = globals.systemClock.now();
+
+    return context.run<void>(
+      name: 'command',
+      overrides: {FlutterCommand: () => this},
+      body: () async {
+        try {
+          await verifyThenRunCommand(null);
+        } finally {
+          final endTime = globals.systemClock.now();
+          globals.printTrace(
+            globals.userMessages.flutterElapsedTime(
+              name,
+              getElapsedAsMilliseconds(endTime.difference(startTime)),
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  @override
+  bool boolArg(String name, {bool global = false}) {
+    return (global ? globalResults : argResults)!.flag(name);
+  }
+
+  @override
+  String? stringArg(String name, {bool global = false}) {
+    return (global ? globalResults : argResults)!.option(name);
+  }
+
+  @override
+  List<String> stringsArg(String name, {bool global = false}) {
+    return (global ? globalResults : argResults)!.multiOption(name);
+  }
+}

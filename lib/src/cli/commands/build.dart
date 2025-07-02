@@ -6,13 +6,14 @@ import 'package:args/command_runner.dart';
 import 'package:flutterpi_tool/src/build_system/build_app.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/cli/command_runner.dart';
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 
 import '../../more_os_utils.dart';
 import '../../common.dart';
 
-class BuildCommand extends FlutterpiCommand {
+class BuildCommand extends FlutterpiCommand with EngineFlavorFlags {
   static const archs = ['arm', 'arm64', 'x64', 'riscv64'];
 
   static const cpus = ['generic', 'pi3', 'pi4'];

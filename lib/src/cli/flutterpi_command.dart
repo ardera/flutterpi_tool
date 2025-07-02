@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/application_package_factory.dart';
@@ -18,9 +19,245 @@ import 'package:flutterpi_tool/src/shutdown_hooks.dart';
 import 'package:github/github.dart' as gh;
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart' as http;
+import 'package:meta/meta.dart';
 import 'package:process/process.dart';
 
-mixin FlutterpiCommandMixin on FlutterCommand {
+abstract class ExtensibleCommandBase extends FlutterCommand {
+  @mustCallSuper
+  void addArgs(ArgParser argParser) {}
+
+  void validateNonOptionArgs();
+
+  void validateArgs();
+
+  @mustCallSuper
+  void addContextOverrides(
+    Map<Type, dynamic Function()> overrides,
+  );
+}
+
+mixin DisplaySizeArg on ExtensibleCommandBase {
+  @override
+  void addArgs(ArgParser argParser) {
+    argParser.addOption(
+      'display-size',
+      help:
+          'The physical size of the device display in millimeters. This is used to calculate the device pixel ratio.',
+      valueHelp: 'width x height',
+    );
+    super.addArgs(argParser);
+  }
+
+  (int, int)? get displaySize {
+    final size = stringArg('display-size');
+    if (size == null) {
+      return null;
+    }
+
+    final parts = size.split('x');
+    if (parts.length != 2) {
+      usageException(
+        'Invalid --display-size: Expected two dimensions separated by "x".',
+      );
+    }
+
+    try {
+      return (int.parse(parts[0].trim()), int.parse(parts[1].trim()));
+    } on FormatException {
+      usageException(
+        'Invalid --display-size: Expected both dimensions to be integers.',
+      );
+    }
+  }
+}
+
+mixin DummyDisplayArgs on ExtensibleCommandBase {
+  @override
+  void addArgs(ArgParser argParser) {
+    argParser.addFlag(
+      'dummy-display',
+      help:
+          'Simulate a dummy display. (Useful if no real display is connected)',
+    );
+
+    argParser.addOption(
+      'dummy-display-size',
+      help:
+          'Simulate a dummy display with a specific size in physical pixels. (Useful if no real display is connected)',
+      valueHelp: 'width x height',
+    );
+    super.addArgs(argParser);
+  }
+
+  bool get useDummyDisplay {
+    final dummyDisplay = boolArg('dummy-display');
+    final dummyDisplaySize = stringArg('dummy-display-size');
+    if (dummyDisplay || dummyDisplaySize != null) {
+      return true;
+    }
+
+    return false;
+  }
+}
+
+mixin PixelRatioArg on ExtensibleCommandBase {
+  @override
+  void addArgs(ArgParser argParser) {
+    argParser.addOption(
+      'pixel-ratio',
+      help: 'The pixel ratio of the device display.',
+      valueHelp: 'ratio',
+    );
+    super.addArgs(argParser);
+  }
+
+  double? get pixelRatio {
+    final ratio = stringArg('pixel-ratio');
+    if (ratio == null) {
+      return null;
+    }
+
+    try {
+      return double.parse(ratio);
+    } on FormatException {
+      usageException(
+        'Invalid --pixel-ratio: Expected a floating point number.',
+      );
+    }
+  }
+}
+
+mixin EngineFlavorFlags on ExtensibleCommandBase {
+  @override
+  void addArgs(ArgParser argParser) {
+    argParser.addFlag(
+      'debug',
+      help: 'Build for debug mode.',
+      negatable: false,
+    );
+
+    argParser.addFlag(
+      'profile',
+      help: 'Build for profile mode.',
+      negatable: false,
+    );
+
+    argParser.addFlag(
+      'release',
+      help: 'Build for release mode.',
+      negatable: false,
+    );
+
+    argParser.addFlag(
+      'debug-unoptimized',
+      help:
+          'Build for debug mode and use unoptimized engine. (For stepping through engine code)',
+      negatable: false,
+    );
+    super.addArgs(argParser);
+  }
+
+  EngineFlavor getEngineFlavor() {
+    final debug = boolArg('debug');
+    final profile = boolArg('profile');
+    final release = boolArg('release');
+    final debugUnopt = boolArg('debug-unoptimized');
+
+    final flags = [debug, profile, release, debugUnopt];
+    if (flags.where((flag) => flag).length > 1) {
+      throw UsageException(
+        'Only one of "--debug", "--profile", "--release", '
+            'or "--debug-unoptimized" can be specified.',
+        '',
+      );
+    }
+
+    if (debug) {
+      return EngineFlavor.debug;
+    } else if (profile) {
+      return EngineFlavor.profile;
+    } else if (release) {
+      return EngineFlavor.release;
+    } else if (debugUnopt) {
+      return EngineFlavor.debugUnopt;
+    } else {
+      return EngineFlavor.debug;
+    }
+  }
+
+  @override
+  BuildMode getBuildMode() {
+    return getEngineFlavor().buildMode;
+  }
+}
+
+mixin DebugSymbolsFlag on ExtensibleCommandBase {
+  @override
+  void addArgs(ArgParser argParser) {
+    argParser.addFlag(
+      'debug-symbols',
+      help: 'Include debug symbols in the output.',
+      negatable: false,
+    );
+    super.addArgs(argParser);
+  }
+
+  bool get includeDebugSymbols => boolArg('debug-symbols');
+}
+
+mixin LocalFlutterpiArg on ExtensibleCommandBase {
+  @override
+  void addArgs(ArgParser argParser) {
+    argParser.addOption(
+      'local-flutterpi',
+      help: 'Use a locally-provided flutter-pi binary instead of a downloaded '
+          'one.',
+      valueHelp: 'path',
+    );
+    super.addArgs(argParser);
+  }
+
+  String? get localFlutterpiPath => stringArg('local-flutterpi');
+}
+
+mixin CustomCacheArgs on ExtensibleCommandBase {
+  @override
+  void addArgs(ArgParser argParser) {
+    argParser.addOption(
+      'github-artifacts-repo',
+      help: 'The GitHub repository that provides the engine artifacts. If no '
+          'run-id is specified, the release of this repository with tag '
+          '"engine/<commit-hash>" will be used to look for the engine artifacts.',
+      valueHelp: 'owner/repo',
+    );
+
+    argParser.addOption(
+      'github-artifacts-runid',
+      help: 'If this is specified, use the artifacts produced by this GitHub '
+          'Actions workflow run ID to look for the engine artifacts.',
+      valueHelp: 'runID',
+    );
+
+    argParser.addOption(
+      'github-artifacts-engine-version',
+      help: 'If a run-id is specified to download engine artifacts from a '
+          'GitHub Actions run, this specifies the version of the engine '
+          'artifacts that were built in the run. Specifying this will make '
+          'sure the flutter SDK tries to use the right engine version. '
+          'If this is not specified, the engine version will not be checked.',
+      valueHelp: 'commit-hash',
+    );
+
+    argParser.addOption(
+      'github-artifacts-auth-token',
+      help: 'The GitHub personal access token to use for downloading engine '
+          'artifacts from a private repository. This is required if the '
+          'repository is private.',
+      valueHelp: 'token',
+    );
+    super.addArgs(argParser);
+  }
+
   MyGithub createGithub({http.Client? httpClient}) {
     httpClient ??= http.Client();
 
@@ -80,115 +317,33 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     }
   }
 
-  Logger createLogger() {
-    final factory = LoggerFactory(
-      outputPreferences: globals.outputPreferences,
-      terminal: globals.terminal,
-      stdio: globals.stdio,
-    );
+  @override
+  void addContextOverrides(Map<Type, Function()> overrides) {
+    overrides[Cache] = () => createCustomCache(
+          fs: globals.fs,
+          shutdownHooks: globals.shutdownHooks,
+          logger: globals.logger,
+          platform: globals.platform,
+          os: globals.os as MoreOperatingSystemUtils,
+          projectFactory: globals.projectFactory,
+          processManager: globals.processManager,
+        );
 
-    return factory.createLogger(
-      daemon: false,
-      machine: false,
-      verbose: boolArg('verbose', global: true),
-      prefixedErrors: false,
-      windows: globals.platform.isWindows,
-    );
+    super.addContextOverrides(overrides);
   }
+}
 
-  void usesSshRemoteNonOptionArg({bool mandatory = true}) {
-    assert(mandatory);
-  }
-
-  void usesDisplaySizeArg() {
-    argParser.addOption(
-      'display-size',
-      help:
-          'The physical size of the device display in millimeters. This is used to calculate the device pixel ratio.',
-      valueHelp: 'width x height',
-    );
-  }
-
-  void usesDummyDisplayArg() {
-    argParser.addFlag(
-      'dummy-display',
-      help:
-          'Simulate a dummy display. (Useful if no real display is connected)',
-    );
-
-    argParser.addOption(
-      'dummy-display-size',
-      help:
-          'Simulate a dummy display with a specific size in physical pixels. (Useful if no real display is connected)',
-      valueHelp: 'width x height',
-    );
-  }
-
-  (int, int)? get displaySize {
-    final size = stringArg('display-size');
-    if (size == null) {
-      return null;
+mixin SshRemoteNonOptionArg on ExtensibleCommandBase {
+  @override
+  void validateNonOptionArgs() {
+    if (argResults!.rest.isEmpty) {
+      throw UsageException('Expected SSH remote as non-option arg.', usage);
     }
 
-    final parts = size.split('x');
-    if (parts.length != 2) {
-      usageException(
-        'Invalid --display-size: Expected two dimensions separated by "x".',
-      );
-    }
-
-    try {
-      return (int.parse(parts[0].trim()), int.parse(parts[1].trim()));
-    } on FormatException {
-      usageException(
-        'Invalid --display-size: Expected both dimensions to be integers.',
-      );
-    }
-  }
-
-  (int, int)? get dummyDisplaySize {
-    final size = stringArg('dummy-display-size');
-    if (size == null) {
-      return null;
-    }
-
-    final parts = size.split('x');
-    if (parts.length != 2) {
-      usageException(
-        'Invalid --dummy-display-size: Expected two dimensions separated by "x".',
-      );
-    }
-
-    try {
-      return (int.parse(parts[0].trim()), int.parse(parts[1].trim()));
-    } on FormatException {
-      usageException(
-        'Invalid --dummy-display-size: Expected both dimensions to be integers.',
-      );
-    }
-  }
-
-  bool get useDummyDisplay {
-    final dummyDisplay = boolArg('dummy-display');
-    final dummyDisplaySize = stringArg('dummy-display-size');
-    if (dummyDisplay || dummyDisplaySize != null) {
-      return true;
-    }
-
-    return false;
-  }
-
-  double? get pixelRatio {
-    final ratio = stringArg('pixel-ratio');
-    if (ratio == null) {
-      return null;
-    }
-
-    try {
-      return double.parse(ratio);
-    } on FormatException {
-      usageException(
-        'Invalid --pixel-ratio: Expected a floating point number.',
+    if (argResults!.rest.length > 1) {
+      throw UsageException(
+        'Too many non-option arguments specified: ${argResults!.rest}',
+        usage,
       );
     }
   }
@@ -220,62 +375,13 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     final remote = sshRemote;
     return remote.contains('@') ? remote.split('@').first : null;
   }
+}
 
+mixin FlutterpiCommandMixin on FlutterCommand {
   final _contextOverrides = <Type, dynamic Function()>{};
 
   void addContextOverride<T>(dynamic Function() fn) {
     _contextOverrides[T] = fn;
-  }
-
-  void usesCustomCache({bool verboseHelp = false}) {
-    argParser.addOption(
-      'github-artifacts-repo',
-      help: 'The GitHub repository that provides the engine artifacts. If no '
-          'run-id is specified, the release of this repository with tag '
-          '"engine/<commit-hash>" will be used to look for the engine artifacts.',
-      valueHelp: 'owner/repo',
-      hide: !verboseHelp,
-    );
-
-    argParser.addOption(
-      'github-artifacts-runid',
-      help: 'If this is specified, use the artifacts produced by this GitHub '
-          'Actions workflow run ID to look for the engine artifacts.',
-      valueHelp: 'runID',
-      hide: !verboseHelp,
-    );
-
-    argParser.addOption(
-      'github-artifacts-engine-version',
-      help: 'If a run-id is specified to download engine artifacts from a '
-          'GitHub Actions run, this specifies the version of the engine '
-          'artifacts that were built in the run. Specifying this will make '
-          'sure the flutter SDK tries to use the right engine version. '
-          'If this is not specified, the engine version will not be checked.',
-      valueHelp: 'commit-hash',
-      hide: !verboseHelp,
-    );
-
-    argParser.addOption(
-      'github-artifacts-auth-token',
-      help: 'The GitHub personal access token to use for downloading engine '
-          'artifacts from a private repository. This is required if the '
-          'repository is private.',
-      valueHelp: 'token',
-      hide: !verboseHelp,
-    );
-
-    addContextOverride<Cache>(
-      () => createCustomCache(
-        fs: globals.fs,
-        shutdownHooks: globals.shutdownHooks,
-        logger: globals.logger,
-        platform: globals.platform,
-        os: globals.os as MoreOperatingSystemUtils,
-        projectFactory: globals.projectFactory,
-        processManager: globals.processManager,
-      ),
-    );
   }
 
   void usesDeviceManager() {
@@ -300,73 +406,6 @@ mixin FlutterpiCommandMixin on FlutterCommand {
         deviceId: stringArg(FlutterGlobalOptions.kDeviceIdOption, global: true),
       ),
     );
-  }
-
-  void usesEngineFlavorOption() {
-    argParser.addFlag(
-      'debug',
-      help: 'Build for debug mode.',
-      negatable: false,
-    );
-
-    argParser.addFlag(
-      'profile',
-      help: 'Build for profile mode.',
-      negatable: false,
-    );
-
-    argParser.addFlag(
-      'release',
-      help: 'Build for release mode.',
-      negatable: false,
-    );
-
-    argParser.addFlag(
-      'debug-unoptimized',
-      help:
-          'Build for debug mode and use unoptimized engine. (For stepping through engine code)',
-      negatable: false,
-    );
-  }
-
-  void usesDebugSymbolsOption() {
-    argParser.addFlag(
-      'debug-symbols',
-      help: 'Include debug symbols in the output.',
-      negatable: false,
-    );
-  }
-
-  bool getIncludeDebugSymbols() {
-    return boolArg('debug-symbols');
-  }
-
-  EngineFlavor getEngineFlavor() {
-    final debug = boolArg('debug');
-    final profile = boolArg('profile');
-    final release = boolArg('release');
-    final debugUnopt = boolArg('debug-unoptimized');
-
-    final flags = [debug, profile, release, debugUnopt];
-    if (flags.where((flag) => flag).length > 1) {
-      throw UsageException(
-        'Only one of "--debug", "--profile", "--release", '
-            'or "--debug-unoptimized" can be specified.',
-        '',
-      );
-    }
-
-    if (debug) {
-      return EngineFlavor.debug;
-    } else if (profile) {
-      return EngineFlavor.profile;
-    } else if (release) {
-      return EngineFlavor.release;
-    } else if (debugUnopt) {
-      return EngineFlavor.debugUnopt;
-    } else {
-      return EngineFlavor.debug;
-    }
   }
 
   Future<Set<FlutterpiTargetPlatform>> getDeviceBasedTargetPlatforms() async {
@@ -427,11 +466,6 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     throw UnsupportedError(
       'This method is not supported in Flutterpi commands.',
     );
-  }
-
-  @override
-  BuildMode getBuildMode() {
-    return getEngineFlavor().buildMode;
   }
 
   @override
