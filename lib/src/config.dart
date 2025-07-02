@@ -11,6 +11,7 @@ class DeviceConfigEntry {
     this.devicePixelRatio,
     this.useDummyDisplay,
     this.dummyDisplaySize,
+    this.rotation,
   });
 
   final String id;
@@ -21,6 +22,7 @@ class DeviceConfigEntry {
   final double? devicePixelRatio;
   final bool? useDummyDisplay;
   final (int, int)? dummyDisplaySize;
+  final int? rotation;
 
   static DeviceConfigEntry fromMap(Map<String, dynamic> map) {
     return DeviceConfigEntry(
@@ -38,6 +40,7 @@ class DeviceConfigEntry {
         [num width, num height] => (width.round(), height.round()),
         _ => null,
       },
+      rotation: (map['rotation'] as num?)?.toInt(),
     );
   }
 
@@ -55,6 +58,7 @@ class DeviceConfigEntry {
         'useDummyDisplay': useDummyDisplay,
       if (dummyDisplaySize case (final width, final height))
         'dummyDisplaySize': [width, height],
+      if (rotation case int rotation) 'rotation': rotation,
     };
   }
 
@@ -73,7 +77,8 @@ class DeviceConfigEntry {
         displaySizeMillimeters == otherEntry.displaySizeMillimeters &&
         devicePixelRatio == otherEntry.devicePixelRatio &&
         useDummyDisplay == otherEntry.useDummyDisplay &&
-        dummyDisplaySize == otherEntry.dummyDisplaySize;
+        dummyDisplaySize == otherEntry.dummyDisplaySize &&
+        rotation == otherEntry.rotation;
   }
 
   @override
@@ -86,6 +91,7 @@ class DeviceConfigEntry {
         devicePixelRatio,
         useDummyDisplay,
         dummyDisplaySize,
+        rotation,
       );
 }
 

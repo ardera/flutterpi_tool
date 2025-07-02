@@ -111,11 +111,20 @@ class FlutterpiArgs {
     this.explicitDisplaySizeMillimeters,
     this.useDummyDisplay = false,
     this.dummyDisplaySize,
-  });
+    this.rotation,
+  }) : assert(
+          rotation == null ||
+              rotation == 0 ||
+              rotation == 90 ||
+              rotation == 180 ||
+              rotation == 270,
+          'Rotation must be one of: 0, 90, 180, 270 degrees if non-null.',
+        );
 
   final (int, int)? explicitDisplaySizeMillimeters;
   final bool useDummyDisplay;
   final (int, int)? dummyDisplaySize;
+  final int? rotation;
 }
 
 class FlutterpiSshDevice extends Device {
@@ -380,6 +389,7 @@ class FlutterpiSshDevice extends Device {
       if (args.useDummyDisplay) '--dummy-display',
       if (args.dummyDisplaySize case (final width, final height))
         '--dummy-display-size=$width,$height',
+      if (args.rotation != null) '--rotation=${args.rotation}',
       if (runtimeModeArg != null) runtimeModeArg,
       bundlePath,
       ...engineArgs,

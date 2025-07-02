@@ -49,6 +49,7 @@ class FlutterpiSshDeviceDiscovery extends PollingDeviceDiscovery {
         explicitDisplaySizeMillimeters: configEntry.displaySizeMillimeters,
         useDummyDisplay: configEntry.useDummyDisplay ?? false,
         dummyDisplaySize: configEntry.dummyDisplaySize,
+        rotation: configEntry.rotation,
       ),
     );
   }

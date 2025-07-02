@@ -411,6 +411,7 @@ class DevicesAddCommand extends FlutterpiCommand {
     usesDisplaySizeArg();
     usesDummyDisplayArg();
     usesSshRemoteNonOptionArg();
+    usesRotationArg();
   }
 
   @override
@@ -497,6 +498,7 @@ class DevicesAddCommand extends FlutterpiCommand {
         displaySizeMillimeters: displaySize,
         useDummyDisplay: useDummyDisplay,
         dummyDisplaySize: dummyDisplaySize,
+        rotation: rotation?.toInt(),
       ),
     );
 

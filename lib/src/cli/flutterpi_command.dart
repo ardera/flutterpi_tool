@@ -136,6 +136,15 @@ mixin FlutterpiCommandMixin on FlutterCommand {
     );
   }
 
+  void usesRotationArg() {
+    argParser.addOption(
+      'rotation',
+      help: 'The rotation of the display in degrees. (0, 90, 180, 270)',
+      valueHelp: 'degrees',
+      allowed: ['0', '90', '180', '270'],
+    );
+  }
+
   (int, int)? get displaySize {
     final size = stringArg('display-size');
     if (size == null) {
@@ -231,6 +240,28 @@ mixin FlutterpiCommandMixin on FlutterCommand {
   String? get sshUser {
     final remote = sshRemote;
     return remote.contains('@') ? remote.split('@').first : null;
+  }
+
+  int? get rotation {
+    final rotationArg = stringArg('rotation');
+    if (rotationArg == null) {
+      return null;
+    }
+
+    switch (rotationArg) {
+      case '0':
+        return 0;
+      case '90':
+        return 90;
+      case '180':
+        return 180;
+      case '270':
+        return 270;
+      default:
+        usageException(
+          'Invalid --rotation: Expected one of "0", "90", "180", or "270".',
+        );
+    }
   }
 
   final _contextOverrides = <Type, dynamic Function()>{};
