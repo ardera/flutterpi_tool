@@ -13,6 +13,27 @@ import 'package:github/github.dart' as gh;
 import 'package:http/http.dart' as http;
 import 'package:process/process.dart';
 
+enum FilesystemLayout {
+  flutterPi,
+  metaFlutter;
+
+  @override
+  String toString() {
+    return switch (this) {
+      flutterPi => 'flutter-pi',
+      metaFlutter => 'meta-flutter'
+    };
+  }
+
+  static FilesystemLayout fromString(String string) {
+    return switch (string) {
+      'flutter-pi' => FilesystemLayout.flutterPi,
+      'meta-flutter' => FilesystemLayout.metaFlutter,
+      _ => throw ArgumentError.value(string, 'Unknown filesystem layout'),
+    };
+  }
+}
+
 mixin FlutterpiCommandMixin on fl.FlutterCommand {
   MyGithub createGithub({http.Client? httpClient}) {
     httpClient ??= http.Client();
@@ -304,6 +325,30 @@ mixin FlutterpiCommandMixin on fl.FlutterCommand {
 
     return globals.fs.file(path);
   }
+
+  void usesFilesystemLayoutArg({bool verboseHelp = false}) {
+    argParser.addOption(
+      'fs-layout',
+      valueHelp: 'layout',
+      help:
+          'The filesystem layout of the built app bundle. Yocto (meta-flutter) '
+          'uses a different filesystem layout for apps than flutter-pi normally '
+          'accepts, so when trying to use flutterpi_tool with a device running '
+          'a meta-flutter yocto image, the meta-flutter fs layout must be '
+          'chosen instead.',
+      allowed: ['flutter-pi', 'meta-flutter'],
+      defaultsTo: 'flutter-pi',
+      hide: !verboseHelp,
+    );
+  }
+
+  FilesystemLayout get filesystemLayout => switch (stringArg('fs-layout')) {
+        'flutter-pi' => FilesystemLayout.flutterPi,
+        'meta-flutter' => FilesystemLayout.metaFlutter,
+        _ => usageException(
+            'Invalid --fs-layout: Expected "flutter-pi" or "meta-flutter".',
+          ),
+      };
 
   Future<Set<FlutterpiTargetPlatform>> getDeviceBasedTargetPlatforms() async {
     final devices = await globals.deviceManager!.getDevices(

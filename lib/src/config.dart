@@ -1,3 +1,4 @@
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:meta/meta.dart';
 
@@ -11,6 +12,7 @@ class DeviceConfigEntry {
     this.devicePixelRatio,
     this.useDummyDisplay = false,
     this.dummyDisplaySize,
+    this.filesystemLayout,
   });
 
   final String id;
@@ -21,6 +23,7 @@ class DeviceConfigEntry {
   final double? devicePixelRatio;
   final bool useDummyDisplay;
   final (int, int)? dummyDisplaySize;
+  final FilesystemLayout? filesystemLayout;
 
   static DeviceConfigEntry fromMap(Map<String, dynamic> map) {
     return DeviceConfigEntry(
@@ -36,6 +39,10 @@ class DeviceConfigEntry {
       useDummyDisplay: map['useDummyDisplay'] as bool? ?? false,
       dummyDisplaySize: switch (map['dummyDisplaySize']) {
         [num width, num height] => (width.round(), height.round()),
+        _ => null,
+      },
+      filesystemLayout: switch (map['filesystemLayout']) {
+        String string => FilesystemLayout.fromString(string),
         _ => null,
       },
     );
@@ -54,6 +61,8 @@ class DeviceConfigEntry {
       if (useDummyDisplay == true) 'useDummyDisplay': true,
       if (dummyDisplaySize case (final width, final height))
         'dummyDisplaySize': [width, height],
+      if (filesystemLayout case FilesystemLayout filesystemLayout)
+        'filesystemLayout': filesystemLayout.toString(),
     };
   }
 
@@ -72,7 +81,8 @@ class DeviceConfigEntry {
         displaySizeMillimeters == otherEntry.displaySizeMillimeters &&
         devicePixelRatio == otherEntry.devicePixelRatio &&
         useDummyDisplay == otherEntry.useDummyDisplay &&
-        dummyDisplaySize == otherEntry.dummyDisplaySize;
+        dummyDisplaySize == otherEntry.dummyDisplaySize &&
+        filesystemLayout == otherEntry.filesystemLayout;
   }
 
   @override
@@ -85,6 +95,7 @@ class DeviceConfigEntry {
         devicePixelRatio,
         useDummyDisplay,
         dummyDisplaySize,
+        filesystemLayout,
       );
 
   @override

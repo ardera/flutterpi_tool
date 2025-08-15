@@ -5,6 +5,7 @@ import 'package:file/file.dart';
 import 'package:file/memory.dart';
 import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/build_system/build_app.dart';
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/executable.dart';
 import 'package:test/test.dart';
@@ -65,6 +66,7 @@ void main() {
       required FlutterpiHostPlatform host,
       required FlutterpiTargetPlatform target,
       required fl.BuildInfo buildInfo,
+      required FilesystemLayout fsLayout,
       fl.FlutterProject? project,
       FlutterpiArtifacts? artifacts,
       String? mainPath,
@@ -74,6 +76,7 @@ void main() {
       Directory? outDir,
       bool unoptimized = false,
       bool includeDebugSymbols = false,
+      bool forceBundleFlutterpi = false,
     }) async {
       buildWasCalled = true;
       expect(buildInfo.dartDefines, contains('FOO=BAR'));
@@ -101,6 +104,7 @@ void main() {
       required FlutterpiHostPlatform host,
       required FlutterpiTargetPlatform target,
       required fl.BuildInfo buildInfo,
+      required FilesystemLayout fsLayout,
       fl.FlutterProject? project,
       FlutterpiArtifacts? artifacts,
       String? mainPath,
@@ -110,6 +114,7 @@ void main() {
       Directory? outDir,
       bool unoptimized = false,
       bool includeDebugSymbols = false,
+      bool forceBundleFlutterpi = false,
     }) async {
       expect(buildInfo.dartDefines, contains('FOO=BAR'));
       buildWasCalled = true;
@@ -134,6 +139,7 @@ void main() {
         required FlutterpiHostPlatform host,
         required FlutterpiTargetPlatform target,
         required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
         fl.FlutterProject? project,
         FlutterpiArtifacts? artifacts,
         String? mainPath,
@@ -143,6 +149,7 @@ void main() {
         Directory? outDir,
         bool unoptimized = false,
         bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
       }) async {
         expect(buildInfo.mode, equals(fl.BuildMode.debug));
         expect(unoptimized, isFalse);
@@ -166,6 +173,7 @@ void main() {
         required FlutterpiHostPlatform host,
         required FlutterpiTargetPlatform target,
         required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
         fl.FlutterProject? project,
         FlutterpiArtifacts? artifacts,
         String? mainPath,
@@ -175,6 +183,7 @@ void main() {
         Directory? outDir,
         bool unoptimized = false,
         bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
       }) async {
         expect(buildInfo.mode, equals(fl.BuildMode.profile));
         expect(unoptimized, isFalse);
@@ -198,6 +207,7 @@ void main() {
         required FlutterpiHostPlatform host,
         required FlutterpiTargetPlatform target,
         required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
         fl.FlutterProject? project,
         FlutterpiArtifacts? artifacts,
         String? mainPath,
@@ -207,6 +217,7 @@ void main() {
         Directory? outDir,
         bool unoptimized = false,
         bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
       }) async {
         expect(buildInfo.mode, equals(fl.BuildMode.release));
         expect(unoptimized, isFalse);
@@ -230,6 +241,7 @@ void main() {
         required FlutterpiHostPlatform host,
         required FlutterpiTargetPlatform target,
         required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
         fl.FlutterProject? project,
         FlutterpiArtifacts? artifacts,
         String? mainPath,
@@ -239,6 +251,7 @@ void main() {
         Directory? outDir,
         bool unoptimized = false,
         bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
       }) async {
         expect(buildInfo.mode, equals(fl.BuildMode.debug));
         expect(unoptimized, isTrue);
@@ -264,6 +277,7 @@ void main() {
         required FlutterpiHostPlatform host,
         required FlutterpiTargetPlatform target,
         required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
         fl.FlutterProject? project,
         FlutterpiArtifacts? artifacts,
         String? mainPath,
@@ -273,6 +287,7 @@ void main() {
         Directory? outDir,
         bool unoptimized = false,
         bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
       }) async {
         expect(
           buildInfo.treeShakeIcons,
@@ -299,6 +314,7 @@ void main() {
         required FlutterpiHostPlatform host,
         required FlutterpiTargetPlatform target,
         required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
         fl.FlutterProject? project,
         FlutterpiArtifacts? artifacts,
         String? mainPath,
@@ -308,6 +324,7 @@ void main() {
         Directory? outDir,
         bool unoptimized = false,
         bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
       }) async {
         expect(buildInfo.treeShakeIcons, isTrue);
         buildWasCalled = true;
@@ -330,6 +347,7 @@ void main() {
         required FlutterpiHostPlatform host,
         required FlutterpiTargetPlatform target,
         required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
         fl.FlutterProject? project,
         FlutterpiArtifacts? artifacts,
         String? mainPath,
@@ -339,6 +357,7 @@ void main() {
         Directory? outDir,
         bool unoptimized = false,
         bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
       }) async {
         expect(buildInfo.treeShakeIcons, isTrue);
         buildWasCalled = true;
@@ -361,6 +380,7 @@ void main() {
         required FlutterpiHostPlatform host,
         required FlutterpiTargetPlatform target,
         required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
         fl.FlutterProject? project,
         FlutterpiArtifacts? artifacts,
         String? mainPath,
@@ -370,6 +390,7 @@ void main() {
         Directory? outDir,
         bool unoptimized = false,
         bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
       }) async {
         expect(
           buildInfo.treeShakeIcons,
@@ -399,6 +420,7 @@ void main() {
       required FlutterpiHostPlatform host,
       required FlutterpiTargetPlatform target,
       required fl.BuildInfo buildInfo,
+      required FilesystemLayout fsLayout,
       fl.FlutterProject? project,
       FlutterpiArtifacts? artifacts,
       String? mainPath,
@@ -408,6 +430,7 @@ void main() {
       Directory? outDir,
       bool unoptimized = false,
       bool includeDebugSymbols = false,
+      bool forceBundleFlutterpi = false,
     }) async {
       expect(mainPath, equals('lib/other_main.dart'));
       buildWasCalled = true;

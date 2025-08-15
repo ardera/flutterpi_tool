@@ -2,6 +2,7 @@ import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/build_system/extended_environment.dart';
 import 'package:flutterpi_tool/src/build_system/targets.dart';
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart' as fl;
@@ -23,6 +24,7 @@ class AppBuilder {
     required FlutterpiHostPlatform host,
     required FlutterpiTargetPlatform target,
     required fl.BuildInfo buildInfo,
+    required FilesystemLayout fsLayout,
     fl.FlutterProject? project,
     FlutterpiArtifacts? artifacts,
     String? mainPath,
@@ -32,11 +34,21 @@ class AppBuilder {
     Directory? outDir,
     bool unoptimized = false,
     bool includeDebugSymbols = false,
+    bool forceBundleFlutterpi = false,
   }) async {
     project ??= fl.FlutterProject.current();
     mainPath ??= fl.defaultMainPath;
     depfilePath ??= fl.defaultDepfilePath;
-    outDir ??= globals.fs.directory(fl.getAssetBuildDirectory());
+    outDir ??= globals.fs.directory(
+      globals.fs.path.join(
+        fl.getBuildDirectory(),
+        'flutter-pi',
+        switch (fsLayout) {
+          FilesystemLayout.flutterPi => '$target',
+          FilesystemLayout.metaFlutter => 'meta-flutter-$target',
+        },
+      ),
+    );
     artifacts ??= globals.flutterpiArtifacts;
 
     // We can still build debug for non-generic platforms of course, the correct
@@ -97,14 +109,20 @@ class AppBuilder {
           target: target,
           unoptimized: unoptimized,
           debugSymbols: includeDebugSymbols,
+          layout: fsLayout,
+          forceBundleFlutterpi: forceBundleFlutterpi,
         ),
       fl.BuildMode.profile => ProfileBundleFlutterpiAssets(
           target: target,
           debugSymbols: includeDebugSymbols,
+          layout: fsLayout,
+          forceBundleFlutterpi: forceBundleFlutterpi,
         ),
       fl.BuildMode.release => ReleaseBundleFlutterpiAssets(
           target: target,
           debugSymbols: includeDebugSymbols,
+          layout: fsLayout,
+          forceBundleFlutterpi: forceBundleFlutterpi,
         ),
       _ => fl.throwToolExit('Unsupported build mode: ${buildInfo.mode}'),
     };
@@ -148,6 +166,7 @@ class AppBuilder {
     required FlutterpiHostPlatform host,
     required FlutterpiTargetPlatform target,
     required fl.BuildInfo buildInfo,
+    required FilesystemLayout fsLayout,
     fl.FlutterProject? project,
     FlutterpiArtifacts? artifacts,
     String? mainPath,
@@ -156,17 +175,27 @@ class AppBuilder {
     String? depfilePath,
     bool unoptimized = false,
     bool includeDebugSymbols = false,
+    bool forceBundleFlutterpi = false,
   }) async {
     final buildDir = fl.getBuildDirectory();
 
-    final outPath =
-        globals.fs.path.join(buildDir, 'flutter-pi', target.toString());
+    final outPath = globals.fs.directory(
+      globals.fs.path.join(
+        buildDir,
+        'flutter-pi',
+        switch (fsLayout) {
+          FilesystemLayout.flutterPi => '$target',
+          FilesystemLayout.metaFlutter => 'meta-flutter-$target',
+        },
+      ),
+    );
     final outDir = globals.fs.directory(outPath);
 
     await build(
       host: host,
       target: target,
       buildInfo: buildInfo,
+      fsLayout: fsLayout,
       artifacts: artifacts,
       mainPath: mainPath,
       manifestPath: manifestPath,
@@ -175,7 +204,13 @@ class AppBuilder {
       outDir: outDir,
       unoptimized: unoptimized,
       includeDebugSymbols: includeDebugSymbols,
+      forceBundleFlutterpi: forceBundleFlutterpi,
     );
+
+    final metaFlutterFlutterpiBin =
+        outDir.childDirectory('bin').childFile('flutter-pi');
+    final metaFlutterDbgsyms =
+        outDir.childDirectory('lib').childFile('libflutter_engine.dbgsyms');
 
     return PrebuiltFlutterpiAppBundle(
       id: id,
@@ -184,12 +219,22 @@ class AppBuilder {
       directory: outDir,
 
       // FIXME: This should be populated by the build targets instead.
-      binaries: [
-        outDir.childFile('flutter-pi'),
-        outDir.childFile('libflutter_engine.so'),
-        if (outDir.childFile('libflutter_engine.so.dbgsyms').existsSync())
-          outDir.childFile('libflutter_engine.so.dbgsyms'),
-      ],
+      binaries: switch (fsLayout) {
+        FilesystemLayout.flutterPi => [
+            outDir.childFile('flutter-pi'),
+            outDir.childFile('libflutter_engine.so'),
+            if (outDir.childFile('libflutter_engine.so.dbgsyms').existsSync())
+              outDir.childFile('libflutter_engine.so.dbgsyms'),
+          ],
+        FilesystemLayout.metaFlutter => [
+            if (metaFlutterFlutterpiBin.existsSync()) metaFlutterFlutterpiBin,
+            outDir.childDirectory('lib').childFile('libflutter_engine.so'),
+            if (metaFlutterDbgsyms.existsSync()) metaFlutterDbgsyms,
+          ],
+      },
+
+      includesFlutterpiBinary:
+          fsLayout == FilesystemLayout.flutterPi && forceBundleFlutterpi,
     );
   }
 }
