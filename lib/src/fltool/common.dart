@@ -82,3 +82,6 @@ export 'package:flutter_tools/src/windows/windows_workflow.dart';
 export 'package:flutter_tools/src/base/process.dart';
 export 'package:flutter_tools/src/asset.dart' hide defaultManifestPath;
 export 'package:flutter_tools/src/base/context.dart';
+export 'package:flutter_tools/src/build_system/targets/icon_tree_shaker.dart';
+export 'package:flutter_tools/src/build_system/exceptions.dart';
+export 'package:flutter_tools/src/build_system/targets/assets.dart';

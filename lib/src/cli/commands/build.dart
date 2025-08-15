@@ -37,6 +37,7 @@ class BuildCommand extends FlutterpiCommand {
     usesDartDefineOption();
     usesTargetOption();
     usesLocalFlutterpiExecutableArg(verboseHelp: verboseHelp);
+    usesFilesystemLayoutArg(verboseHelp: verboseHelp);
 
     argParser
       ..addSeparator('Target options')
@@ -159,11 +160,13 @@ class BuildCommand extends FlutterpiCommand {
       host: host,
       target: targetPlatform,
     );
+    var forceBundleFlutterpi = false;
     if (getLocalFlutterpiExecutable() case File file) {
       artifacts = LocalFlutterpiBinaryOverride(
         inner: artifacts,
         flutterpiBinary: file,
       );
+      forceBundleFlutterpi = true;
     }
 
     // actually build the flutter bundle
@@ -177,6 +180,9 @@ class BuildCommand extends FlutterpiCommand {
       // for `--debug-unoptimized` build mode
       unoptimized: flavor.unoptimized,
       includeDebugSymbols: debugSymbols,
+
+      fsLayout: filesystemLayout,
+      forceBundleFlutterpi: forceBundleFlutterpi,
     );
 
     return FlutterCommandResult.success();

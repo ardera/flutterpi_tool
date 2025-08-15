@@ -1,3 +1,4 @@
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/config.dart';
@@ -45,6 +46,8 @@ class FlutterpiSshDeviceDiscovery extends PollingDeviceDiscovery {
         explicitDisplaySizeMillimeters: configEntry.displaySizeMillimeters,
         useDummyDisplay: configEntry.useDummyDisplay,
         dummyDisplaySize: configEntry.dummyDisplaySize,
+        filesystemLayout:
+            configEntry.filesystemLayout ?? FilesystemLayout.flutterPi,
       ),
     );
   }

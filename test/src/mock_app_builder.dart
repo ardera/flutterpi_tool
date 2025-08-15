@@ -1,6 +1,7 @@
 import 'package:file/src/interface/directory.dart';
 import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/build_system/build_app.dart';
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart' as fl;
@@ -11,6 +12,7 @@ class MockAppBuilder implements AppBuilder {
     required FlutterpiHostPlatform host,
     required FlutterpiTargetPlatform target,
     required fl.BuildInfo buildInfo,
+    required FilesystemLayout fsLayout,
     fl.FlutterProject? project,
     FlutterpiArtifacts? artifacts,
     String? mainPath,
@@ -20,6 +22,7 @@ class MockAppBuilder implements AppBuilder {
     Directory? outDir,
     bool unoptimized,
     bool includeDebugSymbols,
+    bool forceBundleFlutterpi,
   })? buildFn;
 
   @override
@@ -27,6 +30,7 @@ class MockAppBuilder implements AppBuilder {
     required FlutterpiHostPlatform host,
     required FlutterpiTargetPlatform target,
     required fl.BuildInfo buildInfo,
+    required FilesystemLayout fsLayout,
     fl.FlutterProject? project,
     FlutterpiArtifacts? artifacts,
     String? mainPath,
@@ -36,6 +40,7 @@ class MockAppBuilder implements AppBuilder {
     Directory? outDir,
     bool unoptimized = false,
     bool includeDebugSymbols = false,
+    bool forceBundleFlutterpi = false,
   }) {
     if (buildFn == null) {
       fail("Expected buildFn to not be called.");
@@ -45,6 +50,7 @@ class MockAppBuilder implements AppBuilder {
       host: host,
       target: target,
       buildInfo: buildInfo,
+      fsLayout: fsLayout,
       project: project,
       artifacts: artifacts,
       mainPath: mainPath,
@@ -54,6 +60,7 @@ class MockAppBuilder implements AppBuilder {
       outDir: outDir,
       unoptimized: unoptimized,
       includeDebugSymbols: includeDebugSymbols,
+      forceBundleFlutterpi: forceBundleFlutterpi,
     );
   }
 
@@ -62,6 +69,7 @@ class MockAppBuilder implements AppBuilder {
     required FlutterpiHostPlatform host,
     required FlutterpiTargetPlatform target,
     required fl.BuildInfo buildInfo,
+    required FilesystemLayout fsLayout,
     fl.FlutterProject? project,
     FlutterpiArtifacts? artifacts,
     String? mainPath,
@@ -70,6 +78,7 @@ class MockAppBuilder implements AppBuilder {
     String? depfilePath,
     bool unoptimized,
     bool includeDebugSymbols,
+    bool forceBundleFlutterpi,
   })? buildBundleFn;
 
   @override
@@ -78,6 +87,7 @@ class MockAppBuilder implements AppBuilder {
     required FlutterpiHostPlatform host,
     required FlutterpiTargetPlatform target,
     required fl.BuildInfo buildInfo,
+    required FilesystemLayout fsLayout,
     fl.FlutterProject? project,
     FlutterpiArtifacts? artifacts,
     String? mainPath,
@@ -86,6 +96,7 @@ class MockAppBuilder implements AppBuilder {
     String? depfilePath,
     bool unoptimized = false,
     bool includeDebugSymbols = false,
+    bool forceBundleFlutterpi = false,
   }) {
     if (buildBundleFn == null) {
       fail("Expected buildBundleFn to not be called.");
@@ -96,6 +107,7 @@ class MockAppBuilder implements AppBuilder {
       host: host,
       target: target,
       buildInfo: buildInfo,
+      fsLayout: fsLayout,
       project: project,
       artifacts: artifacts,
       mainPath: mainPath,
@@ -104,6 +116,7 @@ class MockAppBuilder implements AppBuilder {
       depfilePath: depfilePath,
       unoptimized: unoptimized,
       includeDebugSymbols: includeDebugSymbols,
+      forceBundleFlutterpi: forceBundleFlutterpi,
     );
   }
 }

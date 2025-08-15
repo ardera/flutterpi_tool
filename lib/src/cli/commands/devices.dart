@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:args/command_runner.dart';
 import 'package:flutterpi_tool/src/cli/command_runner.dart';
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/config.dart';
@@ -408,6 +409,7 @@ class DevicesAddCommand extends FlutterpiCommand {
     usesDisplaySizeArg();
     usesDummyDisplayArg();
     usesSshRemoteNonOptionArg();
+    usesFilesystemLayoutArg();
   }
 
   @override
@@ -433,6 +435,7 @@ class DevicesAddCommand extends FlutterpiCommand {
     final sshExecutable = stringArg('ssh-executable');
     final remoteInstallPath = stringArg('remote-install-path');
     final force = boolArg('force');
+    final fsLayout = filesystemLayout;
     final displaySize = this.displaySize;
 
     final flutterpiToolConfig = globals.flutterPiToolConfig;
@@ -490,6 +493,10 @@ class DevicesAddCommand extends FlutterpiCommand {
         displaySizeMillimeters: displaySize,
         useDummyDisplay: useDummyDisplay,
         dummyDisplaySize: dummyDisplaySize,
+        filesystemLayout: switch (fsLayout) {
+          FilesystemLayout.flutterPi => null,
+          FilesystemLayout.metaFlutter => FilesystemLayout.metaFlutter,
+        },
       ),
     );
 

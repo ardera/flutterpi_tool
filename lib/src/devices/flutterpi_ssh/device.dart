@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/artifacts.dart';
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart' as fl;
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
@@ -17,6 +18,7 @@ abstract class FlutterpiAppBundle extends fl.ApplicationPackage {
     required super.id,
     required this.name,
     required this.displayName,
+    this.includesFlutterpiBinary = true,
   });
 
   @override
@@ -24,6 +26,8 @@ abstract class FlutterpiAppBundle extends fl.ApplicationPackage {
 
   @override
   final String displayName;
+
+  final bool includesFlutterpiBinary;
 }
 
 class BuildableFlutterpiAppBundle extends FlutterpiAppBundle {
@@ -31,6 +35,7 @@ class BuildableFlutterpiAppBundle extends FlutterpiAppBundle {
     required String id,
     required String name,
     required String displayName,
+    super.includesFlutterpiBinary,
   }) : super(id: id, name: name, displayName: displayName);
 }
 
@@ -41,6 +46,7 @@ class PrebuiltFlutterpiAppBundle extends FlutterpiAppBundle {
     required String displayName,
     required this.directory,
     required this.binaries,
+    super.includesFlutterpiBinary,
   }) : super(id: id, name: name, displayName: displayName);
 
   final Directory directory;
@@ -110,11 +116,13 @@ class FlutterpiArgs {
     this.explicitDisplaySizeMillimeters,
     this.useDummyDisplay = false,
     this.dummyDisplaySize,
+    this.filesystemLayout = FilesystemLayout.flutterPi,
   });
 
   final (int, int)? explicitDisplaySizeMillimeters;
   final bool useDummyDisplay;
   final (int, int)? dummyDisplaySize;
+  final FilesystemLayout filesystemLayout;
 }
 
 class FlutterpiSshDevice extends fl.Device {
@@ -335,6 +343,12 @@ class FlutterpiSshDevice extends fl.Device {
       target = target.genericVariant;
     }
 
+    /// TODO: Ugly hack, fix this
+    var forceBundleFlutterpi = false;
+    if (globals.artifacts is LocalFlutterpiBinaryOverride) {
+      forceBundleFlutterpi = true;
+    }
+
     final artifacts = FlutterToFlutterpiArtifactsForwarder(
       inner: globals.flutterpiArtifacts,
       host: host,
@@ -348,6 +362,8 @@ class FlutterpiSshDevice extends fl.Device {
       buildInfo: debuggingOptions.buildInfo,
       mainPath: mainPath,
       artifacts: artifacts,
+      fsLayout: args.filesystemLayout,
+      forceBundleFlutterpi: forceBundleFlutterpi,
     );
   }
 
@@ -495,7 +511,19 @@ class FlutterpiSshDevice extends fl.Device {
     await installApp(prebuiltApp, userIdentifier: userIdentifier);
 
     final remoteInstallPath = _getRemoteInstallPath(prebuiltApp);
-    final flutterpiExePath = path.posix.join(remoteInstallPath, 'flutter-pi');
+
+    // If we have a flutter-pi binary bundled, use that one to execute the app.
+    // That's usually the case.
+    //
+    // If `--fs-layout=meta-flutter` was specified, we can't bundle
+    // a flutter-pi binary with the app, so instead we try to execute flutter-pi
+    // from PATH.
+    //
+    // The exception to that is when `--flutterpi-binary` was specified,
+    // in which case we DO bundle the specified flutter-pi binary and execute it.
+    final flutterpiExePath = prebuiltApp.includesFlutterpiBinary
+        ? path.posix.join(remoteInstallPath, 'flutter-pi')
+        : 'flutter-pi';
 
     final hostPort = switch (debuggingOptions.hostVmServicePort) {
       int port => port,

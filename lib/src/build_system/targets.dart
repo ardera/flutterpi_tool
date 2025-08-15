@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/build_system/extended_environment.dart';
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart';
@@ -12,23 +13,35 @@ import 'package:flutterpi_tool/src/more_os_utils.dart';
 class ReleaseBundleFlutterpiAssets extends CompositeTarget {
   ReleaseBundleFlutterpiAssets({
     required this.target,
+    required this.layout,
     bool debugSymbols = false,
+    bool forceBundleFlutterpi = false,
   }) : super([
-          const CopyFlutterAssets(),
-          const CopyIcudtl(),
+          CopyFlutterAssets(
+            layout: layout,
+            buildMode: BuildMode.release,
+          ),
+          CopyIcudtl(layout: layout),
           CopyFlutterpiEngine(
             target: target,
             flavor: EngineFlavor.release,
             includeDebugSymbols: debugSymbols,
+            layout: layout,
           ),
-          CopyFlutterpiBinary(
-            target: target,
-            buildMode: BuildMode.release,
+          if (layout == FilesystemLayout.flutterPi || forceBundleFlutterpi)
+            CopyFlutterpiBinary(
+              target: target,
+              buildMode: BuildMode.release,
+              layout: layout,
+            ),
+          FlutterpiAppElf(
+            AotElfRelease(TargetPlatform.linux_arm64),
+            layout: layout,
           ),
-          const FlutterpiAppElf(AotElfRelease(TargetPlatform.linux_arm64)),
         ]);
 
   final FlutterpiTargetPlatform target;
+  final FilesystemLayout layout;
 
   @override
   String get name => 'release_bundle_flutterpi_${target.shortName}_assets';
@@ -38,20 +51,30 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
   ProfileBundleFlutterpiAssets({
     required this.target,
     bool debugSymbols = false,
-    String? flutterpiBinaryPathOverride,
+    required FilesystemLayout layout,
+    bool forceBundleFlutterpi = false,
   }) : super([
-          const CopyFlutterAssets(),
-          const CopyIcudtl(),
+          CopyFlutterAssets(
+            layout: layout,
+            buildMode: BuildMode.profile,
+          ),
+          CopyIcudtl(layout: layout),
           CopyFlutterpiEngine(
             target: target,
             flavor: EngineFlavor.profile,
             includeDebugSymbols: debugSymbols,
+            layout: layout,
           ),
-          CopyFlutterpiBinary(
-            target: target,
-            buildMode: BuildMode.profile,
+          if (layout == FilesystemLayout.flutterPi || forceBundleFlutterpi)
+            CopyFlutterpiBinary(
+              target: target,
+              buildMode: BuildMode.profile,
+              layout: layout,
+            ),
+          FlutterpiAppElf(
+            AotElfProfile(TargetPlatform.linux_arm64),
+            layout: layout,
           ),
-          const FlutterpiAppElf(AotElfProfile(TargetPlatform.linux_arm64)),
         ]);
 
   final FlutterpiTargetPlatform target;
@@ -65,19 +88,26 @@ class DebugBundleFlutterpiAssets extends CompositeTarget {
     required this.target,
     bool unoptimized = false,
     bool debugSymbols = false,
-    String? flutterpiBinaryPathOverride,
+    required FilesystemLayout layout,
+    bool forceBundleFlutterpi = false,
   }) : super([
-          const CopyFlutterAssets(),
-          const CopyIcudtl(),
+          CopyFlutterAssets(
+            layout: layout,
+            buildMode: BuildMode.debug,
+          ),
+          CopyIcudtl(layout: layout),
           CopyFlutterpiEngine(
             target: target,
             flavor: unoptimized ? EngineFlavor.debugUnopt : EngineFlavor.debug,
             includeDebugSymbols: debugSymbols,
+            layout: layout,
           ),
-          CopyFlutterpiBinary(
-            target: target,
-            buildMode: BuildMode.debug,
-          ),
+          if (layout == FilesystemLayout.flutterPi || forceBundleFlutterpi)
+            CopyFlutterpiBinary(
+              target: target,
+              buildMode: BuildMode.debug,
+              layout: layout,
+            ),
         ]);
 
   final FlutterpiTargetPlatform target;
@@ -87,7 +117,9 @@ class DebugBundleFlutterpiAssets extends CompositeTarget {
 }
 
 class CopyIcudtl extends Target {
-  const CopyIcudtl();
+  const CopyIcudtl({required this.layout});
+
+  final FilesystemLayout layout;
 
   @override
   String get name => 'flutterpi_copy_icudtl';
@@ -98,8 +130,13 @@ class CopyIcudtl extends Target {
       ];
 
   @override
-  List<Source> get outputs => const <Source>[
-        Source.pattern('{OUTPUT_DIR}/icudtl.dat'),
+  List<Source> get outputs => <Source>[
+        switch (layout) {
+          FilesystemLayout.flutterPi =>
+            Source.pattern('{OUTPUT_DIR}/icudtl.dat'),
+          FilesystemLayout.metaFlutter =>
+            Source.pattern('{OUTPUT_DIR}/data/icudtl.dat'),
+        },
       ];
 
   @override
@@ -109,7 +146,17 @@ class CopyIcudtl extends Target {
   Future<void> build(Environment environment) async {
     final icudtl = environment.fileSystem
         .file(environment.artifacts.getArtifactPath(Artifact.icuData));
-    final outputFile = environment.outputDir.childFile('icudtl.dat');
+
+    final outputDir = switch (layout) {
+      FilesystemLayout.flutterPi => environment.outputDir,
+      FilesystemLayout.metaFlutter =>
+        environment.outputDir.childDirectory('data'),
+    };
+    if (!outputDir.existsSync()) {
+      outputDir.createSync(recursive: true);
+    }
+
+    final outputFile = outputDir.childFile('icudtl.dat');
     icudtl.copySync(outputFile.path);
   }
 }
@@ -163,10 +210,12 @@ class CopyFlutterpiBinary extends Target {
   CopyFlutterpiBinary({
     required this.target,
     required this.buildMode,
+    required this.layout,
   });
 
   final FlutterpiTargetPlatform target;
   final BuildMode buildMode;
+  final FilesystemLayout layout;
 
   @override
   Future<void> build(Environment environment) async {
@@ -183,11 +232,16 @@ class CopyFlutterpiBinary extends Target {
 
     assert(file.fileSystem == environment.fileSystem);
 
-    final outputFile = environment.outputDir.childFile('flutter-pi');
-
-    if (!outputFile.parent.existsSync()) {
-      outputFile.parent.createSync(recursive: true);
+    final outputDir = switch (layout) {
+      FilesystemLayout.flutterPi => environment.outputDir,
+      FilesystemLayout.metaFlutter =>
+        environment.outputDir.childDirectory('bin'),
+    };
+    if (!outputDir.existsSync()) {
+      outputDir.createSync(recursive: true);
     }
+
+    final outputFile = outputDir.childFile('flutter-pi');
     file.copySync(outputFile.path);
 
     if (environment.platform.isLinux || environment.platform.isMacOS) {
@@ -227,7 +281,12 @@ class CopyFlutterpiBinary extends Target {
 
   @override
   List<Source> get outputs => <Source>[
-        Source.pattern('{OUTPUT_DIR}/flutter-pi'),
+        switch (layout) {
+          FilesystemLayout.flutterPi =>
+            Source.pattern('{OUTPUT_DIR}/flutter-pi'),
+          FilesystemLayout.metaFlutter =>
+            Source.pattern('{OUTPUT_DIR}/bin/flutter-pi'),
+        },
       ];
 }
 
@@ -235,6 +294,7 @@ class CopyFlutterpiEngine extends Target {
   CopyFlutterpiEngine({
     required this.target,
     required this.flavor,
+    required this.layout,
     this.includeDebugSymbols = false,
   })  : _engine = Engine(
           target: target,
@@ -248,6 +308,7 @@ class CopyFlutterpiEngine extends Target {
   final FlutterpiTargetPlatform target;
   final EngineFlavor flavor;
   final bool includeDebugSymbols;
+  final FilesystemLayout layout;
 
   final FlutterpiArtifact _engine;
   final FlutterpiArtifact _debugSymbols;
@@ -266,17 +327,34 @@ class CopyFlutterpiEngine extends Target {
 
   @override
   List<Source> get outputs => [
-        const Source.pattern('{OUTPUT_DIR}/libflutter_engine.so'),
+        switch (layout) {
+          FilesystemLayout.flutterPi =>
+            Source.pattern('{OUTPUT_DIR}/libflutter_engine.so'),
+          FilesystemLayout.metaFlutter =>
+            Source.pattern('{OUTPUT_DIR}/lib/libflutter_engine.so'),
+        },
         if (includeDebugSymbols)
-          const Source.pattern('{OUTPUT_DIR}/libflutter_engine.dbgsyms'),
+          switch (layout) {
+            FilesystemLayout.flutterPi =>
+              Source.pattern('{OUTPUT_DIR}/libflutter_engine.dbgsyms'),
+            FilesystemLayout.metaFlutter =>
+              Source.pattern('{OUTPUT_DIR}/lib/libflutter_engine.dbgsyms'),
+          },
       ];
 
   @override
   Future<void> build(covariant ExtendedEnvironment environment) async {
-    final outputFile = environment.outputDir.childFile('libflutter_engine.so');
-    if (!outputFile.parent.existsSync()) {
-      outputFile.parent.createSync(recursive: true);
+    final outputDir = switch (layout) {
+      FilesystemLayout.flutterPi => environment.outputDir,
+      FilesystemLayout.metaFlutter =>
+        environment.outputDir.childDirectory('lib'),
+    };
+
+    if (!outputDir.existsSync()) {
+      outputDir.createSync(recursive: true);
     }
+
+    final outputFile = outputDir.childFile('libflutter_engine.so');
 
     final engine = environment.artifacts.getFlutterpiArtifact(_engine);
 
@@ -292,10 +370,7 @@ class CopyFlutterpiEngine extends Target {
 
     if (includeDebugSymbols) {
       final dbgsymsOutputFile =
-          environment.outputDir.childFile('libflutter_engine.dbgsyms');
-      if (!dbgsymsOutputFile.parent.existsSync()) {
-        dbgsymsOutputFile.parent.createSync(recursive: true);
-      }
+          outputDir.childFile('libflutter_engine.dbgsyms');
 
       final dbgsyms = environment.artifacts.getFlutterpiArtifact(_debugSymbols);
 
@@ -315,10 +390,11 @@ class CopyFlutterpiEngine extends Target {
 /// A wrapper for AOT compilation that copies app.so into the output directory.
 class FlutterpiAppElf extends Target {
   /// Create a [FlutterpiAppElf] wrapper for [aotTarget].
-  const FlutterpiAppElf(this.aotTarget);
+  const FlutterpiAppElf(this.aotTarget, {required this.layout});
 
   /// The [AotElfBase] subclass that produces the app.so.
   final AotElfBase aotTarget;
+  final FilesystemLayout layout;
 
   @override
   String get name => 'flutterpi_aot_bundle';
@@ -329,8 +405,12 @@ class FlutterpiAppElf extends Target {
       ];
 
   @override
-  List<Source> get outputs => const <Source>[
-        Source.pattern('{OUTPUT_DIR}/app.so'),
+  List<Source> get outputs => <Source>[
+        switch (layout) {
+          FilesystemLayout.flutterPi => Source.pattern('{OUTPUT_DIR}/app.so'),
+          FilesystemLayout.metaFlutter =>
+            Source.pattern('{OUTPUT_DIR}/lib/libapp.so'),
+        },
       ];
 
   @override
@@ -341,7 +421,19 @@ class FlutterpiAppElf extends Target {
   @override
   Future<void> build(covariant ExtendedEnvironment environment) async {
     final appElf = environment.buildDir.childFile('app.so');
-    final outputFile = environment.outputDir.childFile('app.so');
+    final outputDir = switch (layout) {
+      FilesystemLayout.flutterPi => environment.outputDir,
+      FilesystemLayout.metaFlutter =>
+        environment.outputDir.childDirectory('lib'),
+    };
+    if (!outputDir.existsSync()) {
+      outputDir.createSync(recursive: true);
+    }
+
+    final outputFile = switch (layout) {
+      FilesystemLayout.flutterPi => outputDir.childFile('app.so'),
+      FilesystemLayout.metaFlutter => outputDir.childFile('libapp.so'),
+    };
 
     appElf.copySync(outputFile.path);
 
@@ -356,9 +448,100 @@ class FlutterpiAppElf extends Target {
 }
 
 /// Copies the kernel_blob.bin to the output directory.
-class CopyFlutterAssets extends CopyFlutterBundle {
-  const CopyFlutterAssets();
+class CopyFlutterAssetsOld extends CopyFlutterBundle {
+  const CopyFlutterAssetsOld();
 
   @override
   String get name => 'bundle_flutterpi_assets';
+}
+
+class CopyFlutterAssets extends Target {
+  const CopyFlutterAssets({
+    required this.layout,
+    required this.buildMode,
+  });
+
+  final FilesystemLayout layout;
+  final BuildMode buildMode;
+
+  @override
+  String get name => 'copy_flutterpi_assets_${layout}_$buildMode';
+
+  @override
+  List<Target> get dependencies => <Target>[
+        const KernelSnapshot(),
+      ];
+
+  @override
+  List<Source> get inputs => const <Source>[
+        Source.pattern('{PROJECT_DIR}/pubspec.yaml'),
+        ...IconTreeShaker.inputs,
+      ];
+
+  @override
+  List<Source> get outputs => <Source>[
+        if (buildMode.isJit)
+          switch (layout) {
+            FilesystemLayout.flutterPi =>
+              Source.pattern('{OUTPUT_DIR}/kernel_blob.bin'),
+            FilesystemLayout.metaFlutter => Source.pattern(
+                '{OUTPUT_DIR}/data/flutter_assets/kernel_blob.bin',
+              ),
+          },
+      ];
+
+  @override
+  List<String> get depfiles => const <String>['flutter_assets.d'];
+
+  String getVersionInfo(Map<String, String> defines) {
+    return FlutterProject.current().getVersionInfo();
+  }
+
+  @override
+  Future<void> build(Environment environment) async {
+    final buildMode = switch (environment.defines[kBuildMode]) {
+      null => throw MissingDefineException(kBuildMode, name),
+      String value => BuildMode.fromCliName(value),
+    };
+
+    final outputDir = switch (layout) {
+      FilesystemLayout.flutterPi => environment.outputDir,
+      FilesystemLayout.metaFlutter => environment.outputDir
+          .childDirectory('data')
+          .childDirectory('flutter_assets'),
+    };
+    if (!outputDir.existsSync()) {
+      outputDir.createSync(recursive: true);
+    }
+
+    if (buildMode.isJit) {
+      environment.buildDir
+          .childFile('app.dill')
+          .copySync(outputDir.childFile('kernel_blob.bin').path);
+    }
+
+    final versionInfo = getVersionInfo(environment.defines);
+
+    final depfile = await copyAssets(
+      environment,
+      outputDir,
+
+      // this is not really used internally,
+      // copyAssets will just do something special if a web platform is
+      // passed.
+      //
+      // So we don't need this to match the platform we're actually building
+      // for.
+      targetPlatform: TargetPlatform.linux_arm64,
+      buildMode: buildMode,
+      additionalContent: <String, DevFSContent>{
+        'version.json': DevFSStringContent(versionInfo),
+      },
+    );
+
+    environment.depFileService.writeToFile(
+      depfile,
+      environment.buildDir.childFile('flutter_assets.d'),
+    );
+  }
 }
