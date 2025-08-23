@@ -12,7 +12,7 @@ class DeviceConfigEntry {
     this.devicePixelRatio,
     this.useDummyDisplay = false,
     this.dummyDisplaySize,
-    this.filesystemLayout,
+    this.filesystemLayout = FilesystemLayout.flutterPi,
   });
 
   final String id;
@@ -23,7 +23,7 @@ class DeviceConfigEntry {
   final double? devicePixelRatio;
   final bool useDummyDisplay;
   final (int, int)? dummyDisplaySize;
-  final FilesystemLayout? filesystemLayout;
+  final FilesystemLayout filesystemLayout;
 
   static DeviceConfigEntry fromMap(Map<String, dynamic> map) {
     return DeviceConfigEntry(
@@ -43,7 +43,7 @@ class DeviceConfigEntry {
       },
       filesystemLayout: switch (map['filesystemLayout']) {
         String string => FilesystemLayout.fromString(string),
-        _ => null,
+        _ => FilesystemLayout.flutterPi,
       },
     );
   }
@@ -61,7 +61,7 @@ class DeviceConfigEntry {
       if (useDummyDisplay == true) 'useDummyDisplay': true,
       if (dummyDisplaySize case (final width, final height))
         'dummyDisplaySize': [width, height],
-      if (filesystemLayout case FilesystemLayout filesystemLayout)
+      if (filesystemLayout != FilesystemLayout.flutterPi)
         'filesystemLayout': filesystemLayout.toString(),
     };
   }

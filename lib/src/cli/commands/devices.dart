@@ -493,10 +493,7 @@ class DevicesAddCommand extends FlutterpiCommand {
         displaySizeMillimeters: displaySize,
         useDummyDisplay: useDummyDisplay,
         dummyDisplaySize: dummyDisplaySize,
-        filesystemLayout: switch (fsLayout) {
-          FilesystemLayout.flutterPi => null,
-          FilesystemLayout.metaFlutter => FilesystemLayout.metaFlutter,
-        },
+        filesystemLayout: fsLayout,
       ),
     );
 
