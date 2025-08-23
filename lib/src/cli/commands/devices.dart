@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:args/command_runner.dart';
 import 'package:flutterpi_tool/src/cli/command_runner.dart';
-import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/config.dart';
