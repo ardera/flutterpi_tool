@@ -224,7 +224,7 @@ class AppBuilder {
             outDir.childFile('flutter-pi'),
             outDir.childFile('libflutter_engine.so'),
             if (includeDebugSymbols)
-              outDir.childFile('libflutter_engine.so.dbgsyms'),
+              outDir.childFile('libflutter_engine.dbgsyms'),
           ],
         FilesystemLayout.metaFlutter => [
             if (forceBundleFlutterpi) metaFlutterFlutterpiBin,
