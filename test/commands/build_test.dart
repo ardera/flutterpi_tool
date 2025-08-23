@@ -450,4 +450,188 @@ void main() {
       reason: "Expected BuildSystem.build to be called",
     );
   });
+
+  group('--fs-layout', () {
+    test('default', () async {
+      var buildWasCalled = false;
+      appBuilder.buildFn = ({
+        required FlutterpiHostPlatform host,
+        required FlutterpiTargetPlatform target,
+        required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
+        fl.FlutterProject? project,
+        FlutterpiArtifacts? artifacts,
+        String? mainPath,
+        String manifestPath = fl.defaultManifestPath,
+        String? applicationKernelFilePath,
+        String? depfilePath,
+        Directory? outDir,
+        bool unoptimized = false,
+        bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
+      }) async {
+        expect(fsLayout, equals(FilesystemLayout.flutterPi));
+        expect(forceBundleFlutterpi, isFalse);
+        buildWasCalled = true;
+      };
+
+      await _runInTestContext(() async {
+        await runner.run(['build']);
+      });
+
+      expect(
+        buildWasCalled,
+        isTrue,
+        reason: "Expected BuildSystem.build to be called",
+      );
+    });
+
+    test('flutter-pi', () async {
+      var buildWasCalled = false;
+      appBuilder.buildFn = ({
+        required FlutterpiHostPlatform host,
+        required FlutterpiTargetPlatform target,
+        required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
+        fl.FlutterProject? project,
+        FlutterpiArtifacts? artifacts,
+        String? mainPath,
+        String manifestPath = fl.defaultManifestPath,
+        String? applicationKernelFilePath,
+        String? depfilePath,
+        Directory? outDir,
+        bool unoptimized = false,
+        bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
+      }) async {
+        expect(fsLayout, equals(FilesystemLayout.flutterPi));
+        expect(forceBundleFlutterpi, isFalse);
+        buildWasCalled = true;
+      };
+
+      await _runInTestContext(() async {
+        await runner.run(['build']);
+      });
+
+      expect(
+        buildWasCalled,
+        isTrue,
+        reason: "Expected BuildSystem.build to be called",
+      );
+    });
+
+    test('meta-flutter', () async {
+      var buildWasCalled = false;
+      appBuilder.buildFn = ({
+        required FlutterpiHostPlatform host,
+        required FlutterpiTargetPlatform target,
+        required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
+        fl.FlutterProject? project,
+        FlutterpiArtifacts? artifacts,
+        String? mainPath,
+        String manifestPath = fl.defaultManifestPath,
+        String? applicationKernelFilePath,
+        String? depfilePath,
+        Directory? outDir,
+        bool unoptimized = false,
+        bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
+      }) async {
+        expect(fsLayout, equals(FilesystemLayout.metaFlutter));
+        expect(forceBundleFlutterpi, isFalse);
+        buildWasCalled = true;
+      };
+
+      await _runInTestContext(() async {
+        await runner.run(['build', '--fs-layout=meta-flutter']);
+      });
+
+      expect(
+        buildWasCalled,
+        isTrue,
+        reason: "Expected BuildSystem.build to be called",
+      );
+    });
+
+    test('flutter-pi, --flutterpi-binary=test', () async {
+      var buildWasCalled = false;
+      appBuilder.buildFn = ({
+        required FlutterpiHostPlatform host,
+        required FlutterpiTargetPlatform target,
+        required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
+        fl.FlutterProject? project,
+        FlutterpiArtifacts? artifacts,
+        String? mainPath,
+        String manifestPath = fl.defaultManifestPath,
+        String? applicationKernelFilePath,
+        String? depfilePath,
+        Directory? outDir,
+        bool unoptimized = false,
+        bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
+      }) async {
+        expect(fsLayout, equals(FilesystemLayout.flutterPi));
+        expect(forceBundleFlutterpi, isTrue);
+        buildWasCalled = true;
+      };
+
+      fs.currentDirectory
+          .childFile('test')
+          .writeAsStringSync('test-flutterpi-binary');
+
+      await _runInTestContext(() async {
+        await runner.run(
+          ['build', '--fs-layout=flutter-pi', '--flutterpi-binary=test'],
+        );
+      });
+
+      expect(
+        buildWasCalled,
+        isTrue,
+        reason: "Expected BuildSystem.build to be called",
+      );
+    });
+
+    test('meta-flutter, --flutterpi-binary=test', () async {
+      var buildWasCalled = false;
+      appBuilder.buildFn = ({
+        required FlutterpiHostPlatform host,
+        required FlutterpiTargetPlatform target,
+        required fl.BuildInfo buildInfo,
+        required FilesystemLayout fsLayout,
+        fl.FlutterProject? project,
+        FlutterpiArtifacts? artifacts,
+        String? mainPath,
+        String manifestPath = fl.defaultManifestPath,
+        String? applicationKernelFilePath,
+        String? depfilePath,
+        Directory? outDir,
+        bool unoptimized = false,
+        bool includeDebugSymbols = false,
+        bool forceBundleFlutterpi = false,
+      }) async {
+        expect(fsLayout, equals(FilesystemLayout.metaFlutter));
+        expect(forceBundleFlutterpi, isTrue);
+        buildWasCalled = true;
+      };
+
+      fs.currentDirectory
+          .childFile('test')
+          .writeAsStringSync('test-flutterpi-binary');
+
+      await _runInTestContext(() async {
+        await runner.run(
+          ['build', '--fs-layout=meta-flutter', '--flutterpi-binary=test'],
+        );
+      });
+
+      expect(
+        buildWasCalled,
+        isTrue,
+        reason: "Expected BuildSystem.build to be called",
+      );
+    });
+  });
 }

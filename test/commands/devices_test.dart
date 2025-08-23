@@ -4,6 +4,7 @@ import 'package:file/memory.dart';
 import 'package:file/src/interface/file_system.dart';
 
 import 'package:flutterpi_tool/src/cli/command_runner.dart' as src;
+import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/config.dart' as src;
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 import 'package:flutterpi_tool/src/executable.dart' as src;
@@ -638,6 +639,104 @@ void main() {
         await _runInTestContext(() async {
           await runner
               .run(['devices', 'add', 'username@test-device', '--id=test-id']);
+        });
+
+        expect(
+          addDeviceWasCalled,
+          isTrue,
+          reason: 'addDeviceFn should have been called',
+        );
+      });
+    });
+
+    group('--fs-layout', () {
+      test('default', () async {
+        var addDeviceWasCalled = false;
+        config
+          ..addDeviceFn = (entry) {
+            expect(
+              entry,
+              src.DeviceConfigEntry(
+                id: 'test-device',
+                sshExecutable: null,
+                sshRemote: 'test-device',
+                remoteInstallPath: null,
+                filesystemLayout: FilesystemLayout.flutterPi,
+              ),
+            );
+            addDeviceWasCalled = true;
+          }
+          ..containsDeviceFn = (id) {
+            return false;
+          };
+
+        await _runInTestContext(() async {
+          await runner.run(['devices', 'add', 'test-device']);
+        });
+
+        expect(
+          addDeviceWasCalled,
+          isTrue,
+          reason: 'addDeviceFn should have been called',
+        );
+      });
+
+      test('flutter-pi', () async {
+        var addDeviceWasCalled = false;
+        config
+          ..addDeviceFn = (entry) {
+            expect(
+              entry,
+              src.DeviceConfigEntry(
+                id: 'test-device',
+                sshExecutable: null,
+                sshRemote: 'test-device',
+                remoteInstallPath: null,
+                filesystemLayout: FilesystemLayout.flutterPi,
+              ),
+            );
+            addDeviceWasCalled = true;
+          }
+          ..containsDeviceFn = (id) {
+            return false;
+          };
+
+        await _runInTestContext(() async {
+          await runner
+              .run(['devices', 'add', 'test-device', '--fs-layout=flutter-pi']);
+        });
+
+        expect(
+          addDeviceWasCalled,
+          isTrue,
+          reason: 'addDeviceFn should have been called',
+        );
+      });
+
+      test('meta-flutter', () async {
+        var addDeviceWasCalled = false;
+        config
+          ..addDeviceFn = (entry) {
+            expect(
+              entry,
+              src.DeviceConfigEntry(
+                id: 'test-device',
+                sshExecutable: null,
+                sshRemote: 'test-device',
+                remoteInstallPath: null,
+                filesystemLayout: FilesystemLayout.metaFlutter,
+              ),
+            );
+            addDeviceWasCalled = true;
+          }
+          ..containsDeviceFn = (id) {
+            return false;
+          };
+
+        await _runInTestContext(() async {
+          await runner.run(
+            ['devices', 'add', 'test-device', '--fs-layout=meta-flutter'],
+          );
         });
 
         expect(
