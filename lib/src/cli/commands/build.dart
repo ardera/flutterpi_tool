@@ -3,9 +3,7 @@
 import 'dart:async';
 
 import 'package:args/command_runner.dart';
-import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/artifacts.dart';
-import 'package:flutterpi_tool/src/build_system/build_app.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/cli/command_runner.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
@@ -38,7 +36,6 @@ class BuildCommand extends FlutterpiCommand {
     // add --dart-define, --dart-define-from-file options
     usesDartDefineOption();
     usesTargetOption();
-    usesCustomCache(verboseHelp: verboseHelp);
     usesLocalFlutterpiExecutableArg(verboseHelp: verboseHelp);
 
     argParser
@@ -170,24 +167,17 @@ class BuildCommand extends FlutterpiCommand {
     }
 
     // actually build the flutter bundle
-    try {
-      await buildFlutterpiBundle(
-        host: host,
-        target: targetPlatform,
-        buildInfo: buildInfo,
-        mainPath: targetFile,
-        artifacts: artifacts,
 
-        operatingSystemUtils: os,
+    await globals.builder.build(
+      host: host,
+      target: targetPlatform,
+      buildInfo: buildInfo,
+      mainPath: targetFile,
 
-        // for `--debug-unoptimized` build mode
-        unoptimized: flavor.unoptimized,
-        includeDebugSymbols: debugSymbols,
-      );
-    } on Exception catch (e, st) {
-      globals.logger.printError('Failed to build Flutter-Pi bundle: $e\n$st');
-      return FlutterCommandResult.fail();
-    }
+      // for `--debug-unoptimized` build mode
+      unoptimized: flavor.unoptimized,
+      includeDebugSymbols: debugSymbols,
+    );
 
     return FlutterCommandResult.success();
   }

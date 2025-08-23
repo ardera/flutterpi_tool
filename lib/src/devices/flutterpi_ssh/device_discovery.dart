@@ -1,4 +1,3 @@
-import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/config.dart';
@@ -11,14 +10,12 @@ class FlutterpiSshDeviceDiscovery extends PollingDeviceDiscovery {
     required this.config,
     required this.logger,
     required this.os,
-    required this.cache,
   }) : super('SSH Devices');
 
   final SshUtils sshUtils;
   final FlutterPiToolConfig config;
   final Logger logger;
   final MoreOperatingSystemUtils os;
-  final FlutterpiCache cache;
 
   @override
   bool get canListAnything => true;
@@ -43,11 +40,10 @@ class FlutterpiSshDeviceDiscovery extends PollingDeviceDiscovery {
       sshUtils: sshUtils,
       remoteInstallPath: configEntry.remoteInstallPath,
       logger: logger,
-      cache: cache,
       os: os,
       args: FlutterpiArgs(
         explicitDisplaySizeMillimeters: configEntry.displaySizeMillimeters,
-        useDummyDisplay: configEntry.useDummyDisplay ?? false,
+        useDummyDisplay: configEntry.useDummyDisplay,
         dummyDisplaySize: configEntry.dummyDisplaySize,
       ),
     );

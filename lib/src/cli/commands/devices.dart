@@ -5,7 +5,6 @@ import 'package:flutterpi_tool/src/cli/command_runner.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/config.dart';
-import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 
 String pluralize(String word, int count) => count == 1 ? word : '${word}s';
 
@@ -339,8 +338,6 @@ class DevicesListCommand extends FlutterpiCommand {
   DevicesListCommand() {
     usesDeviceTimeoutOption();
     usesDeviceConnectionOption();
-
-    usesDeviceManager();
   }
 
   @override
@@ -447,11 +444,7 @@ class DevicesAddCommand extends FlutterpiCommand {
     final diagnostics = <Diagnostic>[];
 
     if (!force) {
-      final ssh = SshUtils(
-        processUtils: globals.processUtils,
-        sshExecutable: sshExecutable ?? 'ssh',
-        defaultRemote: remote,
-      );
+      final ssh = globals.sshUtils;
 
       final connected = await ssh.tryConnect(timeout: Duration(seconds: 5));
       if (!connected) {

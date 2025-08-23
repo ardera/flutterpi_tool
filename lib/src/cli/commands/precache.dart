@@ -7,10 +7,6 @@ import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/more_os_utils.dart';
 
 class PrecacheCommand extends FlutterpiCommand {
-  PrecacheCommand({bool verboseHelp = false}) {
-    usesCustomCache(verboseHelp: verboseHelp);
-  }
-
   @override
   String get name => 'precache';
 

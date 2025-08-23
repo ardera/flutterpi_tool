@@ -1,5 +1,5 @@
-import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
+import 'package:meta/meta.dart';
 
 class DeviceConfigEntry {
   const DeviceConfigEntry({
@@ -9,7 +9,7 @@ class DeviceConfigEntry {
     required this.remoteInstallPath,
     this.displaySizeMillimeters,
     this.devicePixelRatio,
-    this.useDummyDisplay,
+    this.useDummyDisplay = false,
     this.dummyDisplaySize,
   });
 
@@ -19,7 +19,7 @@ class DeviceConfigEntry {
   final String? remoteInstallPath;
   final (int, int)? displaySizeMillimeters;
   final double? devicePixelRatio;
-  final bool? useDummyDisplay;
+  final bool useDummyDisplay;
   final (int, int)? dummyDisplaySize;
 
   static DeviceConfigEntry fromMap(Map<String, dynamic> map) {
@@ -33,7 +33,7 @@ class DeviceConfigEntry {
         _ => null,
       },
       devicePixelRatio: (map['devicePixelRatio'] as num?)?.toDouble(),
-      useDummyDisplay: map['useDummyDisplay'] as bool?,
+      useDummyDisplay: map['useDummyDisplay'] as bool? ?? false,
       dummyDisplaySize: switch (map['dummyDisplaySize']) {
         [num width, num height] => (width.round(), height.round()),
         _ => null,
@@ -49,10 +49,9 @@ class DeviceConfigEntry {
       'remoteInstallPath': remoteInstallPath,
       if (displaySizeMillimeters case (final width, final height))
         'displaySizeMillimeters': [width, height],
-      if (devicePixelRatio case int devicePixelRatio)
+      if (devicePixelRatio case double devicePixelRatio)
         'devicePixelRatio': devicePixelRatio,
-      if (useDummyDisplay case bool useDummyDisplay)
-        'useDummyDisplay': useDummyDisplay,
+      if (useDummyDisplay == true) 'useDummyDisplay': true,
       if (dummyDisplaySize case (final width, final height))
         'dummyDisplaySize': [width, height],
     };
@@ -87,13 +86,27 @@ class DeviceConfigEntry {
         useDummyDisplay,
         dummyDisplaySize,
       );
+
+  @override
+  String toString() {
+    return 'DeviceConfigEntry('
+        'id: $id, '
+        'sshExecutable: $sshExecutable, '
+        'sshRemote: $sshRemote, '
+        'remoteInstallPath: $remoteInstallPath, '
+        'displaySizeMillimeters: $displaySizeMillimeters, '
+        'devicePixelRatio: $devicePixelRatio, '
+        'useDummyDisplay: $useDummyDisplay, '
+        'dummyDisplaySize: $dummyDisplaySize'
+        ')';
+  }
 }
 
 class FlutterPiToolConfig {
   FlutterPiToolConfig({
-    required this.fs,
-    required this.logger,
-    required this.platform,
+    required FileSystem fs,
+    required Logger logger,
+    required Platform platform,
   }) : _config = Config(
           'flutterpi_tool_config',
           fileSystem: fs,
@@ -101,9 +114,16 @@ class FlutterPiToolConfig {
           platform: platform,
         );
 
-  final FileSystem fs;
-  final Logger logger;
-  final Platform platform;
+  @visibleForTesting
+  FlutterPiToolConfig.test({
+    required FileSystem fs,
+    required Logger logger,
+    required Platform platform,
+  }) : _config = Config.test(
+          directory: fs.directory('/'),
+          logger: logger,
+        );
+
   final Config _config;
 
   List<DeviceConfigEntry> getDevices() {

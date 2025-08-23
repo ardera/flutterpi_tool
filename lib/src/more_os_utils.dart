@@ -1,4 +1,3 @@
-import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/archive.dart';
 import 'package:meta/meta.dart';
 import 'package:process/process.dart';

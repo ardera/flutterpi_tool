@@ -4,7 +4,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
 
-import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/authenticating_artifact_updater.dart';
 import 'package:flutterpi_tool/src/github.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
@@ -575,9 +574,205 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
   }
 }
 
-class FlutterpiCache extends FlutterCache {
+abstract class FlutterpiCache extends Cache {
+  FlutterpiCache.withoutArtifacts({
+    @protected super.rootOverride,
+    @protected super.artifacts,
+    required this.logger,
+    required this.fileSystem,
+    required this.platform,
+    required this.osUtils,
+    required this.httpClient,
+  }) : super(
+          logger: logger,
+          fileSystem: fileSystem,
+          platform: platform,
+          osUtils: osUtils,
+        );
+
+  factory FlutterpiCache.test({
+    Directory? rootOverride,
+    List<ArtifactSet> artifacts,
+    required Logger logger,
+    required FileSystem fileSystem,
+    required Platform platform,
+    required MoreOperatingSystemUtils osUtils,
+    required ProcessManager processManager,
+    required ShutdownHooks hooks,
+    required MyGithub github,
+    io.HttpClient? httpClient,
+  }) = FlutterpiCacheWithoutFlutterArtifacts.test;
+
+  factory FlutterpiCache({
+    required Logger logger,
+    required FileSystem fileSystem,
+    required Platform platform,
+    required MoreOperatingSystemUtils osUtils,
+    required FlutterProjectFactory projectFactory,
+    required ProcessManager processManager,
+    required ShutdownHooks hooks,
+    required MyGithub github,
+    gh.RepositorySlug? repo,
+  }) = FlutterpiCacheWithFlutterArtifacts;
+
+  factory FlutterpiCache.fromWorkflow({
+    required Logger logger,
+    required FileSystem fileSystem,
+    required Platform platform,
+    required MoreOperatingSystemUtils osUtils,
+    required FlutterProjectFactory projectFactory,
+    required ProcessManager processManager,
+    required ShutdownHooks hooks,
+    required MyGithub github,
+    gh.RepositorySlug? repo,
+    required String runId,
+    String? availableEngineVersion,
+  }) = FlutterpiCacheWithFlutterArtifacts.fromWorkflow;
+
   @protected
-  FlutterpiCache.withoutEngineArtifacts({
+  final Logger logger;
+  @protected
+  final FileSystem fileSystem;
+  @protected
+  final Platform platform;
+  @protected
+  final MoreOperatingSystemUtils osUtils;
+  @protected
+  final io.HttpClient httpClient;
+  @protected
+  late final http.Client pkgHttpHttpClient = http.IOClient(httpClient);
+
+  @visibleForTesting
+  Set<FlutterpiArtifact> requiredArtifacts({
+    FlutterpiHostPlatform? host,
+    required Set<FlutterpiTargetPlatform> targets,
+    required Set<BuildMode> runtimeModes,
+    required Set<EngineFlavor> flavors,
+    bool includeDebugSymbols = false,
+  });
+
+  @override
+  Future<void> updateAll(
+    Set<DevelopmentArtifact> requiredArtifacts, {
+    bool offline = false,
+    @required FlutterpiHostPlatform? host,
+    Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {},
+    Set<BuildMode> runtimeModes = const {},
+    Set<EngineFlavor> engineFlavors = const {},
+    bool includeDebugSymbols = false,
+  });
+}
+
+mixin FlutterpiCacheMixin on Cache implements FlutterpiCache {
+  @protected
+  final List<ArtifactSet> artifacts = [];
+
+  @override
+  void registerArtifact(ArtifactSet artifactSet) {
+    super.registerArtifact(artifactSet);
+    artifacts.add(artifactSet);
+  }
+
+  late final ArtifactUpdater _updater = createUpdater();
+
+  List<String> get allowedBaseUrls => [
+        cipdBaseUrl,
+        storageBaseUrl,
+        'https://github.com/ardera/flutter-pi/',
+        'https://github.com/ardera/flutter-ci/',
+        'https://api.github.com/repos/ardera/flutter-pi/',
+        'https://api.github.com/repos/ardera/flutter-ci/',
+      ];
+
+  /// This has to be lazy because it requires FLUTTER_ROOT to be initialized.
+  @protected
+  ArtifactUpdater createUpdater() {
+    return AuthenticatingArtifactUpdater(
+      operatingSystemUtils: osUtils,
+      logger: logger,
+      fileSystem: fileSystem,
+      tempStorage: getDownloadDir(),
+      httpClient: httpClient,
+      platform: platform,
+      allowedBaseUrls: allowedBaseUrls,
+    );
+  }
+
+  @override
+  @visibleForTesting
+  Set<FlutterpiArtifact> requiredArtifacts({
+    FlutterpiHostPlatform? host,
+    required Set<FlutterpiTargetPlatform> targets,
+    required Set<BuildMode> runtimeModes,
+    required Set<EngineFlavor> flavors,
+    bool includeDebugSymbols = false,
+  }) {
+    return {
+      for (final artifact in artifacts)
+        if (artifact is FlutterpiArtifact)
+          if (artifact.requiredFor(
+            host: host,
+            targets: targets,
+            flavors: flavors,
+            runtimeModes: runtimeModes,
+            includeDebugSymbols: includeDebugSymbols,
+          ))
+            artifact,
+    };
+  }
+
+  @override
+  Future<void> updateAll(
+    Set<DevelopmentArtifact> requiredArtifacts, {
+    bool offline = false,
+    @required FlutterpiHostPlatform? host,
+    Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {},
+    Set<BuildMode> runtimeModes = const {},
+    Set<EngineFlavor> engineFlavors = const {},
+    bool includeDebugSymbols = false,
+  }) async {
+    host ??= osUtils.fpiHostPlatform;
+
+    for (final artifact in artifacts) {
+      final required = switch (artifact) {
+        FlutterpiArtifact artifact => artifact.requiredFor(
+            host: host,
+            targets: flutterpiPlatforms,
+            flavors: engineFlavors,
+            runtimeModes: runtimeModes,
+            includeDebugSymbols: includeDebugSymbols,
+          ),
+        _ => requiredArtifacts.contains(artifact.developmentArtifact),
+      };
+
+      final short = artifact.toString();
+
+      if (!required) {
+        logger.printTrace('Artifact $short is not required, skipping update.');
+        continue;
+      }
+
+      if (await artifact.isUpToDate(fileSystem)) {
+        logger.printTrace('Artifact $short is up to date, skipping update.');
+        continue;
+      }
+
+      await artifact.update(
+        _updater,
+        logger,
+        fileSystem,
+        osUtils,
+        offline: offline,
+      );
+    }
+  }
+}
+
+class FlutterpiCacheWithFlutterArtifacts extends FlutterCache
+    with FlutterpiCacheMixin
+    implements FlutterpiCache {
+  @protected
+  FlutterpiCacheWithFlutterArtifacts.withoutEngineArtifacts({
     required this.logger,
     required this.fileSystem,
     required this.platform,
@@ -588,6 +783,7 @@ class FlutterpiCache extends FlutterCache {
     required MyGithub github,
     io.HttpClient? httpClient,
   })  : httpClient = httpClient ?? io.HttpClient(),
+        pkgHttpHttpClient = http.IOClient(httpClient ?? io.HttpClient()),
         super(
           logger: logger,
           platform: platform,
@@ -611,7 +807,7 @@ class FlutterpiCache extends FlutterCache {
     );
   }
 
-  factory FlutterpiCache({
+  factory FlutterpiCacheWithFlutterArtifacts({
     required Logger logger,
     required FileSystem fileSystem,
     required Platform platform,
@@ -624,7 +820,7 @@ class FlutterpiCache extends FlutterCache {
   }) {
     repo ??= gh.RepositorySlug('ardera', 'flutter-ci');
 
-    final cache = FlutterpiCache.withoutEngineArtifacts(
+    final cache = FlutterpiCacheWithFlutterArtifacts.withoutEngineArtifacts(
       logger: logger,
       fileSystem: fileSystem,
       platform: platform,
@@ -649,7 +845,7 @@ class FlutterpiCache extends FlutterCache {
     return cache;
   }
 
-  factory FlutterpiCache.fromWorkflow({
+  factory FlutterpiCacheWithFlutterArtifacts.fromWorkflow({
     required Logger logger,
     required FileSystem fileSystem,
     required Platform platform,
@@ -664,7 +860,7 @@ class FlutterpiCache extends FlutterCache {
   }) {
     repo ??= gh.RepositorySlug('ardera', 'flutter-ci');
 
-    final cache = FlutterpiCache.withoutEngineArtifacts(
+    final cache = FlutterpiCacheWithFlutterArtifacts.withoutEngineArtifacts(
       logger: logger,
       fileSystem: fileSystem,
       platform: platform,
@@ -689,28 +885,6 @@ class FlutterpiCache extends FlutterCache {
     }
 
     return cache;
-  }
-
-  @protected
-  final Logger logger;
-  @protected
-  final FileSystem fileSystem;
-  @protected
-  final Platform platform;
-  @protected
-  final MoreOperatingSystemUtils osUtils;
-  @protected
-  final io.HttpClient httpClient;
-  @protected
-  late final http.Client pkgHttpHttpClient = http.IOClient(httpClient);
-
-  @protected
-  final List<ArtifactSet> artifacts = [];
-
-  @override
-  void registerArtifact(ArtifactSet artifactSet) {
-    super.registerArtifact(artifactSet);
-    artifacts.add(artifactSet);
   }
 
   @protected
@@ -797,98 +971,81 @@ class FlutterpiCache extends FlutterCache {
     return descriptions;
   }
 
-  late final ArtifactUpdater _updater = createUpdater();
+  @override
+  FileSystem fileSystem;
 
-  List<String> get allowedBaseUrls => [
-        cipdBaseUrl,
-        storageBaseUrl,
-        'https://github.com/ardera/flutter-pi/',
-        'https://github.com/ardera/flutter-ci/',
-        'https://api.github.com/repos/ardera/flutter-pi/',
-        'https://api.github.com/repos/ardera/flutter-ci/',
-      ];
+  @override
+  io.HttpClient httpClient;
 
-  /// This has to be lazy because it requires FLUTTER_ROOT to be initialized.
+  @override
+  Logger logger;
+
+  @override
+  MoreOperatingSystemUtils osUtils;
+
+  @override
+  http.Client pkgHttpHttpClient;
+
+  @override
+  Platform platform;
+}
+
+class FlutterpiCacheWithoutFlutterArtifacts extends Cache
+    with FlutterpiCacheMixin
+    implements FlutterpiCache {
   @protected
-  ArtifactUpdater createUpdater() {
-    return AuthenticatingArtifactUpdater(
-      operatingSystemUtils: osUtils,
-      logger: logger,
-      fileSystem: fileSystem,
-      tempStorage: getDownloadDir(),
-      httpClient: httpClient,
-      platform: platform,
-      allowedBaseUrls: allowedBaseUrls,
-    );
-  }
+  FlutterpiCacheWithoutFlutterArtifacts.test({
+    Directory? rootOverride,
+    List<ArtifactSet> artifacts = const [],
+    required this.logger,
+    required this.fileSystem,
+    required this.platform,
+    required this.osUtils,
+    required ProcessManager processManager,
+    required ShutdownHooks hooks,
+    required MyGithub github,
+    io.HttpClient? httpClient,
+  })  : httpClient = httpClient ?? io.HttpClient(),
+        pkgHttpHttpClient = http.IOClient(httpClient ?? io.HttpClient()),
+        super(
+          rootOverride: rootOverride ?? fileSystem.currentDirectory,
+          logger: logger,
+          platform: platform,
+          fileSystem: fileSystem,
+          osUtils: osUtils,
+        ) {
+    if (rootOverride?.fileSystem != null &&
+        rootOverride!.fileSystem != fileSystem) {
+      throw ArgumentError(
+        'If rootOverride and fileSystem are both non-null, '
+            'rootOverride.fileSystem must be the same as fileSystem.',
+        'fileSystem',
+      );
+    }
 
-  @visibleForTesting
-  Set<FlutterpiArtifact> requiredArtifacts({
-    FlutterpiHostPlatform? host,
-    required Set<FlutterpiTargetPlatform> targets,
-    required Set<BuildMode> runtimeModes,
-    required Set<EngineFlavor> flavors,
-    bool includeDebugSymbols = false,
-  }) {
-    return {
-      for (final artifact in artifacts)
-        if (artifact is FlutterpiArtifact)
-          if (artifact.requiredFor(
-            host: host,
-            targets: targets,
-            flavors: flavors,
-            runtimeModes: runtimeModes,
-            includeDebugSymbols: includeDebugSymbols,
-          ))
-            artifact,
-    };
+    hooks.addShutdownHook(() {
+      // this will close the inner dart:io http client.
+      pkgHttpHttpClient.close();
+    });
   }
 
   @override
-  Future<void> updateAll(
-    Set<DevelopmentArtifact> requiredArtifacts, {
-    bool offline = false,
-    @required FlutterpiHostPlatform? host,
-    Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {},
-    Set<BuildMode> runtimeModes = const {},
-    Set<EngineFlavor> engineFlavors = const {},
-    bool includeDebugSymbols = false,
-  }) async {
-    host ??= osUtils.fpiHostPlatform;
+  FileSystem fileSystem;
 
-    for (final artifact in artifacts) {
-      final required = switch (artifact) {
-        FlutterpiArtifact artifact => artifact.requiredFor(
-            host: host,
-            targets: flutterpiPlatforms,
-            flavors: engineFlavors,
-            runtimeModes: runtimeModes,
-            includeDebugSymbols: includeDebugSymbols,
-          ),
-        _ => requiredArtifacts.contains(artifact.developmentArtifact),
-      };
+  @override
+  io.HttpClient httpClient;
 
-      final short = artifact.toString();
+  @override
+  Logger logger;
 
-      if (!required) {
-        logger.printTrace('Artifact $short is not required, skipping update.');
-        continue;
-      }
+  @override
+  MoreOperatingSystemUtils osUtils;
 
-      if (await artifact.isUpToDate(fileSystem)) {
-        logger.printTrace('Artifact $short is up to date, skipping update.');
-        continue;
-      }
+  @override
+  http.Client pkgHttpHttpClient;
 
-      await artifact.update(
-        _updater,
-        logger,
-        fileSystem,
-        osUtils,
-        offline: offline,
-      );
-    }
-  }
+  @override
+  Platform platform;
 }
 
 Future<String> getFlutterRoot() async {

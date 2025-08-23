@@ -4,7 +4,6 @@ import 'package:file/file.dart';
 import 'package:meta/meta.dart';
 
 import 'package:flutterpi_tool/src/fltool/common.dart' as fltool;
-import 'package:flutterpi_tool/src/fltool/context_runner.dart' as fltool;
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 
 import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
@@ -12,7 +11,6 @@ import 'package:flutterpi_tool/src/artifacts.dart';
 
 class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
   RunCommand({bool verboseHelp = false}) {
-    usesDeviceManager();
     usesEngineFlavorOption();
     usesDebugSymbolsOption();
     usesLocalFlutterpiExecutableArg(verboseHelp: verboseHelp);
@@ -44,7 +42,7 @@ class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
   Future<fltool.FlutterCommandResult> runCommand() async {
     await populateCache();
 
-    FlutterpiArtifacts artifacts = globals.flutterpiArtifacts;
+    var artifacts = globals.flutterpiArtifacts;
     if (getLocalFlutterpiExecutable() case File file) {
       artifacts = LocalFlutterpiBinaryOverride(
         inner: artifacts,
@@ -52,11 +50,10 @@ class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
       );
     }
 
-    return fltool.runInContext(
-      super.runCommand,
+    return fltool.context.run(
+      body: super.runCommand,
       overrides: {
         fltool.Artifacts: () => artifacts,
-        FlutterpiArtifacts: () => artifacts,
       },
     );
   }
