@@ -234,7 +234,7 @@ class AppBuilder {
       },
 
       includesFlutterpiBinary:
-          fsLayout == FilesystemLayout.flutterPi && forceBundleFlutterpi,
+          fsLayout == FilesystemLayout.flutterPi || forceBundleFlutterpi,
     );
   }
 }
