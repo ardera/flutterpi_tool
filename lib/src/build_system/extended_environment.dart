@@ -1,4 +1,3 @@
-import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';

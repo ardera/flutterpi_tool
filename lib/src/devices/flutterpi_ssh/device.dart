@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/artifacts.dart';
-import 'package:flutterpi_tool/src/build_system/build_app.dart';
-import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
-import 'package:flutterpi_tool/src/fltool/common.dart';
+import 'package:flutterpi_tool/src/fltool/common.dart' as fl;
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/more_os_utils.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
@@ -13,7 +12,7 @@ import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 
-abstract class FlutterpiAppBundle extends ApplicationPackage {
+abstract class FlutterpiAppBundle extends fl.ApplicationPackage {
   FlutterpiAppBundle({
     required super.id,
     required this.name,
@@ -59,7 +58,7 @@ class _RunningApp {
 
   final FlutterpiAppBundle app;
   final Process sshProcess;
-  final DeviceLogReader logReader;
+  final fl.DeviceLogReader logReader;
   final SshUtils sshUtils;
   final MoreOperatingSystemUtils os;
 
@@ -118,7 +117,7 @@ class FlutterpiArgs {
   final (int, int)? dummyDisplaySize;
 }
 
-class FlutterpiSshDevice extends Device {
+class FlutterpiSshDevice extends fl.Device {
   FlutterpiSshDevice({
     required String id,
     required this.name,
@@ -126,27 +125,25 @@ class FlutterpiSshDevice extends Device {
     required String? remoteInstallPath,
     required this.logger,
     required this.os,
-    required this.cache,
     this.args = const FlutterpiArgs(),
   })  : remoteInstallPath = remoteInstallPath ?? '/tmp/',
         super(
           id,
-          category: Category.mobile,
-          platformType: PlatformType.custom,
+          category: fl.Category.mobile,
+          platformType: fl.PlatformType.custom,
           ephemeral: false,
           logger: logger,
         );
 
   final SshUtils sshUtils;
   final String remoteInstallPath;
-  final Logger logger;
-  final FlutterpiCache cache;
+  final fl.Logger logger;
   final MoreOperatingSystemUtils os;
   final FlutterpiArgs args;
 
   final runningApps = <String, _RunningApp>{};
-  final logReaders = <String, CustomDeviceLogReader>{};
-  final globalLogReader = CustomDeviceLogReader('FlutterPi');
+  final logReaders = <String, fl.CustomDeviceLogReader>{};
+  final globalLogReader = fl.CustomDeviceLogReader('FlutterPi');
 
   String _getRemoteInstallPath(FlutterpiAppBundle bundle) {
     return path.posix.join(remoteInstallPath, bundle.id);
@@ -166,26 +163,26 @@ class FlutterpiSshDevice extends Device {
         case 'riscv64':
           return FlutterpiTargetPlatform.genericRiscv64;
         default:
-          throwToolExit(
+          fl.throwToolExit(
             'SSH device "$id" has unknown target platform. `uname -m`: $result',
           );
       }
     } on SshException catch (e) {
-      throwToolExit('Error querying ssh device "$id" target platform: $e');
+      fl.throwToolExit('Error querying ssh device "$id" target platform: $e');
     }
   }
 
   late final flutterpiTargetPlatform = getFlutterpiTargetPlatform();
 
   @override
-  Category? get category => Category.mobile;
+  fl.Category? get category => fl.Category.mobile;
 
   @override
   void clearLogs() {}
 
   @override
-  DeviceConnectionInterface get connectionInterface =>
-      DeviceConnectionInterface.wireless;
+  fl.DeviceConnectionInterface get connectionInterface =>
+      fl.DeviceConnectionInterface.wireless;
 
   @override
   Future<void> dispose() async {
@@ -200,8 +197,8 @@ class FlutterpiSshDevice extends Device {
   bool get ephemeral => false;
 
   @override
-  FutureOr<DeviceLogReader> getLogReader({
-    ApplicationPackage? app,
+  FutureOr<fl.DeviceLogReader> getLogReader({
+    fl.ApplicationPackage? app,
     bool includePastLogs = false,
   }) {
     if (app == null) {
@@ -209,7 +206,7 @@ class FlutterpiSshDevice extends Device {
     } else {
       return logReaders.putIfAbsent(
         app.id,
-        () => CustomDeviceLogReader(app.id),
+        () => fl.CustomDeviceLogReader(app.id),
       );
     }
   }
@@ -222,7 +219,7 @@ class FlutterpiSshDevice extends Device {
     final installDir = _getRemoteInstallPath(app);
 
     if (app is! PrebuiltFlutterpiAppBundle) {
-      throwToolExit('Cannot install unbuilt app bundle "${app.id}".');
+      fl.throwToolExit('Cannot install unbuilt app bundle "${app.id}".');
     }
 
     final status = logger.startProgress('Installing app on device...');
@@ -237,7 +234,7 @@ class FlutterpiSshDevice extends Device {
           throwOnError: true,
         );
       } on SshException catch (e) {
-        throwToolExit('Error installing app on SSH device "$id": $e');
+        fl.throwToolExit('Error installing app on SSH device "$id": $e');
       }
 
       // make all the binaries executable on the remote device.
@@ -253,7 +250,7 @@ class FlutterpiSshDevice extends Device {
       try {
         await sshUtils.makeExecutable(args: remoteBinaries);
       } on SshException catch (e) {
-        throwToolExit(
+        fl.throwToolExit(
           'Error making $remoteBinaries binaries executable on SSH device "$id": '
           '$e',
         );
@@ -291,7 +288,7 @@ class FlutterpiSshDevice extends Device {
   bool isSupported() => true;
 
   @override
-  bool isSupportedForProject(FlutterProject flutterProject) {
+  bool isSupportedForProject(fl.FlutterProject flutterProject) {
     // TODO: implement isSupportedForProject
     return true;
   }
@@ -303,14 +300,14 @@ class FlutterpiSshDevice extends Device {
   final String name;
 
   @override
-  PlatformType? get platformType => PlatformType.custom;
+  fl.PlatformType? get platformType => fl.PlatformType.custom;
 
   @override
-  DevicePortForwarder? get portForwarder => throw UnimplementedError();
+  fl.DevicePortForwarder? get portForwarder => throw UnimplementedError();
 
   @override
-  Future<MemoryInfo> queryMemoryInfo() async {
-    return MemoryInfo.empty();
+  Future<fl.MemoryInfo> queryMemoryInfo() async {
+    return fl.MemoryInfo.empty();
   }
 
   @override
@@ -319,7 +316,7 @@ class FlutterpiSshDevice extends Device {
   Future<FlutterpiAppBundle> _buildApp({
     required String id,
     String? mainPath,
-    required DebuggingOptions debuggingOptions,
+    required fl.DebuggingOptions debuggingOptions,
   }) async {
     /// TODO: This is partially duplicated.
     final host = switch (os.fpiHostPlatform) {
@@ -330,7 +327,7 @@ class FlutterpiSshDevice extends Device {
 
     var target = await flutterpiTargetPlatform;
     if (!target.isGeneric &&
-        debuggingOptions.buildInfo.mode == BuildMode.debug) {
+        debuggingOptions.buildInfo.mode == fl.BuildMode.debug) {
       logger.printTrace(
         'Non-generic target platform ($target) is not supported for debug mode, '
         'using generic variant ${target.genericVariant}.',
@@ -344,13 +341,12 @@ class FlutterpiSshDevice extends Device {
       target: target,
     );
 
-    return await buildFlutterpiApp(
+    return await globals.builder.buildBundle(
       id: id,
       host: host,
       target: target,
       buildInfo: debuggingOptions.buildInfo,
       mainPath: mainPath,
-      operatingSystemUtils: os,
       artifacts: artifacts,
     );
   }
@@ -359,14 +355,14 @@ class FlutterpiSshDevice extends Device {
   List<String> buildFlutterpiCommand({
     required String flutterpiExe,
     required String bundlePath,
-    required BuildMode runtimeMode,
+    required fl.BuildMode runtimeMode,
     Iterable<String> engineArgs = const [],
     Iterable<String> dartCmdlineArgs = const [],
   }) {
     final runtimeModeArg = switch (runtimeMode) {
-      BuildMode.debug => null,
-      BuildMode.profile => '--profile',
-      BuildMode.release => '--release',
+      fl.BuildMode.debug => null,
+      fl.BuildMode.profile => '--profile',
+      fl.BuildMode.release => '--release',
       dynamic other => throw Exception('Unsupported runtime mode: $other')
     };
 
@@ -388,7 +384,7 @@ class FlutterpiSshDevice extends Device {
 
   @visibleForTesting
   List<String> buildEngineArgs({
-    required DebuggingOptions debuggingOptions,
+    required fl.DebuggingOptions debuggingOptions,
     bool traceStartup = false,
     String? route,
   }) {
@@ -435,11 +431,11 @@ class FlutterpiSshDevice extends Device {
     }
 
     switch (debuggingOptions.enableImpeller) {
-      case ImpellerStatus.enabled:
+      case fl.ImpellerStatus.enabled:
         addFlag('enable-impeller=true');
-      case ImpellerStatus.disabled:
+      case fl.ImpellerStatus.disabled:
         addFlag('enable-impeller=false');
-      case ImpellerStatus.platformDefault:
+      case fl.ImpellerStatus.platformDefault:
     }
 
     // Options only supported when there is a VM Service connection between the
@@ -474,11 +470,11 @@ class FlutterpiSshDevice extends Device {
   }
 
   @override
-  Future<LaunchResult> startApp(
+  Future<fl.LaunchResult> startApp(
     covariant FlutterpiAppBundle? package, {
     String? mainPath,
     String? route,
-    required DebuggingOptions debuggingOptions,
+    required fl.DebuggingOptions debuggingOptions,
     Map<String, Object?> platformArgs = const {},
     bool prebuiltApplication = false,
     bool ipv6 = false,
@@ -491,7 +487,7 @@ class FlutterpiSshDevice extends Device {
           mainPath: mainPath,
           debuggingOptions: debuggingOptions,
         ),
-      dynamic _ => throwToolExit(
+      dynamic _ => fl.throwToolExit(
           'Cannot start app on SSH device "$id" without an app bundle.',
         ),
     };
@@ -530,7 +526,7 @@ class FlutterpiSshDevice extends Device {
         ],
       );
     } on Exception catch (e) {
-      throwToolExit(e.toString());
+      fl.throwToolExit(e.toString());
     }
 
     final sshProcess = await sshUtils.startSsh(
@@ -544,7 +540,7 @@ class FlutterpiSshDevice extends Device {
 
     final logReader = logReaders.putIfAbsent(
       prebuiltApp.id,
-      () => CustomDeviceLogReader(prebuiltApp.name),
+      () => fl.CustomDeviceLogReader(prebuiltApp.name),
     );
     globalLogReader.listenToLinesStream(logReader.logLines);
     logReader.listenToProcessOutput(sshProcess);
@@ -557,9 +553,9 @@ class FlutterpiSshDevice extends Device {
       os: os,
     );
 
-    final discovery = ProtocolDiscovery.vmService(
+    final discovery = fl.ProtocolDiscovery.vmService(
       logReader,
-      portForwarder: NoOpDevicePortForwarder(),
+      portForwarder: fl.NoOpDevicePortForwarder(),
       logger: logger,
       hostPort: hostPort,
       devicePort: devicePort,
@@ -610,12 +606,12 @@ class FlutterpiSshDevice extends Device {
       final uri = await uriCompleter.future;
 
       runningApps[prebuiltApp.id] = runningApp;
-      return LaunchResult.succeeded(vmServiceUri: uri);
+      return fl.LaunchResult.succeeded(vmServiceUri: uri);
     } on Exception catch (e) {
       logger.printError(e.toString(), wrap: false);
     }
 
-    return LaunchResult.failed();
+    return fl.LaunchResult.failed();
   }
 
   @override
@@ -671,8 +667,8 @@ class FlutterpiSshDevice extends Device {
   bool get supportsHotRestart => true;
 
   @override
-  FutureOr<bool> supportsRuntimeMode(BuildMode buildMode) {
-    return buildMode != BuildMode.jitRelease;
+  FutureOr<bool> supportsRuntimeMode(fl.BuildMode buildMode) {
+    return buildMode != fl.BuildMode.jitRelease;
   }
 
   @override
@@ -687,18 +683,18 @@ class FlutterpiSshDevice extends Device {
   }
 
   @override
-  Future<TargetPlatform> get targetPlatform async =>
+  Future<fl.TargetPlatform> get targetPlatform async =>
       switch (await flutterpiTargetPlatform) {
         FlutterpiTargetPlatform.genericArmV7 ||
         FlutterpiTargetPlatform.pi3 ||
         FlutterpiTargetPlatform.pi4 =>
-          TargetPlatform.linux_arm64,
-        FlutterpiTargetPlatform.genericRiscv64 => TargetPlatform.linux_arm64,
+          fl.TargetPlatform.linux_arm64,
+        FlutterpiTargetPlatform.genericRiscv64 => fl.TargetPlatform.linux_arm64,
         FlutterpiTargetPlatform.genericAArch64 ||
         FlutterpiTargetPlatform.pi3_64 ||
         FlutterpiTargetPlatform.pi4_64 =>
-          TargetPlatform.linux_arm64,
-        FlutterpiTargetPlatform.genericX64 => TargetPlatform.linux_x64,
+          fl.TargetPlatform.linux_arm64,
+        FlutterpiTargetPlatform.genericX64 => fl.TargetPlatform.linux_x64,
       };
 
   @override

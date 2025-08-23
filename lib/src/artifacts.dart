@@ -1,4 +1,3 @@
-import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/build_system/extended_environment.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';

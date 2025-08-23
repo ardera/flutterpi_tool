@@ -2,7 +2,6 @@
 
 import 'dart:async';
 
-import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/build_system/extended_environment.dart';
 import 'package:flutterpi_tool/src/common.dart';

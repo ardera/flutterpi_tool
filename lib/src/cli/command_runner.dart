@@ -1,7 +1,6 @@
 // ignore_for_file: avoid_print, implementation_imports
 
 import 'package:args/command_runner.dart';
-import 'package:file/file.dart';
 import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 
 class SshException implements Exception {
