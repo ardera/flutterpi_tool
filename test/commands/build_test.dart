@@ -18,6 +18,7 @@ import '../src/fake_flutter_version.dart';
 import '../src/fake_process_manager.dart';
 import '../src/mock_app_builder.dart';
 import '../src/mock_flutterpi_artifacts.dart';
+import '../src/test_feature_flags.dart';
 
 void main() {
   late MemoryFileSystem fs;
@@ -42,6 +43,7 @@ void main() {
         Platform: () => platform,
         fl.Artifacts: () => flutterpiArtifacts,
         AppBuilder: () => appBuilder,
+        fl.FeatureFlags: () => TestFeatureFlags(),
         ...overrides,
       },
     );
