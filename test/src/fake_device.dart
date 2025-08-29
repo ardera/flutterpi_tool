@@ -27,7 +27,7 @@ class FakeDevice implements fl.Device {
   Future<bool> Function(fl.ApplicationPackage app, {String? userIdentifier})?
       isAppInstalledFn;
   Future<bool> Function(fl.ApplicationPackage app)? isLatestBuildInstalledFn;
-  bool Function()? isSupportedFn;
+  Future<bool> Function()? isSupportedFn;
   bool Function(fl.FlutterProject flutterProject)? isSupportedForProjectFn;
   Future<fl.MemoryInfo> Function()? queryMemoryInfoFn;
   Future<fl.LaunchResult> Function(
@@ -41,7 +41,7 @@ class FakeDevice implements fl.Device {
   })? startAppFn;
   Future<bool> Function(fl.ApplicationPackage? app, {String? userIdentifier})?
       stopAppFn;
-  String Function()? supportMessageFn;
+  Future<String> Function()? supportMessageFn;
   FutureOr<bool> Function(fl.BuildMode buildMode)? supportsRuntimeModeFn;
   Future<void> Function(fl.File outputFile)? takeScreenshotFn;
   Future<Map<String, Object>> Function()? toJsonFn;
@@ -63,7 +63,7 @@ class FakeDevice implements fl.Device {
             Future.value(targetPlatform ?? fl.TargetPlatform.android_arm64),
         targetPlatformDisplayName =
             Future.value(targetPlatformDisplayName ?? 'Android (arm64)'),
-        isSupportedFn = (() => true);
+        isSupportedFn = (() => Future.value(true));
 
   @override
   fl.Category? category;
@@ -231,7 +231,7 @@ class FakeDevice implements fl.Device {
   }
 
   @override
-  bool isSupported() {
+  Future<bool> isSupported() async {
     if (isSupportedFn != null) return isSupportedFn!();
     fail('Should not access isSupported');
   }
@@ -283,7 +283,7 @@ class FakeDevice implements fl.Device {
   }
 
   @override
-  String supportMessage() {
+  Future<String> supportMessage() {
     if (supportMessageFn != null) return supportMessageFn!();
     fail('Should not access supportMessage');
   }

@@ -141,6 +141,13 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
     );
   }
 
+  @override
+  Future<void> downloadFile(String message, Uri url, Directory location) {
+    return _downloadArchive(message, url, location, (File file, Directory dir) {
+      file.copySync(dir.childFile(file.basename).path);
+    });
+  }
+
   Future<void> _downloadArchive(
     String message,
     Uri url,

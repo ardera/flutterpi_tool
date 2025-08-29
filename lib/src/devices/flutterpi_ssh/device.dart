@@ -293,7 +293,7 @@ class FlutterpiSshDevice extends fl.Device {
   Future<bool> get isLocalEmulator async => false;
 
   @override
-  bool isSupported() => true;
+  Future<bool> isSupported() => Future.value(true);
 
   @override
   bool isSupportedForProject(fl.FlutterProject flutterProject) {

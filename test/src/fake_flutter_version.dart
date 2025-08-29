@@ -25,6 +25,8 @@ class FakeFlutterVersion implements fltool.FlutterVersion {
     this.gitTagVersion = const fltool.GitTagVersion.unknown(),
     this.flutterRoot = '/path/to/flutter',
     this.nextFlutterVersion,
+    this.engineBuildDate = '12/01/01',
+    this.engineContentHash = 'abcdef',
   });
 
   final String branch;
@@ -96,6 +98,12 @@ class FakeFlutterVersion implements fltool.FlutterVersion {
 
   @override
   final fltool.GitTagVersion gitTagVersion;
+
+  @override
+  final String? engineBuildDate;
+
+  @override
+  final String? engineContentHash;
 
   @override
   FileSystem get fs =>
