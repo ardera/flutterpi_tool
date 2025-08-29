@@ -1,3 +1,6 @@
+## 0.9.0 - 2025-08-29
+- flutter 3.35 compatibility
+
 ## 0.8.1 - 2025-08-29
 - add `--fs-layout=<flutter-pi/meta-flutter>` argument to
   `flutterpi_tool devices add` and `flutterpi_tool build`
