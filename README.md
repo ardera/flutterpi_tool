@@ -2,6 +2,8 @@
 A tool to make developing &amp; distributing flutter apps for https://github.com/ardera/flutter-pi easier.
 
 ## 📰 News
+- Building & Running apps on [meta-flutter](https://github.com/meta-flutter/meta-flutter) yocto distros works now,
+  via the `--fs-layout=meta-flutter` option to `flutterpi_tool devices add`, `flutterpi_tool build`.
 - RISC-V 64-bit is now supported as a target & host platform.
 - The flutter-pi binary to bundle can now be explicitly specified using
   `--flutterpi-binary=...`
@@ -64,7 +66,12 @@ $ flutterpi_tool devices add pi@pi5 --display-size=285x190 --id=my-pi
 Device "my-pi" has been added successfully.
 ```
 
-### 3. Listing devices
+### 3. Adding a device that uses [meta-flutter](https://github.com/meta-flutter/meta-flutter)
+```console
+$ flutterpi_tool devices add root@my-yocto-device --fs-layout=meta-flutter
+```
+
+### 4. Listing devices
 ```console
 $ flutterpi_tool devices
 Found 1 wirelessly connected device:
@@ -76,7 +83,7 @@ the "--device-timeout" flag.
 ...
 ```
 
-### 4. Creating and running an app on a remote device
+### 5. Creating and running an app on a remote device
 ```console
 $ flutter create hello_world && cd hello_world
 
@@ -87,7 +94,7 @@ Installing app on device...
 ...
 ```
 
-### 5. Running the same app in profile mode
+### 6. Running the same app in profile mode
 ```
 $ flutterpi_tool run -d pi5 --profile
 ```

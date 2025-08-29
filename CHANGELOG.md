@@ -1,3 +1,8 @@
+## 0.8.1 - 2025-08-29
+- add `--fs-layout=<flutter-pi/meta-flutter>` argument to
+  `flutterpi_tool devices add` and `flutterpi_tool build`
+- internal refactors, tests & improvements
+
 ## 0.8.0 - 2025-06-13
 - add `--flutterpi-binary` argument to bundle a custom flutter-pi binary
   with the app
