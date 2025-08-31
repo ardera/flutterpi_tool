@@ -1,3 +1,7 @@
+## 0.8.2 - 2025-09-01
+- fix artifacts resolving
+- add test for artifacts resolving
+
 ## 0.8.1 - 2025-08-29
 - add `--fs-layout=<flutter-pi/meta-flutter>` argument to
   `flutterpi_tool devices add` and `flutterpi_tool build`
