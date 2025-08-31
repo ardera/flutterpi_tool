@@ -176,6 +176,7 @@ class BuildCommand extends FlutterpiCommand {
       target: targetPlatform,
       buildInfo: buildInfo,
       mainPath: targetFile,
+      artifacts: artifacts,
 
       // for `--debug-unoptimized` build mode
       unoptimized: flavor.unoptimized,
