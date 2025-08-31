@@ -655,7 +655,7 @@ abstract class FlutterpiCache extends Cache {
   Future<void> updateAll(
     Set<DevelopmentArtifact> requiredArtifacts, {
     bool offline = false,
-    @required FlutterpiHostPlatform? host,
+    FlutterpiHostPlatform? host,
     Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {},
     Set<BuildMode> runtimeModes = const {},
     Set<EngineFlavor> engineFlavors = const {},
@@ -725,7 +725,7 @@ mixin FlutterpiCacheMixin on Cache implements FlutterpiCache {
   Future<void> updateAll(
     Set<DevelopmentArtifact> requiredArtifacts, {
     bool offline = false,
-    @required FlutterpiHostPlatform? host,
+    FlutterpiHostPlatform? host,
     Set<FlutterpiTargetPlatform> flutterpiPlatforms = const {},
     Set<BuildMode> runtimeModes = const {},
     Set<EngineFlavor> engineFlavors = const {},
