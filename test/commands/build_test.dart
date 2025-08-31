@@ -12,6 +12,7 @@ import 'package:test/test.dart';
 
 import 'package:flutterpi_tool/src/cli/command_runner.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart' as fl;
+import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 
 import '../src/context.dart';
 import '../src/fake_flutter_version.dart';
@@ -633,5 +634,39 @@ void main() {
         reason: "Expected BuildSystem.build to be called",
       );
     });
+  });
+
+  test('build system artifacts is a flutterpi artifacts', () async {
+    var buildWasCalled = false;
+    appBuilder.buildFn = ({
+      required FlutterpiHostPlatform host,
+      required FlutterpiTargetPlatform target,
+      required fl.BuildInfo buildInfo,
+      required FilesystemLayout fsLayout,
+      fl.FlutterProject? project,
+      FlutterpiArtifacts? artifacts,
+      String? mainPath,
+      String manifestPath = fl.defaultManifestPath,
+      String? applicationKernelFilePath,
+      String? depfilePath,
+      Directory? outDir,
+      bool unoptimized = false,
+      bool includeDebugSymbols = false,
+      bool forceBundleFlutterpi = false,
+    }) async {
+      expect(artifacts ?? globals.artifacts, isA<FlutterpiArtifacts>());
+
+      buildWasCalled = true;
+    };
+
+    await _runInTestContext(() async {
+      await runner.run(['build']);
+    });
+
+    expect(
+      buildWasCalled,
+      isTrue,
+      reason: "Expected BuildSystem.build to be called",
+    );
   });
 }
