@@ -1,3 +1,7 @@
+## 0.9.1 - 2025-09-01
+- fix artifacts resolving
+- add test for artifacts resolving
+
 ## 0.9.0 - 2025-08-29
 - flutter 3.35 compatibility
 
