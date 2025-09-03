@@ -84,16 +84,17 @@ Future<V> runInContext<V>(
             logger: globals.logger,
             platform: globals.platform,
             operatingSystemUtils: globals.os as MoreOperatingSystemUtils,
-            sshUtils: SshUtils(
-              processUtils: globals.processUtils,
-              defaultRemote: '',
-            ),
+            sshUtils: globals.sshUtils,
             flutterpiToolConfig: globals.flutterPiToolConfig,
           ),
       AppBuilder: () => AppBuilder(
             operatingSystemUtils: globals.moreOs,
             buildSystem: globals.buildSystem,
           ),
+      SshUtils: () => SshUtils(
+            processUtils: globals.processUtils,
+            defaultRemote: '',
+          )
     },
   );
 }
