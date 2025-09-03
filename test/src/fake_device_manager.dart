@@ -72,7 +72,24 @@ class FakeDeviceManager implements fl.DeviceManager {
     bool includeDevicesUnsupportedByProject = false,
     fl.FlutterProject? flutterProject,
   }) {
-    return FakeFilter();
+    fl.FlutterProject? flutterProject;
+    if (!includeDevicesUnsupportedByProject) {
+      flutterProject = fl.FlutterProject.current();
+    }
+    if (hasSpecifiedAllDevices) {
+      return fl.DeviceDiscoverySupportFilter
+          .excludeDevicesUnsupportedByFlutterOrProjectOrAll(
+        flutterProject: flutterProject,
+      );
+    } else if (!hasSpecifiedDeviceId) {
+      return fl.DeviceDiscoverySupportFilter
+          .excludeDevicesUnsupportedByFlutterOrProject(
+        flutterProject: flutterProject,
+      );
+    } else {
+      return fl.DeviceDiscoverySupportFilter
+          .excludeDevicesUnsupportedByFlutter();
+    }
   }
 
   @override
