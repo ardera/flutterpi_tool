@@ -40,6 +40,14 @@ class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
 
   @override
   Future<fltool.FlutterCommandResult> runCommand() async {
+    final specifiedDeviceId = stringArg(
+      fltool.FlutterGlobalOptions.kDeviceIdOption,
+      global: true,
+    );
+    if (specifiedDeviceId != null) {
+      globals.deviceManager?.specifiedDeviceId = specifiedDeviceId;
+    }
+
     await populateCache();
 
     var artifacts = globals.flutterpiArtifacts;
