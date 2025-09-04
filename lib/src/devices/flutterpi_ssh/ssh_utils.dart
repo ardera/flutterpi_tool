@@ -200,6 +200,7 @@ class SshUtils {
   Future<bool> tryConnect({
     Duration? timeout,
     bool throwOnError = false,
+    String? remote,
   }) async {
     final timeoutSecondsCeiled = switch (timeout) {
       Duration(inMicroseconds: final micros) =>
@@ -209,6 +210,7 @@ class SshUtils {
     };
 
     final result = await runSsh(
+      remote: remote,
       command: null,
       extraArgs: [
         if (timeoutSecondsCeiled != null) ...[
@@ -240,22 +242,32 @@ class SshUtils {
     );
   }
 
-  Future<String> uname({Iterable<String>? args, Duration? timeout}) async {
+  Future<String> uname({
+    Iterable<String>? args,
+    Duration? timeout,
+    String? remote,
+  }) async {
     final command = ['uname', ...?args].join(' ');
 
     final result = await runSsh(
       command: command,
       throwOnError: true,
       timeout: timeout,
+      remote: remote,
     );
 
     return result.stdout.trim();
   }
 
-  Future<String> id({Iterable<String>? args, Duration? timeout}) async {
+  Future<String> id({
+    Iterable<String>? args,
+    Duration? timeout,
+    String? remote,
+  }) async {
     final command = ['id', ...?args].join(' ');
 
     final result = await runSsh(
+      remote: remote,
       command: command,
       throwOnError: true,
       timeout: timeout,
@@ -267,19 +279,235 @@ class SshUtils {
   Future<void> makeExecutable({
     Iterable<String>? args,
     Duration? timeout,
+    String? remote,
   }) async {
     final command = ['chmod', '+x', ...?args].join(' ');
 
     await runSsh(
+      remote: remote,
       command: command,
       throwOnError: true,
       timeout: timeout,
     );
   }
 
-  Future<bool> remoteUserBelongsToGroups(Iterable<String> groups) async {
-    final result = await id(args: ['-nG']);
+  Future<bool> remoteUserBelongsToGroups(
+    Iterable<String> groups, {
+    String? remote,
+  }) async {
+    final result = await id(args: ['-nG'], remote: remote);
     final userGroups = result.split(' ');
     return groups.every(userGroups.contains);
+  }
+}
+
+class RemoteSpecificSshUtils implements SshUtils {
+  RemoteSpecificSshUtils({
+    required this.inner,
+    required this.remote,
+  });
+
+  final SshUtils inner;
+  final String remote;
+
+  @override
+  String get sshExecutable => inner.sshExecutable;
+
+  @override
+  String get scpExecutable => inner.scpExecutable;
+
+  @override
+  String get defaultRemote => remote;
+
+  @override
+  ProcessUtils get processUtils => inner.processUtils;
+
+  @override
+  List<String> buildSshCommand({
+    bool? interactive = false,
+    bool? allocateTTY,
+    bool? exitOnForwardFailure,
+    Iterable<(int, int)> remotePortForwards = const [],
+    Iterable<(int, int)> localPortForwards = const [],
+    Iterable<String> extraArgs = const [],
+    String? remote,
+    String? command,
+  }) {
+    return inner.buildSshCommand(
+      interactive: interactive,
+      allocateTTY: allocateTTY,
+      exitOnForwardFailure: exitOnForwardFailure,
+      remotePortForwards: remotePortForwards,
+      localPortForwards: localPortForwards,
+      extraArgs: extraArgs,
+      remote: remote ?? this.remote,
+      command: command,
+    );
+  }
+
+  @override
+  List<String> buildUsermodAddGroupsCommand(Iterable<String> groups) {
+    return inner.buildUsermodAddGroupsCommand(groups);
+  }
+
+  @override
+  Future<RunResult> runSsh({
+    String? remote,
+    String? command,
+    Iterable<String> extraArgs = const [],
+    bool throwOnError = false,
+    String? workingDirectory,
+    Map<String, String>? environment,
+    Duration? timeout,
+    int timeoutRetries = 0,
+    bool? allocateTTY,
+    Iterable<(int, int)> localPortForwards = const [],
+    Iterable<(int, int)> remotePortForwards = const [],
+    bool? exitOnForwardFailure,
+  }) {
+    return inner.runSsh(
+      remote: remote ?? this.remote,
+      command: command,
+      extraArgs: extraArgs,
+      throwOnError: throwOnError,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      timeout: timeout,
+      timeoutRetries: timeoutRetries,
+      allocateTTY: allocateTTY,
+      localPortForwards: localPortForwards,
+      remotePortForwards: remotePortForwards,
+      exitOnForwardFailure: exitOnForwardFailure,
+    );
+  }
+
+  @override
+  Future<Process> startSsh({
+    String? remote,
+    String? command,
+    Iterable<String> extraArgs = const [],
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool? allocateTTY,
+    Iterable<(int, int)> remotePortForwards = const [],
+    Iterable<(int, int)> localPortForwards = const [],
+    bool? exitOnForwardFailure,
+    ProcessStartMode mode = ProcessStartMode.normal,
+  }) {
+    return inner.startSsh(
+      remote: remote ?? this.remote,
+      command: command,
+      extraArgs: extraArgs,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      allocateTTY: allocateTTY,
+      remotePortForwards: remotePortForwards,
+      localPortForwards: localPortForwards,
+      exitOnForwardFailure: exitOnForwardFailure,
+      mode: mode,
+    );
+  }
+
+  @override
+  Future<RunResult> scp({
+    String? remote,
+    required String localPath,
+    required String remotePath,
+    Iterable<String> extraArgs = const [],
+    bool throwOnError = false,
+    String? workingDirectory,
+    Map<String, String>? environment,
+    Duration? timeout,
+    int timeoutRetries = 0,
+    bool recursive = true,
+  }) {
+    return inner.scp(
+      remote: remote ?? this.remote,
+      localPath: localPath,
+      remotePath: remotePath,
+      extraArgs: extraArgs,
+      throwOnError: throwOnError,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      timeout: timeout,
+      timeoutRetries: timeoutRetries,
+      recursive: recursive,
+    );
+  }
+
+  @override
+  Future<bool> tryConnect({
+    Duration? timeout,
+    bool throwOnError = false,
+    String? remote,
+  }) {
+    return inner.tryConnect(
+      timeout: timeout,
+      throwOnError: throwOnError,
+      remote: remote ?? this.remote,
+    );
+  }
+
+  @override
+  Future<void> copy({
+    required String localPath,
+    required String remotePath,
+    String? remote,
+  }) {
+    return inner.copy(
+      localPath: localPath,
+      remotePath: remotePath,
+      remote: remote ?? this.remote,
+    );
+  }
+
+  @override
+  Future<String> uname({
+    Iterable<String>? args,
+    Duration? timeout,
+    String? remote,
+  }) {
+    return inner.uname(
+      args: args,
+      timeout: timeout,
+      remote: remote ?? this.remote,
+    );
+  }
+
+  @override
+  Future<String> id({
+    Iterable<String>? args,
+    Duration? timeout,
+    String? remote,
+  }) {
+    return inner.id(
+      args: args,
+      timeout: timeout,
+      remote: remote ?? this.remote,
+    );
+  }
+
+  @override
+  Future<void> makeExecutable({
+    Iterable<String>? args,
+    Duration? timeout,
+    String? remote,
+  }) {
+    return inner.makeExecutable(
+      args: args,
+      timeout: timeout,
+      remote: remote ?? this.remote,
+    );
+  }
+
+  @override
+  Future<bool> remoteUserBelongsToGroups(
+    Iterable<String> groups, {
+    String? remote,
+  }) {
+    return inner.remoteUserBelongsToGroups(
+      groups,
+      remote: remote ?? this.remote,
+    );
   }
 }
