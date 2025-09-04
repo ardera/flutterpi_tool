@@ -1,3 +1,7 @@
+## 0.9.2 - 2025-09-04
+- fix device diagnostics connecting to invalid device on `flutterpi_tool devices add`
+- fix target device specification using `flutterpi_tool run -d`
+
 ## 0.9.1 - 2025-09-01
 - fix artifacts resolving
 - add test for artifacts resolving
