@@ -94,7 +94,7 @@ Future<V> runInContext<V>(
       SshUtils: () => SshUtils(
             processUtils: globals.processUtils,
             defaultRemote: '',
-          )
+          ),
     },
   );
 }

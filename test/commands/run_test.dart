@@ -89,5 +89,5 @@ void main() {
 
 class FakeTerminal extends Fake implements fl.AnsiTerminal {
   @override
-  set usesTerminalUi(bool _usesTerminalUi) {}
+  set usesTerminalUi(bool usesTerminalUi) {}
 }
