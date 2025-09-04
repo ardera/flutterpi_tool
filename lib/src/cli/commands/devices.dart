@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:args/command_runner.dart';
 import 'package:flutterpi_tool/src/cli/command_runner.dart';
+import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/config.dart';
@@ -446,9 +447,14 @@ class DevicesAddCommand extends FlutterpiCommand {
     final diagnostics = <Diagnostic>[];
 
     if (!force) {
-      final ssh = globals.sshUtils;
+      final ssh = RemoteSpecificSshUtils(
+        inner: globals.sshUtils,
+        remote: remote,
+      );
 
-      final connected = await ssh.tryConnect(timeout: Duration(seconds: 5));
+      final connected = await ssh.tryConnect(
+        timeout: Duration(seconds: 5),
+      );
       if (!connected) {
         globals.printError(
           'Connecting to device failed. Make sure the device is reachable '
@@ -458,8 +464,9 @@ class DevicesAddCommand extends FlutterpiCommand {
         return FlutterCommandResult.fail();
       }
 
-      final hasPermissions =
-          await ssh.remoteUserBelongsToGroups(['video', 'input', 'render']);
+      final hasPermissions = await ssh.remoteUserBelongsToGroups(
+        ['video', 'input', 'render'],
+      );
       if (!hasPermissions) {
         final addGroupsCommand = ssh
             .buildSshCommand(

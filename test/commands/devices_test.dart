@@ -82,14 +82,18 @@ class MockSshUtils implements SshUtils {
 
   String? defaultRemoteValue;
 
-  Future<String> Function({Iterable<String>? args, Duration? timeout})? idFn;
+  Future<String> Function(
+      {Iterable<String>? args, String? remote, Duration? timeout})? idFn;
 
-  Future<void> Function({Iterable<String>? args, Duration? timeout})?
-      makeExecutableFn;
+  Future<void> Function(
+      {Iterable<String>? args,
+      String? remote,
+      Duration? timeout})? makeExecutableFn;
 
   fltool.ProcessUtils? processUtilsValue;
 
-  Future<bool> Function(Iterable<String> groups)? remoteUserBelongsToGroupsFn;
+  Future<bool> Function(Iterable<String> groups, {String? remote})?
+      remoteUserBelongsToGroupsFn;
 
   Future<fltool.RunResult> Function({
     String? remote,
@@ -135,9 +139,11 @@ class MockSshUtils implements SshUtils {
     fltool.ProcessStartMode mode,
   })? startSshFn;
 
-  Future<bool> Function({Duration? timeout, bool throwOnError})? tryConnectFn;
+  Future<bool> Function({String? remote, Duration? timeout, bool throwOnError})?
+      tryConnectFn;
 
-  Future<String> Function({Iterable<String>? args, Duration? timeout})? unameFn;
+  Future<String> Function(
+      {Iterable<String>? args, String? remote, Duration? timeout})? unameFn;
 
   @override
   List<String> buildSshCommand({
@@ -196,17 +202,19 @@ class MockSshUtils implements SshUtils {
   }
 
   @override
-  Future<String> id({Iterable<String>? args, Duration? timeout}) {
+  Future<String> id(
+      {Iterable<String>? args, String? remote, Duration? timeout}) {
     if (idFn == null) throw UnimplementedError('idFn is not set');
-    return idFn!(args: args, timeout: timeout);
+    return idFn!(args: args, remote: remote, timeout: timeout);
   }
 
   @override
-  Future<void> makeExecutable({Iterable<String>? args, Duration? timeout}) {
+  Future<void> makeExecutable(
+      {Iterable<String>? args, String? remote, Duration? timeout}) {
     if (makeExecutableFn == null) {
       throw UnimplementedError('makeExecutableFn is not set');
     }
-    return makeExecutableFn!(args: args, timeout: timeout);
+    return makeExecutableFn!(args: args, remote: remote, timeout: timeout);
   }
 
   @override
@@ -218,11 +226,12 @@ class MockSshUtils implements SshUtils {
   }
 
   @override
-  Future<bool> remoteUserBelongsToGroups(Iterable<String> groups) {
+  Future<bool> remoteUserBelongsToGroups(Iterable<String> groups,
+      {String? remote}) {
     if (remoteUserBelongsToGroupsFn == null) {
       throw UnimplementedError('remoteUserBelongsToGroupsFn is not set');
     }
-    return remoteUserBelongsToGroupsFn!(groups);
+    return remoteUserBelongsToGroupsFn!(groups, remote: remote);
   }
 
   @override
@@ -330,17 +339,20 @@ class MockSshUtils implements SshUtils {
   }
 
   @override
-  Future<bool> tryConnect({Duration? timeout, bool throwOnError = false}) {
+  Future<bool> tryConnect(
+      {String? remote, Duration? timeout, bool throwOnError = false}) {
     if (tryConnectFn == null) {
       throw UnimplementedError('tryConnectFn is not set');
     }
-    return tryConnectFn!(timeout: timeout, throwOnError: throwOnError);
+    return tryConnectFn!(
+        remote: remote, timeout: timeout, throwOnError: throwOnError);
   }
 
   @override
-  Future<String> uname({Iterable<String>? args, Duration? timeout}) {
+  Future<String> uname(
+      {Iterable<String>? args, String? remote, Duration? timeout}) {
     if (unameFn == null) throw UnimplementedError('unameFn is not set');
-    return unameFn!(args: args, timeout: timeout);
+    return unameFn!(args: args, remote: remote, timeout: timeout);
   }
 }
 
@@ -375,11 +387,11 @@ void main() {
     runner = src.createFlutterpiCommandRunner();
     config = MockConfig();
     sshUtils = MockSshUtils()
-      ..remoteUserBelongsToGroupsFn = (groups) async {
+      ..remoteUserBelongsToGroupsFn = (groups, {remote}) async {
         // Mock implementation that always returns true for testing
         return true;
       }
-      ..tryConnectFn = ({timeout, throwOnError = false}) async {
+      ..tryConnectFn = ({remote, timeout, throwOnError = false}) async {
         // Mock implementation that always returns true for testing
         return true;
       };
@@ -750,6 +762,7 @@ void main() {
     group('diagnostics', () {
       test('attempts connecting to new device', () async {
         var tryConnectWasCalled = false;
+        var remoteUserBelongsToGroupsWasCalled = false;
 
         config
           ..addDeviceFn = (entry) {}
@@ -757,8 +770,20 @@ void main() {
             return false;
           };
 
-        sshUtils.tryConnectFn = ({timeout, throwOnError = false}) async {
+        sshUtils.tryConnectFn = ({
+          timeout,
+          throwOnError = false,
+          remote,
+        }) async {
           tryConnectWasCalled = true;
+          expect(remote, 'test-device');
+          return true;
+        };
+
+        sshUtils.remoteUserBelongsToGroupsFn = (groups, {remote}) async {
+          remoteUserBelongsToGroupsWasCalled = true;
+          expect(groups, unorderedEquals(['render', 'video', 'input']));
+          expect(remote, equals('test-device'));
           return true;
         };
 
@@ -776,6 +801,11 @@ void main() {
           isTrue,
           reason: 'SshUtils.tryConnect should have been called',
         );
+        expect(
+          remoteUserBelongsToGroupsWasCalled,
+          isTrue,
+          reason: 'SshUtils.remoteUserBelongsToGroups should have been called',
+        );
       });
 
       test('prints error when connecting to device fails', () async {
@@ -785,7 +815,11 @@ void main() {
             return false;
           };
 
-        sshUtils.tryConnectFn = ({timeout, throwOnError = false}) async {
+        sshUtils.tryConnectFn = ({
+          timeout,
+          throwOnError = false,
+          remote,
+        }) async {
           expect(throwOnError, isFalse);
           return false;
         };
@@ -811,7 +845,11 @@ void main() {
             return false;
           };
 
-        sshUtils.tryConnectFn = ({timeout, throwOnError = false}) async {
+        sshUtils.tryConnectFn = ({
+          timeout,
+          throwOnError = false,
+          remote,
+        }) async {
           fail('SshUtils.tryConnect should not have been called');
         };
 
