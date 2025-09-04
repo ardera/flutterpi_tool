@@ -434,6 +434,14 @@ mixin FlutterpiCommandMixin on fl.FlutterCommand {
   @override
   Future<void> run() async {
     return await runWithContext(() async {
+      final specifiedDeviceId = stringArg(
+        fl.FlutterGlobalOptions.kDeviceIdOption,
+        global: true,
+      );
+      if (specifiedDeviceId != null) {
+        globals.deviceManager?.specifiedDeviceId = specifiedDeviceId;
+      }
+
       await verifyThenRunCommand(null);
     });
   }
