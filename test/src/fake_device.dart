@@ -116,9 +116,6 @@ class FakeDevice implements fl.Device {
   Future<String> sdkNameAndVersion;
 
   @override
-  bool supportsFastStart = true;
-
-  @override
   bool supportsFlavors = true;
 
   @override
@@ -316,4 +313,7 @@ class FakeDevice implements fl.Device {
     }
     fail('Should not access uninstallApp');
   }
+
+  @override
+  Uri? devToolsUri;
 }

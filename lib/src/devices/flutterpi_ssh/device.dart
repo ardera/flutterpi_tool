@@ -677,9 +677,6 @@ class FlutterpiSshDevice extends fl.Device {
   }
 
   @override
-  bool get supportsFastStart => false;
-
-  @override
   bool get supportsFlavors => false;
 
   @override

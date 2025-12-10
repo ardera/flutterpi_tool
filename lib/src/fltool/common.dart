@@ -85,3 +85,5 @@ export 'package:flutter_tools/src/base/context.dart';
 export 'package:flutter_tools/src/build_system/targets/icon_tree_shaker.dart';
 export 'package:flutter_tools/src/build_system/exceptions.dart';
 export 'package:flutter_tools/src/build_system/targets/assets.dart';
+export 'package:flutter_tools/src/web/devfs_config.dart';
+export 'package:flutter_tools/src/build_system/targets/native_assets.dart';

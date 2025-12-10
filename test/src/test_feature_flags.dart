@@ -15,6 +15,9 @@ class TestFeatureFlags implements fl.FeatureFlags {
     this.isSwiftPackageManagerEnabled = false,
     this.isOmitLegacyVersionFileEnabled = false,
     this.isLLDBDebuggingEnabled = false,
+    this.isDartDataAssetsEnabled = false,
+    this.isUISceneMigrationEnabled = false,
+    this.isWindowingEnabled = false,
   });
 
   @override
@@ -57,6 +60,15 @@ class TestFeatureFlags implements fl.FeatureFlags {
   final bool isLLDBDebuggingEnabled;
 
   @override
+  final bool isDartDataAssetsEnabled;
+
+  @override
+  final bool isUISceneMigrationEnabled;
+
+  @override
+  final bool isWindowingEnabled;
+
+  @override
   bool isEnabled(fl.Feature feature) {
     return switch (feature) {
       fl.flutterWebFeature => isWebEnabled,
@@ -72,6 +84,9 @@ class TestFeatureFlags implements fl.FeatureFlags {
       fl.swiftPackageManager => isSwiftPackageManagerEnabled,
       fl.omitLegacyVersionFile => isOmitLegacyVersionFileEnabled,
       fl.lldbDebugging => isLLDBDebuggingEnabled,
+      fl.dartDataAssets => isDartDataAssetsEnabled,
+      fl.uiSceneMigration => isUISceneMigrationEnabled,
+      fl.windowingFeature => isWindowingEnabled,
       _ => false,
     };
   }
@@ -91,6 +106,9 @@ class TestFeatureFlags implements fl.FeatureFlags {
         fl.swiftPackageManager,
         fl.omitLegacyVersionFile,
         fl.lldbDebugging,
+        fl.dartDataAssets,
+        fl.uiSceneMigration,
+        fl.windowingFeature,
       ];
 
   @override

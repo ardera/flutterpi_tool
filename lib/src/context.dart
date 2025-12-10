@@ -61,6 +61,7 @@ Future<V> runInContext<V>(
           verbose: verbose,
           prefixedErrors: false,
           windows: globals.platform.isWindows,
+          widgetPreviews: false,
         );
       },
       fl.Artifacts: () => CachedFlutterpiArtifacts(

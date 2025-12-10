@@ -22,6 +22,9 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
             buildMode: BuildMode.release,
           ),
           CopyIcudtl(layout: layout),
+          const DartBuildForNative(),
+          const KernelSnapshot(),
+          const InstallCodeAssets(),
           CopyFlutterpiEngine(
             target: target,
             flavor: EngineFlavor.release,
@@ -59,6 +62,9 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
             buildMode: BuildMode.profile,
           ),
           CopyIcudtl(layout: layout),
+          const DartBuildForNative(),
+          const KernelSnapshot(),
+          const InstallCodeAssets(),
           CopyFlutterpiEngine(
             target: target,
             flavor: EngineFlavor.profile,
@@ -96,6 +102,9 @@ class DebugBundleFlutterpiAssets extends CompositeTarget {
             buildMode: BuildMode.debug,
           ),
           CopyIcudtl(layout: layout),
+          const DartBuildForNative(),
+          const KernelSnapshot(),
+          const InstallCodeAssets(),
           CopyFlutterpiEngine(
             target: target,
             flavor: unoptimized ? EngineFlavor.debugUnopt : EngineFlavor.debug,
@@ -522,9 +531,10 @@ class CopyFlutterAssets extends Target {
 
     final versionInfo = getVersionInfo(environment.defines);
 
+    final dartHookResult = await DartBuild.loadHookResult(environment);
+
     final depfile = await copyAssets(
-      environment,
-      outputDir,
+      environment, outputDir,
 
       // this is not really used internally,
       // copyAssets will just do something special if a web platform is
@@ -536,7 +546,11 @@ class CopyFlutterAssets extends Target {
       buildMode: buildMode,
       additionalContent: <String, DevFSContent>{
         'version.json': DevFSStringContent(versionInfo),
+        'NativeAssetsManifest.json': DevFSFileContent(
+          environment.buildDir.childFile('native_assets.json'),
+        ),
       },
+      dartHookResult: dartHookResult,
     );
 
     environment.depFileService.writeToFile(

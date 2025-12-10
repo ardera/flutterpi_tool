@@ -1,3 +1,8 @@
+## unreleased
+
+- support flutter 3.38
+- (untested) support for native assets
+
 ## 0.9.2 - 2025-09-04
 - fix device diagnostics connecting to invalid device on `flutterpi_tool devices add`
 - fix target device specification using `flutterpi_tool run -d`

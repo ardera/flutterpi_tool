@@ -18,7 +18,9 @@ class RunCommand extends fltool.RunCommand with FlutterpiCommandMixin {
 
   @protected
   @override
-  Future<fltool.DebuggingOptions> createDebuggingOptions(bool webMode) async {
+  Future<fltool.DebuggingOptions> createDebuggingOptions({
+    fltool.WebDevServerConfig? webDevServerConfig,
+  }) async {
     final buildInfo = await getBuildInfo();
 
     if (buildInfo.mode.isRelease) {
