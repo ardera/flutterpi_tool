@@ -96,6 +96,7 @@ Future<V> runInContext<V>(
             processUtils: globals.processUtils,
             defaultRemote: '',
           ),
+      fl.FlutterHookRunner: () => fl.FlutterHookRunnerNative(),
     },
   );
 }
