@@ -113,9 +113,29 @@ class ExtendedEnvironment implements Environment {
   final MoreOperatingSystemUtils operatingSystemUtils;
 
   @override
+  // In 3.38.4 this overrides, in 3.38.3 and before this is a new method.
+  // ignore: override_on_non_overriding_member
   ExtendedEnvironment copyWith({Directory? outputDir}) {
     return ExtendedEnvironment.wrap(
-      delegate: _delegate.copyWith(outputDir: outputDir),
+      // can't use _delegate.copyWith because it doesn't exist in 3.38.3 and before
+      delegate: Environment(
+        projectDir: projectDir,
+        packageConfigPath: packageConfigPath,
+        outputDir: outputDir ?? this.outputDir,
+        cacheDir: cacheDir,
+        flutterRootDir: flutterRootDir,
+        fileSystem: fileSystem,
+        logger: logger,
+        artifacts: artifacts,
+        processManager: processManager,
+        platform: platform,
+        analytics: analytics,
+        generateDartPluginRegistry: generateDartPluginRegistry,
+        engineVersion: engineVersion,
+        buildDir: buildDir,
+        defines: defines,
+        inputs: inputs,
+      ),
       operatingSystemUtils: operatingSystemUtils,
       artifacts: artifacts,
     );
