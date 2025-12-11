@@ -11,9 +11,14 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.TOKEN }}
     steps:
       - uses: actions/checkout@v4
       

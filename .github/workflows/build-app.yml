@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build Flutter-Pi Bundle (${{ matrix.arch }}, ${{ matrix.cpu}})
@@ -28,6 +31,8 @@ jobs:
             cpu: pi3
           - arch: arm64
             cpu: pi4
+    env:
+      GITHUB_TOKEN: ${{ secrets.TOKEN }}
     steps:
       - uses: actions/checkout@v4
       
