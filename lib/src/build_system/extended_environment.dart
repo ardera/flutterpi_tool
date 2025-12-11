@@ -111,4 +111,13 @@ class ExtendedEnvironment implements Environment {
   final FlutterpiArtifacts artifacts;
 
   final MoreOperatingSystemUtils operatingSystemUtils;
+
+  @override
+  ExtendedEnvironment copyWith({Directory? outputDir}) {
+    return ExtendedEnvironment.wrap(
+      delegate: _delegate.copyWith(outputDir: outputDir),
+      operatingSystemUtils: operatingSystemUtils,
+      artifacts: artifacts,
+    );
+  }
 }
