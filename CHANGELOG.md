@@ -1,3 +1,8 @@
+## unreleased
+
+- flutter 3.38.4 compatibility
+- fix hook results not rebuilding on hot reload
+
 ## 0.10.0 - 2025-12-10
 - support flutter 3.38
 
