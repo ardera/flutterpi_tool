@@ -87,3 +87,5 @@ export 'package:flutter_tools/src/build_system/exceptions.dart';
 export 'package:flutter_tools/src/build_system/targets/assets.dart';
 export 'package:flutter_tools/src/web/devfs_config.dart';
 export 'package:flutter_tools/src/build_system/targets/native_assets.dart';
+export 'package:flutter_tools/src/hook_runner.dart';
+export 'package:flutter_tools/src/build_system/targets/hook_runner_native.dart';

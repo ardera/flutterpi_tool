@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build Flutter-Pi Bundle (${{ matrix.arch }}, ${{ matrix.cpu}})
@@ -35,7 +38,7 @@ jobs:
         with:
           cache: true
           channel: stable
-          flutter-version: 3.38.0
+          flutter-version: 3.38.4
       
       - name: Install dependencies & Activate as global executable
         run: |
@@ -47,19 +50,21 @@ jobs:
 
       - name: Run flutterpi_tool build
         working-directory: test_app
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
         run: |
           echo '::group::flutterpi_tool build ... --debug-unoptimized'
-          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --debug-unoptimized --debug-symbols
+          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --debug-unoptimized --debug-symbols --verbose
           echo '::endgroup::'
 
           echo '::group::flutterpi_tool build ... --debug'
-          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --debug --debug-symbols
+          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --debug --debug-symbols --verbose
           echo '::endgroup::'
           
           echo '::group::flutterpi_tool build ... --profile'
-          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --profile --debug-symbols
+          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --profile --debug-symbols --verbose
           echo '::endgroup::'
 
           echo '::group::flutterpi_tool build ... --release'
-          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --release --debug-symbols
+          flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --release --debug-symbols --verbose
           echo '::endgroup::'
