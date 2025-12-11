@@ -39,12 +39,11 @@ mixin FlutterpiCommandMixin on fl.FlutterCommand {
     httpClient ??= http.Client();
 
     final String? token;
-    if (argParser.options.containsKey('github-artifacts-auth-token')) {
-      token = stringArg('github-artifacts-auth-token');
-    } else if (globals.platform.environment['GITHUB_TOKEN']
-        case final envToken?) {
+    if (globals.platform.environment['GITHUB_TOKEN'] case final envToken?) {
       globals.logger.printTrace('Using GITHUB_TOKEN from environment.');
       token = envToken;
+    } else if (argParser.options.containsKey('github-artifacts-auth-token')) {
+      token = stringArg('github-artifacts-auth-token');
     } else {
       token = null;
     }
