@@ -43,6 +43,7 @@ mixin FlutterpiCommandMixin on fl.FlutterCommand {
       token = stringArg('github-artifacts-auth-token');
     } else if (globals.platform.environment['GITHUB_TOKEN']
         case final envToken?) {
+      globals.logger.printTrace('Using GITHUB_TOKEN from environment.');
       token = envToken;
     } else {
       token = null;
