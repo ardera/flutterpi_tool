@@ -35,7 +35,7 @@ jobs:
         with:
           cache: true
           channel: stable
-          flutter-version: 3.38.0
+          flutter-version: 3.38.4
       
       - name: Install dependencies & Activate as global executable
         run: |
