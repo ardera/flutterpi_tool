@@ -727,7 +727,8 @@ class FlutterpiSshDevice extends fl.Device {
         FlutterpiTargetPlatform.genericRiscv64 => fl.TargetPlatform.linux_arm64,
         FlutterpiTargetPlatform.genericAArch64 ||
         FlutterpiTargetPlatform.pi3_64 ||
-        FlutterpiTargetPlatform.pi4_64 =>
+        FlutterpiTargetPlatform.pi4_64 ||
+        FlutterpiTargetPlatform.pi5_64 =>
           fl.TargetPlatform.linux_arm64,
         FlutterpiTargetPlatform.genericX64 => fl.TargetPlatform.linux_x64,
       };
