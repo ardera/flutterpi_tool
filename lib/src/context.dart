@@ -15,6 +15,7 @@ import 'package:flutterpi_tool/src/fltool/common.dart' as fl;
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
 import 'package:flutterpi_tool/src/github.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
+import 'package:github/github.dart' as gh;
 
 // ignore: implementation_imports
 import 'package:flutter_tools/src/context_runner.dart' as fl;
@@ -22,13 +23,30 @@ import 'package:flutter_tools/src/context_runner.dart' as fl;
 Future<V> runInContext<V>(
   FutureOr<V> Function() fn, {
   bool verbose = false,
+  String? githubArtifactsRepo,
+  String? githubArtifactsRunId,
+  String? githubArtifactsEngineVersion,
+  String? githubArtifactsAuthToken,
 }) async {
   return await fl.runInContext(
     fn,
     overrides: {
       Analytics: () => const NoOpAnalytics(),
       fl.TemplateRenderer: () => const fl.MustacheTemplateRenderer(),
-      fl.Cache: () => FlutterpiCache(
+      fl.Cache: () {
+        // Check environment variable for token if not provided
+        final token = githubArtifactsAuthToken ??
+            globals.platform.environment['GITHUB_TOKEN'];
+
+        final github = MyGithub.caching(
+          httpClient: http.IOClient(
+            globals.httpClientFactory?.call() ?? io.HttpClient(),
+          ),
+          auth: token != null ? gh.Authentication.bearerToken(token) : null,
+        );
+
+        if (githubArtifactsRunId != null) {
+          return FlutterpiCache.fromWorkflow(
             hooks: globals.shutdownHooks,
             logger: globals.logger,
             fileSystem: globals.fs,
@@ -36,12 +54,29 @@ Future<V> runInContext<V>(
             osUtils: globals.os as MoreOperatingSystemUtils,
             projectFactory: globals.projectFactory,
             processManager: globals.processManager,
-            github: MyGithub.caching(
-              httpClient: http.IOClient(
-                globals.httpClientFactory?.call() ?? io.HttpClient(),
-              ),
-            ),
-          ),
+            repo: githubArtifactsRepo != null
+                ? gh.RepositorySlug.full(githubArtifactsRepo)
+                : null,
+            runId: githubArtifactsRunId,
+            availableEngineVersion: githubArtifactsEngineVersion,
+            github: github,
+          );
+        } else {
+          return FlutterpiCache(
+            hooks: globals.shutdownHooks,
+            logger: globals.logger,
+            fileSystem: globals.fs,
+            platform: globals.platform,
+            osUtils: globals.os as MoreOperatingSystemUtils,
+            projectFactory: globals.projectFactory,
+            processManager: globals.processManager,
+            repo: githubArtifactsRepo != null
+                ? gh.RepositorySlug.full(githubArtifactsRepo)
+                : null,
+            github: github,
+          );
+        }
+      },
       fl.OperatingSystemUtils: () => MoreOperatingSystemUtils(
             fileSystem: globals.fs,
             logger: globals.logger,

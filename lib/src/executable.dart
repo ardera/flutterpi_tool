@@ -36,6 +36,20 @@ FlutterpiToolCommandRunner createFlutterpiCommandRunner({
   return runner;
 }
 
+// Helper to extract option value from args
+String? _extractOption(List<String> args, String optionName) {
+  for (var i = 0; i < args.length; i++) {
+    final arg = args[i];
+    if (arg == '--$optionName' && i + 1 < args.length) {
+      return args[i + 1];
+    }
+    if (arg.startsWith('--$optionName=')) {
+      return arg.substring('--$optionName='.length);
+    }
+  }
+  return null;
+}
+
 Future<void> main(List<String> args) async {
   final verbose =
       args.contains('-v') || args.contains('--verbose') || args.contains('-vv');
@@ -49,6 +63,14 @@ Future<void> main(List<String> args) async {
       (args.isNotEmpty && args.first == 'help') ||
       (args.length == 1 && verbose);
   final verboseHelp = help && verbose;
+
+  // Parse github-artifacts options early (before context is set up)
+  final githubArtifactsRepo = _extractOption(args, 'github-artifacts-repo');
+  final githubArtifactsRunId = _extractOption(args, 'github-artifacts-runid');
+  final githubArtifactsEngineVersion =
+      _extractOption(args, 'github-artifacts-engine-version');
+  final githubArtifactsAuthToken =
+      _extractOption(args, 'github-artifacts-auth-token');
 
   final runner = createFlutterpiCommandRunner(verboseHelp: verboseHelp);
 
@@ -86,5 +108,9 @@ Future<void> main(List<String> args) async {
       }
     },
     verbose: verbose,
+    githubArtifactsRepo: githubArtifactsRepo,
+    githubArtifactsRunId: githubArtifactsRunId,
+    githubArtifactsEngineVersion: githubArtifactsEngineVersion,
+    githubArtifactsAuthToken: githubArtifactsAuthToken,
   );
 }
