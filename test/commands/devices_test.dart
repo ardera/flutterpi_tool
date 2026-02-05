@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:args/command_runner.dart';
 import 'package:file/memory.dart';
 import 'package:file/src/interface/file_system.dart';
 
@@ -780,6 +781,185 @@ void main() {
           isTrue,
           reason: 'addDeviceFn should have been called',
         );
+      });
+    });
+
+    group('rotation', () {
+      test('default (0 degrees)', () async {
+        var addDeviceWasCalled = false;
+        config
+          ..addDeviceFn = (entry) {
+            expect(
+              entry,
+              src.DeviceConfigEntry(
+                id: 'test-device',
+                sshExecutable: null,
+                sshRemote: 'test-device',
+                remoteInstallPath: null,
+                rotation: 0,
+              ),
+            );
+            addDeviceWasCalled = true;
+          }
+          ..containsDeviceFn = (id) {
+            return false;
+          };
+
+        await _runInTestContext(() async {
+          await runner.run(['devices', 'add', 'test-device', '--rotation=0']);
+        });
+
+        expect(
+          addDeviceWasCalled,
+          isTrue,
+          reason: 'addDeviceFn should have been called',
+        );
+      });
+
+      test('90 degrees', () async {
+        var addDeviceWasCalled = false;
+        config
+          ..addDeviceFn = (entry) {
+            expect(
+              entry,
+              src.DeviceConfigEntry(
+                id: 'test-device',
+                sshExecutable: null,
+                sshRemote: 'test-device',
+                remoteInstallPath: null,
+                filesystemLayout: FilesystemLayout.flutterPi,
+                rotation: 90,
+              ),
+            );
+            addDeviceWasCalled = true;
+          }
+          ..containsDeviceFn = (id) {
+            return false;
+          };
+
+        await _runInTestContext(() async {
+          await runner.run(['devices', 'add', 'test-device', '--rotation=90']);
+        });
+        expect(
+          addDeviceWasCalled,
+          isTrue,
+          reason: 'addDeviceFn should have been called',
+        );
+      });
+
+      test('180 degrees', () async {
+        var addDeviceWasCalled = false;
+        config
+          ..addDeviceFn = (entry) {
+            expect(
+              entry,
+              src.DeviceConfigEntry(
+                id: 'test-device',
+                sshExecutable: null,
+                sshRemote: 'test-device',
+                remoteInstallPath: null,
+                filesystemLayout: FilesystemLayout.flutterPi,
+                rotation: 180,
+              ),
+            );
+            addDeviceWasCalled = true;
+          }
+          ..containsDeviceFn = (id) {
+            return false;
+          };
+
+        await _runInTestContext(() async {
+          await runner.run(['devices', 'add', 'test-device', '--rotation=180']);
+        });
+
+        expect(
+          addDeviceWasCalled,
+          isTrue,
+          reason: 'addDeviceFn should have been called',
+        );
+      });
+
+      test('270 degrees', () async {
+        var addDeviceWasCalled = false;
+        config
+          ..addDeviceFn = (entry) {
+            expect(
+              entry,
+              src.DeviceConfigEntry(
+                id: 'test-device',
+                sshExecutable: null,
+                sshRemote: 'test-device',
+                remoteInstallPath: null,
+                filesystemLayout: FilesystemLayout.flutterPi,
+                rotation: 270,
+              ),
+            );
+            addDeviceWasCalled = true;
+          }
+          ..containsDeviceFn = (id) {
+            return false;
+          };
+
+        await _runInTestContext(() async {
+          await runner.run(['devices', 'add', 'test-device', '--rotation=270']);
+        });
+
+        expect(
+          addDeviceWasCalled,
+          isTrue,
+          reason: 'addDeviceFn should have been called',
+        );
+      });
+
+      test('without rotation flag (should be null)', () async {
+        var addDeviceWasCalled = false;
+        config
+          ..addDeviceFn = (entry) {
+            expect(
+              entry,
+              src.DeviceConfigEntry(
+                id: 'test-device',
+                sshExecutable: null,
+                sshRemote: 'test-device',
+                remoteInstallPath: null,
+                filesystemLayout: FilesystemLayout.flutterPi,
+                rotation: null, // No rotation specified
+              ),
+            );
+            addDeviceWasCalled = true;
+          }
+          ..containsDeviceFn = (id) {
+            return false;
+          };
+
+        await _runInTestContext(() async {
+          await runner.run(['devices', 'add', 'test-device']);
+        });
+
+        expect(
+          addDeviceWasCalled,
+          isTrue,
+          reason: 'addDeviceFn should have been called',
+        );
+      });
+      test('179 degrees (should fail - invalid value)', () async {
+        config
+          ..addDeviceFn = (entry) {
+            fail(
+              'addDeviceFn should not have been called with invalid rotation',
+            );
+          }
+          ..containsDeviceFn = (id) {
+            return false;
+          };
+
+        await _runInTestContext(() async {
+          expect(
+            () async => await runner
+                .run(['devices', 'add', 'test-device', '--rotation=179']),
+            throwsA(isA<UsageException>()),
+          );
+        });
       });
     });
 

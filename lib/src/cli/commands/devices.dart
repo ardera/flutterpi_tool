@@ -410,6 +410,7 @@ class DevicesAddCommand extends FlutterpiCommand {
     usesDummyDisplayArg();
     usesSshRemoteNonOptionArg();
     usesFilesystemLayoutArg();
+    usesRotationArg();
   }
 
   @override
@@ -500,6 +501,7 @@ class DevicesAddCommand extends FlutterpiCommand {
         useDummyDisplay: useDummyDisplay,
         dummyDisplaySize: dummyDisplaySize,
         filesystemLayout: fsLayout,
+        rotation: rotation?.toInt(),
       ),
     );
 
