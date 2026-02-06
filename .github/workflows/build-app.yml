@@ -2,19 +2,25 @@ name: Build Test App
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
 
+env:
+  FLUTTER_VERSION: 3.38.4
+
 jobs:
   build:
     name: Build Flutter-Pi Bundle (${{ matrix.arch }}, ${{ matrix.cpu}})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
+        runner:
+          - windows-latest
+          - ubuntu-latest
         arch:
           - arm
           - arm64
@@ -33,13 +39,13 @@ jobs:
             cpu: pi4
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: subosito/flutter-action@v2
         with:
           cache: true
           channel: stable
-          flutter-version: 3.38.4
-      
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
       - name: Install dependencies & Activate as global executable
         run: |
           flutter pub get
@@ -60,7 +66,7 @@ jobs:
           echo '::group::flutterpi_tool build ... --debug'
           flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --debug --debug-symbols --verbose
           echo '::endgroup::'
-          
+
           echo '::group::flutterpi_tool build ... --profile'
           flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --profile --debug-symbols --verbose
           echo '::endgroup::'
