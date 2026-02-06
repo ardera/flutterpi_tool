@@ -269,7 +269,8 @@ void main() {
           expect(
             environment.outputDir.path,
             equals(
-                p.join('build', 'flutter-pi', 'meta-flutter-riscv64-generic')),
+              p.join('build', 'flutter-pi', 'meta-flutter-riscv64-generic'),
+            ),
           );
 
           buildWasCalled = true;
@@ -492,8 +493,10 @@ void main() {
 
       expect(
         bundle.binaries.map(
-          (file) => p.relative(file.path,
-              from: p.join('build', 'flutter-pi', 'riscv64-generic')),
+          (file) => p.relative(
+            file.path,
+            from: p.join('build', 'flutter-pi', 'riscv64-generic'),
+          ),
         ),
         unorderedEquals([
           'flutter-pi',
@@ -526,8 +529,10 @@ void main() {
 
       expect(
         bundle.binaries.map(
-          (file) => p.relative(file.path,
-              from: p.join('build', 'flutter-pi', 'riscv64-generic')),
+          (file) => p.relative(
+            file.path,
+            from: p.join('build', 'flutter-pi', 'riscv64-generic'),
+          ),
         ),
         unorderedEquals([
           'flutter-pi',
