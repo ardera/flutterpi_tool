@@ -123,7 +123,7 @@ void main() {
     }) async {
       expect(
         environment.defines[fl.kTargetFile],
-        equals('lib/main_flutterpi.dart'),
+        equals(p.join('lib', 'main_flutterpi.dart')),
       );
 
       buildWasCalled = true;
@@ -136,7 +136,7 @@ void main() {
         target: FlutterpiTargetPlatform.genericRiscv64,
         buildInfo: fl.BuildInfo.debug,
         fsLayout: FilesystemLayout.flutterPi,
-        mainPath: 'lib/main_flutterpi.dart',
+        mainPath: p.join('lib', 'main_flutterpi.dart'),
       ),
     );
 
@@ -268,7 +268,8 @@ void main() {
         }) async {
           expect(
             environment.outputDir.path,
-            equals('build/flutter-pi/meta-flutter-riscv64-generic'),
+            equals(
+                p.join('build', 'flutter-pi', 'meta-flutter-riscv64-generic')),
           );
 
           buildWasCalled = true;
@@ -375,7 +376,7 @@ void main() {
         }) async {
           expect(
             environment.outputDir.path,
-            equals('build/flutter-pi/riscv64-generic'),
+            equals(p.join('build', 'flutter-pi', 'riscv64-generic')),
           );
 
           buildWasCalled = true;
@@ -491,8 +492,8 @@ void main() {
 
       expect(
         bundle.binaries.map(
-          (file) =>
-              p.relative(file.path, from: 'build/flutter-pi/riscv64-generic'),
+          (file) => p.relative(file.path,
+              from: p.join('build', 'flutter-pi', 'riscv64-generic')),
         ),
         unorderedEquals([
           'flutter-pi',
@@ -525,8 +526,8 @@ void main() {
 
       expect(
         bundle.binaries.map(
-          (file) =>
-              p.relative(file.path, from: 'build/flutter-pi/riscv64-generic'),
+          (file) => p.relative(file.path,
+              from: p.join('build', 'flutter-pi', 'riscv64-generic')),
         ),
         unorderedEquals([
           'flutter-pi',
@@ -560,11 +561,11 @@ void main() {
         bundle.binaries.map(
           (file) => p.relative(
             file.path,
-            from: 'build/flutter-pi/meta-flutter-riscv64-generic',
+            from: p.join('build', 'flutter-pi', 'meta-flutter-riscv64-generic'),
           ),
         ),
         unorderedEquals([
-          'lib/libflutter_engine.so',
+          p.join('lib', 'libflutter_engine.so'),
         ]),
       );
     });
@@ -595,12 +596,12 @@ void main() {
         bundle.binaries.map(
           (file) => p.relative(
             file.path,
-            from: 'build/flutter-pi/meta-flutter-riscv64-generic',
+            from: p.join('build', 'flutter-pi', 'meta-flutter-riscv64-generic'),
           ),
         ),
         unorderedEquals([
-          'bin/flutter-pi',
-          'lib/libflutter_engine.so',
+          p.join('bin', 'flutter-pi'),
+          p.join('lib', 'libflutter_engine.so'),
         ]),
       );
     });
@@ -631,12 +632,12 @@ void main() {
         bundle.binaries.map(
           (file) => p.relative(
             file.path,
-            from: 'build/flutter-pi/meta-flutter-riscv64-generic',
+            from: p.join('build', 'flutter-pi', 'meta-flutter-riscv64-generic'),
           ),
         ),
         unorderedEquals([
-          'lib/libflutter_engine.dbgsyms',
-          'lib/libflutter_engine.so',
+          p.join('lib', 'libflutter_engine.dbgsyms'),
+          p.join('lib', 'libflutter_engine.so'),
         ]),
       );
     });
