@@ -7,6 +7,7 @@ import 'package:flutterpi_tool/src/build_system/build_app.dart';
 import 'package:flutterpi_tool/src/config.dart';
 import 'package:flutterpi_tool/src/devices/device_manager.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/ssh_utils.dart';
+import 'package:github/github.dart' as gh;
 import 'package:unified_analytics/unified_analytics.dart';
 import 'package:http/io_client.dart' as http;
 
@@ -28,20 +29,28 @@ Future<V> runInContext<V>(
     overrides: {
       Analytics: () => const NoOpAnalytics(),
       fl.TemplateRenderer: () => const fl.MustacheTemplateRenderer(),
-      fl.Cache: () => FlutterpiCache(
-            hooks: globals.shutdownHooks,
-            logger: globals.logger,
-            fileSystem: globals.fs,
-            platform: globals.platform,
-            osUtils: globals.os as MoreOperatingSystemUtils,
-            projectFactory: globals.projectFactory,
-            processManager: globals.processManager,
-            github: MyGithub.caching(
-              httpClient: http.IOClient(
-                globals.httpClientFactory?.call() ?? io.HttpClient(),
-              ),
+      fl.Cache: () {
+        final auth = switch (globals.platform.environment['GITHUB_TOKEN']) {
+          final token? => gh.Authentication.bearerToken(token),
+          _ => null,
+        };
+
+        return FlutterpiCache(
+          hooks: globals.shutdownHooks,
+          logger: globals.logger,
+          fileSystem: globals.fs,
+          platform: globals.platform,
+          osUtils: globals.os as MoreOperatingSystemUtils,
+          projectFactory: globals.projectFactory,
+          processManager: globals.processManager,
+          github: MyGithub.caching(
+            httpClient: http.IOClient(
+              globals.httpClientFactory?.call() ?? io.HttpClient(),
             ),
+            auth: auth,
           ),
+        );
+      },
       fl.OperatingSystemUtils: () => MoreOperatingSystemUtils(
             fileSystem: globals.fs,
             logger: globals.logger,
