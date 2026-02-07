@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:file/file.dart';
 import 'package:file/memory.dart';
 import 'package:flutterpi_tool/src/build_system/targets.dart';
 import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
