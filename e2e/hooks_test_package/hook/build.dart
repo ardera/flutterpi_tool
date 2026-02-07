@@ -7,8 +7,8 @@ void main(List<String> args) async {
     final packageName = input.packageName;
     final cbuilder = CBuilder.library(
       name: packageName,
-      assetName: '${packageName}_bindings_generated.dart',
-      sources: ['src/$packageName.c'],
+      assetName: 'hooks_test_bindings_generated.dart',
+      sources: ['src/hooks_test.c'],
     );
     await cbuilder.run(
       input: input,
