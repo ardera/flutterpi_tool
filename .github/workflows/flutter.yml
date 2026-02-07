@@ -32,13 +32,13 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
 
       - name: Install dependencies
-        run: flutter pub get
+        run: dart pub get
 
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed .
 
-      - name: Analyze project source
-        run: flutter analyze
+      - name: Analyze
+        run: dart analyze
 
   test:
     runs-on: ${{ matrix.runner }}
@@ -65,8 +65,8 @@ jobs:
       - name: Run tests
         run: flutter test
 
-  e2e-test:
-    name: End-to-End Tests (${{ matrix.runner }})
+  e2e:
+    name: E2E Tests (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     env:
       GITHUB_TOKEN: ${{ secrets.PUBLIC_ONLY_PAT }}
@@ -76,6 +76,7 @@ jobs:
           - windows-latest
           - ubuntu-latest
           - macos-latest
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
 
