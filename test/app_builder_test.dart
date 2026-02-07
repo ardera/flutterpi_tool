@@ -344,7 +344,10 @@ void main() {
               environment.outputDir.path,
               equals(
                 p.windows.join(
-                    'build', 'flutter-pi', 'meta-flutter-riscv64-generic'),
+                  'build',
+                  'flutter-pi',
+                  'meta-flutter-riscv64-generic',
+                ),
               ),
             );
 
