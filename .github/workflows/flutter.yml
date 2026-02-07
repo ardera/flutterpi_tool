@@ -40,6 +40,21 @@ jobs:
       - name: Analyze
         run: dart analyze
 
+      - name: Analyze e2e/hooks_test_package
+        working-directory: e2e/hooks_test_package
+        run: |
+          echo '::group::dart pub get'
+          dart pub get --enforce-lockfile
+          echo '::endgroup::'
+
+          echo '::group::dart format'
+          dart format --output=none --set-exit-if-changed .
+          echo '::endgroup::'
+
+          echo '::group::dart analyze'
+          dart analyze
+          echo '::endgroup::'
+
   test:
     runs-on: ${{ matrix.runner }}
     env:
