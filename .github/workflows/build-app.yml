@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: ["main"]
 
-permissions:
-  contents: read
-
 env:
   FLUTTER_VERSION: 3.38.4
 
