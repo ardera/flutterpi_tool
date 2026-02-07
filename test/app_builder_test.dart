@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file/file.dart';
 import 'package:file/memory.dart';
 import 'package:flutterpi_tool/src/build_system/targets.dart';
 import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
@@ -114,33 +115,66 @@ void main() {
     expect(buildWasCalled, isTrue);
   });
 
-  test('passes target path correctly', () async {
-    var buildWasCalled = false;
-    buildSystem.buildFn = (
-      fl.Target target,
-      fl.Environment environment, {
-      fl.BuildSystemConfig buildSystemConfig = const fl.BuildSystemConfig(),
-    }) async {
-      expect(
-        environment.defines[fl.kTargetFile],
-        equals(p.join('lib', 'main_flutterpi.dart')),
+  group('passes target path correctly', () {
+    test('posix', () async {
+      var buildWasCalled = false;
+      buildSystem.buildFn = (
+        fl.Target target,
+        fl.Environment environment, {
+        fl.BuildSystemConfig buildSystemConfig = const fl.BuildSystemConfig(),
+      }) async {
+        expect(
+          environment.defines[fl.kTargetFile],
+          equals(p.posix.join('lib', 'main_flutterpi.dart')),
+        );
+
+        buildWasCalled = true;
+        return fl.BuildResult(success: true);
+      };
+
+      await _runInTestContext(
+        () async => await appBuilder.build(
+          host: FlutterpiHostPlatform.linuxRV64,
+          target: FlutterpiTargetPlatform.genericRiscv64,
+          buildInfo: fl.BuildInfo.debug,
+          fsLayout: FilesystemLayout.flutterPi,
+          mainPath: p.posix.join('lib', 'main_flutterpi.dart'),
+        ),
       );
 
-      buildWasCalled = true;
-      return fl.BuildResult(success: true);
-    };
+      expect(buildWasCalled, isTrue);
+    });
 
-    await _runInTestContext(
-      () async => await appBuilder.build(
-        host: FlutterpiHostPlatform.linuxRV64,
-        target: FlutterpiTargetPlatform.genericRiscv64,
-        buildInfo: fl.BuildInfo.debug,
-        fsLayout: FilesystemLayout.flutterPi,
-        mainPath: p.join('lib', 'main_flutterpi.dart'),
-      ),
-    );
+    test('windows', () async {
+      fs = MemoryFileSystem.test(style: FileSystemStyle.windows);
 
-    expect(buildWasCalled, isTrue);
+      var buildWasCalled = false;
+      buildSystem.buildFn = (
+        fl.Target target,
+        fl.Environment environment, {
+        fl.BuildSystemConfig buildSystemConfig = const fl.BuildSystemConfig(),
+      }) async {
+        expect(
+          environment.defines[fl.kTargetFile],
+          equals(p.windows.join('lib', 'main_flutterpi.dart')),
+        );
+
+        buildWasCalled = true;
+        return fl.BuildResult(success: true);
+      };
+
+      await _runInTestContext(
+        () async => await appBuilder.build(
+          host: FlutterpiHostPlatform.linuxRV64,
+          target: FlutterpiTargetPlatform.genericRiscv64,
+          buildInfo: fl.BuildInfo.debug,
+          fsLayout: FilesystemLayout.flutterPi,
+          mainPath: p.windows.join('lib', 'main_flutterpi.dart'),
+        ),
+      );
+
+      expect(buildWasCalled, isTrue);
+    });
   });
 
   group('--fs-layout', () {
@@ -259,36 +293,79 @@ void main() {
         expect(bundle.includesFlutterpiBinary, isTrue);
       });
 
-      test('default output directory is build/<target>-meta-flutter', () async {
-        var buildWasCalled = false;
-        buildSystem.buildFn = (
-          fl.Target target,
-          fl.Environment environment, {
-          fl.BuildSystemConfig buildSystemConfig = const fl.BuildSystemConfig(),
-        }) async {
-          expect(
-            environment.outputDir.path,
-            equals(
-              p.join('build', 'flutter-pi', 'meta-flutter-riscv64-generic'),
+      group('default output directory is build/<target>-meta-flutter', () {
+        test('posix', () async {
+          var buildWasCalled = false;
+          buildSystem.buildFn = (
+            fl.Target target,
+            fl.Environment environment, {
+            fl.BuildSystemConfig buildSystemConfig =
+                const fl.BuildSystemConfig(),
+          }) async {
+            expect(
+              environment.outputDir.path,
+              equals(
+                p.posix.join(
+                  'build',
+                  'flutter-pi',
+                  'meta-flutter-riscv64-generic',
+                ),
+              ),
+            );
+
+            buildWasCalled = true;
+            return fl.BuildResult(success: true);
+          };
+
+          await _runInTestContext(
+            () async => await appBuilder.buildBundle(
+              id: 'test-id',
+              host: FlutterpiHostPlatform.linuxRV64,
+              target: FlutterpiTargetPlatform.genericRiscv64,
+              buildInfo: fl.BuildInfo.debug,
+              fsLayout: FilesystemLayout.metaFlutter,
+              forceBundleFlutterpi: true,
             ),
           );
 
-          buildWasCalled = true;
-          return fl.BuildResult(success: true);
-        };
+          expect(buildWasCalled, isTrue);
+        });
 
-        await _runInTestContext(
-          () async => await appBuilder.buildBundle(
-            id: 'test-id',
-            host: FlutterpiHostPlatform.linuxRV64,
-            target: FlutterpiTargetPlatform.genericRiscv64,
-            buildInfo: fl.BuildInfo.debug,
-            fsLayout: FilesystemLayout.metaFlutter,
-            forceBundleFlutterpi: true,
-          ),
-        );
+        test('windows', () async {
+          fs = MemoryFileSystem.test(style: FileSystemStyle.windows);
 
-        expect(buildWasCalled, isTrue);
+          var buildWasCalled = false;
+          buildSystem.buildFn = (
+            fl.Target target,
+            fl.Environment environment, {
+            fl.BuildSystemConfig buildSystemConfig =
+                const fl.BuildSystemConfig(),
+          }) async {
+            expect(
+              environment.outputDir.path,
+              equals(
+                p.windows.join(
+                    'build', 'flutter-pi', 'meta-flutter-riscv64-generic'),
+              ),
+            );
+
+            buildWasCalled = true;
+            return fl.BuildResult(success: true);
+          };
+
+          await _runInTestContext(
+            () async => await appBuilder.buildBundle(
+              id: 'test-id',
+              host: FlutterpiHostPlatform.linuxRV64,
+              target: FlutterpiTargetPlatform.genericRiscv64,
+              buildInfo: fl.BuildInfo.debug,
+              fsLayout: FilesystemLayout.metaFlutter,
+              forceBundleFlutterpi: true,
+            ),
+          );
+
+          expect(buildWasCalled, isTrue);
+        });
       });
     });
 
