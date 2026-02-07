@@ -64,3 +64,32 @@ jobs:
 
       - name: Run tests
         run: flutter test
+
+  e2e-test:
+    name: End-to-End Tests (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.PUBLIC_ONLY_PAT }}
+    strategy:
+      matrix:
+        runner:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          cache: true
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Activate flutterpi_tool globally
+        run: flutter pub global activate -spath .
+
+      - name: Run e2e tests
+        run: dart test e2e
