@@ -13,10 +13,7 @@ import 'dart:ffi' as ffi;
 /// They will block the Dart execution while running the native function, so
 /// only do this for native functions which are guaranteed to be short-lived.
 @ffi.Native<ffi.IntPtr Function(ffi.IntPtr, ffi.IntPtr)>()
-external int sum(
-  int a,
-  int b,
-);
+external int sum(int a, int b);
 
 /// A longer lived native function, which occupies the thread calling it.
 ///
@@ -24,7 +21,4 @@ external int sum(
 /// block Dart execution. This will cause dropped frames in Flutter applications.
 /// Instead, call these native functions on a separate isolate.
 @ffi.Native<ffi.IntPtr Function(ffi.IntPtr, ffi.IntPtr)>()
-external int sum_long_running(
-  int a,
-  int b,
-);
+external int sum_long_running(int a, int b);
