@@ -127,59 +127,67 @@ Matcher buildExitedSuccessfully() => _ProcessExitedSuccessfully(
     );
 
 void main() {
-  group('hooks_test native assets e2e', () {
-    const exampleDir = 'e2e/hooks_test_package/example';
+  // Only tested on linux right now, see testOn below.
+  // On windows and macOS it's hard to get a working linux
+  // cross compiler. Best thing we can do maybe is just
+  // verify we provide an understandable error message.
+  group(
+    'hooks_test native assets e2e',
+    () {
+      const exampleDir = 'e2e/hooks_test_package/example';
 
-    setUpAll(() async {
-      // Ensure dependencies are installed
-      final pubGetResult = await Process.run(
-        'flutter',
-        ['pub', 'get'],
-        workingDirectory: exampleDir,
+      setUpAll(() async {
+        // Ensure dependencies are installed
+        final pubGetResult = await Process.run(
+          'flutter',
+          ['pub', 'get'],
+          workingDirectory: exampleDir,
+        );
+        expect(pubGetResult, exitedSuccessfully());
+      });
+
+      test(
+        'builds successfully in debug mode',
+        () async {
+          final result = await Process.run(
+            'flutterpi_tool',
+            ['build', '--debug'],
+            workingDirectory: exampleDir,
+          );
+
+          expect(result, buildExitedSuccessfully());
+        },
+        timeout: const Timeout(Duration(minutes: 5)),
       );
-      expect(pubGetResult, exitedSuccessfully());
-    });
 
-    test(
-      'builds successfully in debug mode',
-      () async {
-        final result = await Process.run(
-          'flutterpi_tool',
-          ['build', '--debug'],
-          workingDirectory: exampleDir,
-        );
+      test(
+        'builds successfully in profile mode',
+        () async {
+          final result = await Process.run(
+            'flutterpi_tool',
+            ['build', '--profile'],
+            workingDirectory: exampleDir,
+          );
 
-        expect(result, buildExitedSuccessfully());
-      },
-      timeout: const Timeout(Duration(minutes: 5)),
-    );
+          expect(result, buildExitedSuccessfully());
+        },
+        timeout: const Timeout(Duration(minutes: 5)),
+      );
 
-    test(
-      'builds successfully in profile mode',
-      () async {
-        final result = await Process.run(
-          'flutterpi_tool',
-          ['build', '--profile'],
-          workingDirectory: exampleDir,
-        );
+      test(
+        'builds successfully in release mode',
+        () async {
+          final result = await Process.run(
+            'flutterpi_tool',
+            ['build', '--release'],
+            workingDirectory: exampleDir,
+          );
 
-        expect(result, buildExitedSuccessfully());
-      },
-      timeout: const Timeout(Duration(minutes: 5)),
-    );
-
-    test(
-      'builds successfully in release mode',
-      () async {
-        final result = await Process.run(
-          'flutterpi_tool',
-          ['build', '--release'],
-          workingDirectory: exampleDir,
-        );
-
-        expect(result, buildExitedSuccessfully());
-      },
-      timeout: const Timeout(Duration(minutes: 5)),
-    );
-  });
+          expect(result, buildExitedSuccessfully());
+        },
+        timeout: const Timeout(Duration(minutes: 5)),
+      );
+    },
+    testOn: 'linux',
+  );
 }
