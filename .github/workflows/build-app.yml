@@ -72,7 +72,7 @@ jobs:
       - name: Run flutterpi_tool build
         working-directory: test_app
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PUBLIC_ONLY_PAT }}
         run: |
           echo '::group::flutterpi_tool build ... --debug-unoptimized'
           flutterpi_tool build --arch=${{ matrix.arch }} --cpu=${{ matrix.cpu }} --debug-unoptimized --debug-symbols --verbose
