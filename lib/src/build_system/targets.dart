@@ -479,6 +479,8 @@ class CopyFlutterAssets extends Target {
   @override
   List<Target> get dependencies => <Target>[
         const KernelSnapshot(),
+        const DartBuildForNative(),
+        const InstallCodeAssets(),
       ];
 
   @override
