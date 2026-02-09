@@ -92,6 +92,12 @@ jobs:
           - ubuntu-latest
           - ubuntu-24.04-arm
           - macos-latest
+        include:
+          # we need to use the main channel,
+          # as flutter does apparently not officially release SDKs for arm64 linux.
+          # see: https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json
+          - runner: ubuntu-24.04-arm
+            channel: main
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -99,7 +105,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           cache: true
-          channel: stable
+          channel: ${{ matrix.channel || 'stable' }}
           flutter-version: ${{ env.FLUTTER_VERSION }}
 
       - name: Install dependencies
