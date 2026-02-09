@@ -7,39 +7,112 @@ name: Flutter
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
 
+env:
+  FLUTTER_VERSION: 3.38.4
+
 jobs:
-  build:
+  analyze:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: subosito/flutter-action@v2
         with:
           cache: true
           channel: stable
-          flutter-version: 3.38.4
-      
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
       - name: Install dependencies
-        run: flutter pub get
-        
+        run: dart pub get
+
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed .
 
-      # Consider passing '--fatal-infos' for slightly stricter analysis.
-      - name: Analyze project source
-        run: flutter analyze
+      - name: Analyze
+        run: dart analyze
 
-      # Your project will need to have tests in test/ and a dependency on
-      # package:test for this step to succeed. Note that Flutter projects will
-      # want to change this to 'flutter test'.
+      - name: Analyze e2e/hooks_test_package
+        working-directory: e2e/hooks_test_package
+        run: |
+          echo '::group::dart pub get'
+          dart pub get --enforce-lockfile
+          echo '::endgroup::'
+
+          echo '::group::dart format'
+          dart format --output=none --set-exit-if-changed .
+          echo '::endgroup::'
+
+          echo '::group::dart analyze'
+          dart analyze
+          echo '::endgroup::'
+
+  test:
+    runs-on: ${{ matrix.runner }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.token }}
+    strategy:
+      matrix:
+        runner:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          cache: true
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Run tests
         run: flutter test
+
+  e2e:
+    name: E2E Tests (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.PUBLIC_ONLY_PAT }}
+    strategy:
+      matrix:
+        runner:
+          - windows-latest
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - macos-latest
+        include:
+          # we need to use the main channel,
+          # as flutter does apparently not officially release SDKs for arm64 linux.
+          # see: https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json
+          - runner: ubuntu-24.04-arm
+            channel: main
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          cache: true
+          channel: ${{ matrix.channel || 'stable' }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Activate flutterpi_tool globally
+        run: flutter pub global activate -spath .
+
+      - name: Run e2e tests
+        run: dart test e2e

@@ -21,6 +21,9 @@ analyzer:
   exclude:
     - lib/src/archive
 
+    # separate package with additional dependencies not contained
+    # in the root pubspec
+    - e2e/hooks_test_package
 # For more information about the core and recommended set of lints, see
 # https://dart.dev/go/core-lints
 
