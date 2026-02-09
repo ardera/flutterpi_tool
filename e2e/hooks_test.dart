@@ -1,6 +1,5 @@
 import 'dart:ffi';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:path/path.dart' as pathlib;
 import 'package:test/test.dart';
@@ -244,19 +243,23 @@ void main() {
       setUp(() async {
         // Ensure dependencies are installed
         final pubGetResult = await Process.run(
-            'flutter',
-            [
-              'pub',
-              'get',
-              '--enforce-lockfile',
-            ],
-            workingDirectory: exampleDir);
+          'flutter',
+          [
+            'pub',
+            'get',
+            '--enforce-lockfile',
+          ],
+          workingDirectory: exampleDir,
+        );
         expect(pubGetResult, exitedSuccessfully());
       });
 
       tearDown(() async {
-        final clean = await Process.run('flutter', ['clean'],
-            workingDirectory: exampleDir);
+        final clean = await Process.run(
+          'flutter',
+          ['clean'],
+          workingDirectory: exampleDir,
+        );
         expect(clean, exitedSuccessfully());
       });
 

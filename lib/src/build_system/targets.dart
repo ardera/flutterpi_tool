@@ -490,7 +490,7 @@ class CopyFlutterAssets extends Target {
         CopyCodeAssets(
           target: target,
           layout: layout,
-        )
+        ),
       ];
 
   @override
