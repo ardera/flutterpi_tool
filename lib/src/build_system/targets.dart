@@ -7,6 +7,9 @@ import 'package:flutterpi_tool/src/build_system/extended_environment.dart';
 import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
+import 'package:flutterpi_tool/src/fltool/common.dart' as fl;
+import 'package:flutter_tools/src/isolated/native_assets/native_assets.dart'
+    as fl;
 import 'package:flutterpi_tool/src/fltool/globals.dart';
 import 'package:flutterpi_tool/src/more_os_utils.dart';
 
@@ -20,6 +23,7 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
           CopyFlutterAssets(
             layout: layout,
             buildMode: BuildMode.release,
+            target: target,
           ),
           CopyIcudtl(layout: layout),
           const DartBuildForNative(),
@@ -60,6 +64,7 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
           CopyFlutterAssets(
             layout: layout,
             buildMode: BuildMode.profile,
+            target: target,
           ),
           CopyIcudtl(layout: layout),
           const DartBuildForNative(),
@@ -100,6 +105,7 @@ class DebugBundleFlutterpiAssets extends CompositeTarget {
           CopyFlutterAssets(
             layout: layout,
             buildMode: BuildMode.debug,
+            target: target,
           ),
           CopyIcudtl(layout: layout),
           const DartBuildForNative(),
@@ -468,19 +474,23 @@ class CopyFlutterAssets extends Target {
   const CopyFlutterAssets({
     required this.layout,
     required this.buildMode,
+    required this.target,
   });
 
   final FilesystemLayout layout;
   final BuildMode buildMode;
+  final FlutterpiTargetPlatform target;
 
   @override
-  String get name => 'copy_flutterpi_assets_${layout}_$buildMode';
+  String get name => 'copy_flutterpi_assets_${layout}_${buildMode}_$target';
 
   @override
   List<Target> get dependencies => <Target>[
         const KernelSnapshot(),
-        const DartBuildForNative(),
-        const InstallCodeAssets(),
+        CopyCodeAssets(
+          target: target,
+          layout: layout,
+        )
       ];
 
   @override
@@ -560,4 +570,93 @@ class CopyFlutterAssets extends Target {
       environment.buildDir.childFile('flutter_assets.d'),
     );
   }
+}
+
+/// Inspired by flutter_tools InstallCodeAssets,
+/// but install into output folder directly, instead of
+/// into build/native_asets
+class CopyCodeAssets extends Target {
+  const CopyCodeAssets({
+    required this.target,
+    required this.layout,
+  });
+
+  final FlutterpiTargetPlatform target;
+  final FilesystemLayout layout;
+
+  @override
+  Future<void> build(Environment environment) async {
+    final projectUri = environment.projectDir.uri;
+    final fs = environment.fileSystem;
+
+    // And install/copy the code assets to the right place and create a
+    // native_asset.yaml that can be used by the final AOT compilation.
+    final nativeAssetsJson =
+        environment.buildDir.childFile(nativeAssetsFilename);
+
+    final nativeAssetsDir =
+        fs.directory(fl.nativeAssetsBuildUri(projectUri, 'linux'));
+
+    assert(fs.file(nativeAssetsJson).existsSync());
+
+    final outputDir = switch (layout) {
+      FilesystemLayout.flutterPi => environment.outputDir,
+      FilesystemLayout.metaFlutter =>
+        environment.outputDir.childDirectory('lib'),
+    };
+
+    final inputs = <File>[];
+    final outputs = <File>[];
+
+    final outputNativeAssetsJson =
+        fs.file(environment.outputDir.childFile(nativeAssetsFilename));
+
+    await nativeAssetsJson.copy(outputNativeAssetsJson.path);
+    inputs.add(nativeAssetsJson);
+    outputs.add(outputNativeAssetsJson);
+
+    // copy all files from build/native_assets/linux to build/flutter-pi/.../
+    await Future.wait(
+      nativeAssetsDir.listSync().map((entity) async {
+        if (entity is! File) return;
+
+        inputs.add(entity);
+        outputs.add(entity);
+
+        entity.copy(outputDir.childFile(entity.basename).path);
+      }),
+      eagerError: true,
+    );
+
+    final outputDepfile = environment.buildDir.childFile(depFilename);
+    environment.depFileService.writeToFile(
+      fl.Depfile(inputs, outputs),
+      outputDepfile,
+    );
+    if (!outputDepfile.existsSync()) {
+      throwToolExit("${outputDepfile.path} doesn't exist.");
+    }
+  }
+
+  @override
+  List<String> get depfiles => <String>[depFilename];
+
+  @override
+  List<Target> get dependencies => const <Target>[InstallCodeAssets()];
+
+  @override
+  List<Source> get inputs => const <Source>[
+        Source.pattern('{BUILD_DIR}/$nativeAssetsFilename'),
+      ];
+
+  @override
+  String get name => 'copy_code_assets';
+
+  @override
+  List<Source> get outputs => const <Source>[
+        Source.pattern('{OUTPUT_DIR}/$nativeAssetsFilename'),
+      ];
+
+  static const nativeAssetsFilename = 'native_assets.json';
+  static const depFilename = 'copy_code_assets.d';
 }
