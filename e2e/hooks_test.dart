@@ -339,4 +339,6 @@ void main() {
     },
     testOn: 'linux',
   );
+
+  test('empty test to make all-skipped runs succeed', () {});
 }
