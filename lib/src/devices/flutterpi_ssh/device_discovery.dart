@@ -53,7 +53,7 @@ class FlutterpiSshDeviceDiscovery extends PollingDeviceDiscovery {
   }
 
   @override
-  Future<List<Device>> pollingGetDevices({Duration? timeout}) async {
+  Future<List<Device>> pollingGetDevices({Duration? timeout, bool forWirelessDiscovery = false}) async {
     timeout ??= Duration(seconds: 5);
 
     final entries = config.getDevices();
