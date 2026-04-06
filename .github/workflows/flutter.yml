@@ -7,9 +7,9 @@ name: Flutter
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -21,16 +21,16 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: subosito/flutter-action@v2
         with:
           cache: true
           channel: stable
-          flutter-version: 3.38.4
-      
+          flutter-version: 3.41.0
+
       - name: Install dependencies
         run: flutter pub get
-        
+
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed .
 

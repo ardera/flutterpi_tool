@@ -94,6 +94,9 @@ class FakeDeviceManager implements fl.DeviceManager {
 
   @override
   fl.Device? getSingleEphemeralDevice(List<fl.Device> devices) => null;
+
+  @override
+  void stopExtendedWirelessDeviceDiscoverers() {}
 }
 
 class FakeFilter extends Fake implements fl.DeviceDiscoverySupportFilter {
