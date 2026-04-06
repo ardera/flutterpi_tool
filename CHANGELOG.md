@@ -1,3 +1,8 @@
+## 0.11.0 - 2026-04-19
+
+- flutter 3.41.x compatibility (thanks to [@miguelzapp](https://github.com/miguelzapp)!)
+- `--rotation` argument for `flutterpi_tool devices add` (thanks to [@TID-Test](https://github.com/TID-Test)!)
+
 ## 0.10.1 - 2025-12-11
 
 - flutter 3.38.4 compatibility
