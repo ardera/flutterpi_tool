@@ -304,6 +304,40 @@ mixin FlutterpiCommandMixin on fl.FlutterCommand {
     );
   }
 
+  void usesGithubArtifactsOptions({bool verboseHelp = false}) {
+    argParser.addOption(
+      'github-artifacts-repo',
+      help:
+          'Use a custom GitHub repository for engine artifacts instead of ardera/flutter-ci.',
+      valueHelp: 'owner/repo',
+      hide: !verboseHelp,
+    );
+
+    argParser.addOption(
+      'github-artifacts-runid',
+      help:
+          'Download engine artifacts from a specific GitHub Actions workflow run instead of releases.',
+      valueHelp: 'run-id',
+      hide: !verboseHelp,
+    );
+
+    argParser.addOption(
+      'github-artifacts-engine-version',
+      help:
+          'Specify the engine version available in the workflow run artifacts.',
+      valueHelp: 'engine-hash',
+      hide: !verboseHelp,
+    );
+
+    argParser.addOption(
+      'github-artifacts-auth-token',
+      help:
+          'GitHub authentication token for accessing artifacts. Can also be set via GITHUB_TOKEN environment variable.',
+      valueHelp: 'token',
+      hide: !verboseHelp,
+    );
+  }
+
   bool getIncludeDebugSymbols() {
     return boolArg('debug-symbols');
   }
