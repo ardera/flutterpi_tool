@@ -14,7 +14,7 @@ import '../../common.dart';
 class BuildCommand extends FlutterpiCommand {
   static const archs = ['arm', 'arm64', 'x64', 'riscv64'];
 
-  static const cpus = ['generic', 'pi3', 'pi4'];
+  static const cpus = ['generic', 'pi3', 'pi4', 'pi5'];
 
   BuildCommand({bool verboseHelp = false}) {
     argParser.addSeparator(
@@ -68,6 +68,8 @@ class BuildCommand extends FlutterpiCommand {
               'Use a Raspberry Pi 3 tuned engine. Compatible with arm and arm64. (-mcpu=cortex-a53+nocrypto -mtune=cortex-a53)',
           'pi4':
               'Use a Raspberry Pi 4 tuned engine. Compatible with arm and arm64. (-mcpu=cortex-a72+nocrypto -mtune=cortex-a72)',
+          'pi5':
+              'Use a Raspberry Pi 5 tuned engine. Compatible with arm64 only. (-mcpu=cortex-a76 -mtune=cortex-a76)',
         },
       );
   }
@@ -108,6 +110,7 @@ class BuildCommand extends FlutterpiCommand {
       ('arm64', 'generic') => FlutterpiTargetPlatform.genericAArch64,
       ('arm64', 'pi3') => FlutterpiTargetPlatform.pi3_64,
       ('arm64', 'pi4') => FlutterpiTargetPlatform.pi4_64,
+      ('arm64', 'pi5') => FlutterpiTargetPlatform.pi5_64,
       ('x64', 'generic') => FlutterpiTargetPlatform.genericX64,
       ('riscv64', 'generic') => FlutterpiTargetPlatform.genericRiscv64,
       (final arch, final cpu) => throw UsageException(

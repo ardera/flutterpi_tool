@@ -66,7 +66,8 @@ enum FlutterpiTargetPlatform {
   pi3.tuned32('pi3', 'armv7-generic', 'arm-linux-gnueabihf'),
   pi3_64.tuned64('pi3-64', 'aarch64-generic', 'aarch64-linux-gnu'),
   pi4.tuned32('pi4', 'armv7-generic', 'arm-linux-gnueabihf'),
-  pi4_64.tuned64('pi4-64', 'aarch64-generic', 'aarch64-linux-gnu');
+  pi4_64.tuned64('pi4-64', 'aarch64-generic', 'aarch64-linux-gnu'),
+  pi5_64.tuned64('pi5-64', 'aarch64-generic', 'aarch64-linux-gnu');
 
   const FlutterpiTargetPlatform.generic64(this.shortName, this.triple)
       : isGeneric = true,
