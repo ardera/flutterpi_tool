@@ -135,6 +135,38 @@ mixin FlutterpiCommandMixin on fl.FlutterCommand {
     );
   }
 
+  void usesGithubWorkflowArtifactsArgs({bool verboseHelp = false}) {
+    argParser
+      ..addOption(
+        'github-artifacts-repo',
+        help:
+            'Use workflow artifacts from the specified GitHub repository instead of release artifacts.',
+        valueHelp: 'owner/name',
+        hide: !verboseHelp,
+      )
+      ..addOption(
+        'github-artifacts-runid',
+        help:
+            'Use workflow artifacts from the specified GitHub Actions run id.',
+        valueHelp: 'run id',
+        hide: !verboseHelp,
+      )
+      ..addOption(
+        'github-artifacts-engine-version',
+        help:
+            'Restrict workflow artifact lookup to the specified engine version.',
+        valueHelp: 'engine version',
+        hide: !verboseHelp,
+      )
+      ..addOption(
+        'github-artifacts-auth-token',
+        help:
+            'Use this GitHub token when querying private or rate-limited workflow artifacts.',
+        valueHelp: 'token',
+        hide: !verboseHelp,
+      );
+  }
+
   void usesRotationArg() {
     argParser.addOption(
       'rotation',
