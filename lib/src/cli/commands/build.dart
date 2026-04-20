@@ -37,6 +37,7 @@ class BuildCommand extends FlutterpiCommand {
     usesDartDefineOption();
     usesTargetOption();
     usesLocalFlutterpiExecutableArg(verboseHelp: verboseHelp);
+    usesGithubWorkflowArtifactsArgs(verboseHelp: verboseHelp);
     usesFilesystemLayoutArg(verboseHelp: verboseHelp);
 
     argParser

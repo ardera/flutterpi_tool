@@ -98,3 +98,13 @@ Installing app on device...
 ```
 $ flutterpi_tool run -d pi5 --profile
 ```
+
+### 7. Building with artifacts pinned to a specific GitHub Actions run
+```console
+$ flutterpi_tool build --release \
+    --github-artifacts-runid=23382732417 \
+    --github-artifacts-engine-version=052f31d115eceda8cbff1b3481fcde4330c4ae12
+```
+
+This is useful when you want `build` to use workflow artifacts from a specific
+run instead of the default release-based artifact lookup.

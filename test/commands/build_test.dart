@@ -671,4 +671,45 @@ void main() {
       reason: "Expected BuildSystem.build to be called",
     );
   });
+
+  test('accepts github workflow artifact flags', () async {
+    var buildWasCalled = false;
+    appBuilder.buildFn = ({
+      required FlutterpiHostPlatform host,
+      required FlutterpiTargetPlatform target,
+      required fl.BuildInfo buildInfo,
+      required FilesystemLayout fsLayout,
+      fl.FlutterProject? project,
+      FlutterpiArtifacts? artifacts,
+      String? mainPath,
+      String manifestPath = fl.defaultManifestPath,
+      String? applicationKernelFilePath,
+      String? depfilePath,
+      Directory? outDir,
+      bool unoptimized = false,
+      bool includeDebugSymbols = false,
+      bool forceBundleFlutterpi = false,
+    }) async {
+      buildWasCalled = true;
+    };
+
+    await _runInTestContext(() async {
+      await runner.run([
+        'build',
+        '--release',
+        '--arch',
+        'arm64',
+        '--cpu',
+        'generic',
+        '--github-artifacts-runid=23382732417',
+        '--github-artifacts-engine-version=052f31d115eceda8cbff1b3481fcde4330c4ae12',
+      ]);
+    });
+
+    expect(
+      buildWasCalled,
+      isTrue,
+      reason: "Expected BuildSystem.build to be called",
+    );
+  });
 }
