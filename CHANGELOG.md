@@ -1,3 +1,9 @@
+## 0.12.0 - 2026-06-25
+
+- flutter 3.44.x compatibility
+- fix `dart analyze` errors and warnings
+- fix `pub get` version conflict with `test` package
+
 ## 0.11.0 - 2026-04-19
 
 - flutter 3.41.x compatibility (thanks to [@miguelzapp](https://github.com/miguelzapp)!)

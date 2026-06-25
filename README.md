@@ -46,6 +46,7 @@ Flutter-Pi Tool
 Project
   build      Builds a flutter-pi asset bundle.
   run        Run your Flutter app on an attached device.
+  test       Run Flutter unit tests for the current project.
 
 Tools & Devices
   devices    List & manage flutterpi_tool devices.
