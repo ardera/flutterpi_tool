@@ -21,6 +21,34 @@ import 'package:process/process.dart';
 
 FlutterpiCache get flutterpiCache => globals.cache as FlutterpiCache;
 
+/// Resolves a GitHub repository slug from the local git remote.
+///
+/// This avoids hardcoding a default repository, which could silently fetch
+/// artifacts from the wrong repository if a user forgets to specify
+/// `--github-artifacts-repo`. Instead, we parse the git remote URL to
+/// determine the owner/repo dynamically.
+///
+/// Returns `null` if the git remote cannot be determined or is not a
+/// GitHub repository.
+gh.RepositorySlug? _resolveRepoSlugFromGit() {
+  try {
+    final result = io.Process.runSync('git', ['remote', 'get-url', 'origin']);
+    if (result.exitCode == 0) {
+      final url = (result.stdout as String).trim();
+      // Match both SSH (git@github.com:owner/repo.git) and
+      // HTTPS (https://github.com/owner/repo.git) formats.
+      final match =
+          RegExp(r'(?:github\.com[/:])([^/]+)/([^/.]+)').firstMatch(url);
+      if (match != null) {
+        return gh.RepositorySlug(match.group(1)!, match.group(2)!);
+      }
+    }
+  } catch (_) {
+    // git not available or not in a git repo, fall through to null
+  }
+  return null;
+}
+
 extension GithubReleaseFindAsset on gh.Release {
   gh.ReleaseAsset? findAsset(String name) {
     return assets!.cast<gh.ReleaseAsset?>().singleWhere(
@@ -367,7 +395,11 @@ class GithubWorkflowRunArtifact extends FlutterpiArtifact {
     this.availableEngineVersion,
     required super.cache,
     required this.artifactDescription,
-  })  : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci'),
+  })  : repo = repo ??
+            _resolveRepoSlugFromGit() ??
+            (throw ArgumentError(
+              'Could not determine repository slug. Specify --github-artifacts-repo or run from a git repository.',
+            )),
         storageKey = _getStorageKeyForArtifact(artifactDescription),
         super(artifactDescription.cacheKey);
 
@@ -467,7 +499,11 @@ class GithubReleaseArtifact extends FlutterpiArtifact {
     required super.cache,
     required this.github,
     required this.artifactDescription,
-  })  : repo = repo ?? gh.RepositorySlug('ardera', 'flutter-ci'),
+  })  : repo = repo ??
+            _resolveRepoSlugFromGit() ??
+            (throw ArgumentError(
+              'Could not determine repository slug. Specify --github-artifacts-repo or run from a git repository.',
+            )),
         storageKey = getStorageKeyForArtifact(artifactDescription),
         super(artifactDescription.cacheKey);
 
@@ -818,7 +854,10 @@ class FlutterpiCacheWithFlutterArtifacts extends FlutterCache
     required MyGithub github,
     gh.RepositorySlug? repo,
   }) {
-    repo ??= gh.RepositorySlug('ardera', 'flutter-ci');
+    repo ??= _resolveRepoSlugFromGit() ??
+        (throw ArgumentError(
+          'Could not determine repository slug. Specify --github-artifacts-repo or run from a git repository.',
+        ));
 
     final cache = FlutterpiCacheWithFlutterArtifacts.withoutEngineArtifacts(
       logger: logger,
@@ -858,7 +897,10 @@ class FlutterpiCacheWithFlutterArtifacts extends FlutterCache
     required String runId,
     String? availableEngineVersion,
   }) {
-    repo ??= gh.RepositorySlug('ardera', 'flutter-ci');
+    repo ??= _resolveRepoSlugFromGit() ??
+        (throw ArgumentError(
+          'Could not determine repository slug. Specify --github-artifacts-repo or run from a git repository.',
+        ));
 
     final cache = FlutterpiCacheWithFlutterArtifacts.withoutEngineArtifacts(
       logger: logger,

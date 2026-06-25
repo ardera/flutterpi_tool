@@ -54,6 +54,7 @@ Future<void> main(List<String> args) async {
 
   fltool.Cache.flutterRoot = await getFlutterRoot();
 
+  rawCommandLineArgs = args;
   await runInContext(
     () async {
       try {

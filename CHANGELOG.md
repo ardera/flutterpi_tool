@@ -1,3 +1,13 @@
+## 0.13.0 - 2026-06-25
+
+- resolve GitHub repository slug dynamically from git remote instead of
+  hardcoding a default, avoiding silent artifact fetches from the wrong repo
+- add `--github-artifacts-runid` and `--github-artifacts-repo` options to
+  `flutterpi_tool build` for downloading engine binaries from GitHub Actions
+  workflow runs
+- fix URL encoding in `getReleaseByTagName` for tags with special characters
+- fix artifact total count parsing when GitHub API returns non-integer values
+
 ## 0.11.0 - 2026-04-19
 
 - flutter 3.41.x compatibility (thanks to [@miguelzapp](https://github.com/miguelzapp)!)

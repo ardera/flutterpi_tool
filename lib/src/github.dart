@@ -111,7 +111,7 @@ class MyGithubImpl extends MyGithub {
     String tagName, {
     required gh.RepositorySlug repo,
   }) async {
-    return await github.repositories.getReleaseByTagName(repo, tagName);
+    return await github.repositories.getReleaseByTagName(repo, Uri.encodeComponent(tagName));
   }
 
   @visibleForTesting
@@ -142,7 +142,8 @@ class MyGithubImpl extends MyGithub {
         },
       );
 
-      total ??= response['total_count'] as int;
+      final rawTotal = response['total_count'];
+      total ??= rawTotal is int ? rawTotal : (response['artifacts'] as Iterable).length;
 
       for (final artifact in response['artifacts']) {
         results.add(GithubArtifact.fromJson(artifact));

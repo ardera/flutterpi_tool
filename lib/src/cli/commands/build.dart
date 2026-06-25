@@ -4,7 +4,6 @@ import 'dart:async';
 
 import 'package:args/command_runner.dart';
 import 'package:flutterpi_tool/src/artifacts.dart';
-import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/cli/command_runner.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
 import 'package:flutterpi_tool/src/fltool/globals.dart' as globals;
@@ -38,6 +37,21 @@ class BuildCommand extends FlutterpiCommand {
     usesTargetOption();
     usesLocalFlutterpiExecutableArg(verboseHelp: verboseHelp);
     usesFilesystemLayoutArg(verboseHelp: verboseHelp);
+
+    // GitHub workflow artifacts options
+    argParser
+      ..addOption(
+        'github-artifacts-runid',
+        help: 'Download engine binaries from a specific GitHub Actions workflow run instead of releases.',
+        valueHelp: 'run-id',
+        hide: !verboseHelp,
+      )
+      ..addOption(
+        'github-artifacts-repo',
+        help: 'GitHub repository to download engine artifacts from (owner/repo).',
+        valueHelp: 'owner/repo',
+        hide: !verboseHelp,
+      );
 
     argParser
       ..addSeparator('Target options')
@@ -145,7 +159,7 @@ class BuildCommand extends FlutterpiCommand {
     }
 
     // update the cached flutter-pi artifacts
-    await flutterpiCache.updateAll(
+    await globals.flutterpiCache.updateAll(
       const {DevelopmentArtifact.universal},
       host: host,
       offline: false,
