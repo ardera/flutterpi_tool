@@ -274,6 +274,20 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
   }
 
   @override
+  void setProgressContext({
+    required int artifactIndex,
+    required int artifactTotal,
+    required int downloadTotal,
+    int downloadIndex = 0,
+  }) {}
+
+  @override
+  void resetProgressContext() {}
+
+  @override
+  String formatProgressMessage(String artifactName) => artifactName;
+
+  @override
   void removeDownloadedFiles() {
     for (final file in downloadedFiles) {
       ErrorHandlingFileSystem.deleteIfExists(file);

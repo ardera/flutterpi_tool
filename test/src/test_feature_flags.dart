@@ -18,6 +18,8 @@ class TestFeatureFlags implements fl.FeatureFlags {
     this.isDartDataAssetsEnabled = false,
     this.isUISceneMigrationEnabled = false,
     this.isWindowingEnabled = false,
+    this.isAccessibilityEvaluationsEnabled = false,
+    this.isRiscv64SupportEnabled = false,
   });
 
   @override
@@ -67,6 +69,12 @@ class TestFeatureFlags implements fl.FeatureFlags {
 
   @override
   final bool isWindowingEnabled;
+
+  @override
+  final bool isAccessibilityEvaluationsEnabled;
+
+  @override
+  final bool isRiscv64SupportEnabled;
 
   @override
   bool isEnabled(fl.Feature feature) {
