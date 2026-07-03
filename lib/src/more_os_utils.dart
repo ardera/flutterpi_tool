@@ -85,6 +85,7 @@ class MoreOperatingSystemUtilsWrapper implements MoreOperatingSystemUtils {
       HostPlatform.darwin_arm64 => FlutterpiHostPlatform.darwinARM64,
       HostPlatform.linux_x64 => FlutterpiHostPlatform.linuxX64,
       HostPlatform.linux_arm64 => FlutterpiHostPlatform.linuxARM64,
+      HostPlatform.linux_riscv64 => FlutterpiHostPlatform.linuxRV64,
       HostPlatform.windows_x64 => FlutterpiHostPlatform.windowsX64,
       HostPlatform.windows_arm64 => FlutterpiHostPlatform.windowsARM64,
     };
