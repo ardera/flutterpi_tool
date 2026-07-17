@@ -70,7 +70,7 @@ Future<void> main(List<String> args) async {
         }
 
         await exitWithHooks(
-          0,
+          e.exitCode ?? 1,
           shutdownHooks: globals.shutdownHooks,
           logger: globals.logger,
         );
@@ -79,7 +79,7 @@ Future<void> main(List<String> args) async {
         globals.printStatus(e.usage);
 
         await exitWithHooks(
-          0,
+          1,
           shutdownHooks: globals.shutdownHooks,
           logger: globals.logger,
         );

@@ -18,6 +18,8 @@ class TestFeatureFlags implements fl.FeatureFlags {
     this.isDartDataAssetsEnabled = false,
     this.isUISceneMigrationEnabled = false,
     this.isWindowingEnabled = false,
+    this.isAccessibilityEvaluationsEnabled = false,
+    this.isRiscv64SupportEnabled = false,
   });
 
   @override
@@ -69,6 +71,12 @@ class TestFeatureFlags implements fl.FeatureFlags {
   final bool isWindowingEnabled;
 
   @override
+  final bool isAccessibilityEvaluationsEnabled;
+
+  @override
+  final bool isRiscv64SupportEnabled;
+
+  @override
   bool isEnabled(fl.Feature feature) {
     return switch (feature) {
       fl.flutterWebFeature => isWebEnabled,
@@ -87,6 +95,8 @@ class TestFeatureFlags implements fl.FeatureFlags {
       fl.dartDataAssets => isDartDataAssetsEnabled,
       fl.uiSceneMigration => isUISceneMigrationEnabled,
       fl.windowingFeature => isWindowingEnabled,
+      fl.accessibilityEvaluationsFeature => isAccessibilityEvaluationsEnabled,
+      fl.riscv64 => isRiscv64SupportEnabled,
       _ => false,
     };
   }
@@ -109,6 +119,8 @@ class TestFeatureFlags implements fl.FeatureFlags {
         fl.dartDataAssets,
         fl.uiSceneMigration,
         fl.windowingFeature,
+        fl.accessibilityEvaluationsFeature,
+        fl.riscv64,
       ];
 
   @override

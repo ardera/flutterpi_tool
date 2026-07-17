@@ -40,6 +40,34 @@ class FlutterpiToolCommandRunner extends CommandRunner<void>
           'Print the address of the Dart Tooling Daemon, if one is hosted by the Flutter CLI.',
       hide: !verboseHelp,
     );
+
+    argParser.addOption(
+      'github-artifacts-repo',
+      valueHelp: 'owner/repository',
+      help: 'Download engine artifacts from a custom GitHub repository.',
+      hide: !verboseHelp,
+    );
+
+    argParser.addOption(
+      'github-artifacts-runid',
+      valueHelp: 'run-id',
+      help: 'Download engine artifacts from a specific GitHub Actions run.',
+      hide: !verboseHelp,
+    );
+
+    argParser.addOption(
+      'github-artifacts-engine-version',
+      valueHelp: 'engine-hash',
+      help: 'The engine version available in the selected workflow run.',
+      hide: !verboseHelp,
+    );
+
+    argParser.addOption(
+      'github-artifacts-auth-token',
+      valueHelp: 'token',
+      help: 'GitHub token used to download workflow artifacts.',
+      hide: !verboseHelp,
+    );
   }
 
   @override
