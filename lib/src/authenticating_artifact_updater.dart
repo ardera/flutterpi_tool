@@ -70,6 +70,21 @@ class AuthenticatingArtifactUpdater implements ArtifactUpdater {
   @visibleForTesting
   final List<File> downloadedFiles = <File>[];
 
+  // Compat with Flutter 3.44+ ArtifactUpdater progress-context API.
+  @override
+  void setProgressContext({
+    required int artifactIndex,
+    required int artifactTotal,
+    required int downloadTotal,
+    int downloadIndex = 0,
+  }) {}
+
+  @override
+  void resetProgressContext() {}
+
+  @override
+  String formatProgressMessage(String artifactName) => artifactName;
+
   static const Set<String> _denylistedBasenames = <String>{
     'entitlements.txt',
     'without_entitlements.txt',

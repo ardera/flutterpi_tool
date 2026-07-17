@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:args/command_runner.dart';
 import 'package:file/file.dart';
+import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/cache.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/devices/flutterpi_ssh/device.dart';
@@ -42,10 +43,8 @@ mixin FlutterpiCommandMixin on fl.FlutterCommand {
     if (globals.platform.environment['GITHUB_TOKEN'] case final envToken?) {
       globals.logger.printTrace('Using GITHUB_TOKEN from environment.');
       token = envToken;
-    } else if (argParser.options.containsKey('github-artifacts-auth-token')) {
-      token = stringArg('github-artifacts-auth-token');
     } else {
-      token = null;
+      token = stringArg('github-artifacts-auth-token', global: true);
     }
 
     return MyGithub.caching(
@@ -64,9 +63,10 @@ mixin FlutterpiCommandMixin on fl.FlutterCommand {
     required ProcessManager processManager,
     http.Client? httpClient,
   }) {
-    final repo = stringArg('github-artifacts-repo');
-    final runId = stringArg('github-artifacts-runid');
-    final githubEngineHash = stringArg('github-artifacts-engine-version');
+    final repo = stringArg('github-artifacts-repo', global: true);
+    final runId = stringArg('github-artifacts-runid', global: true);
+    final githubEngineHash =
+        stringArg('github-artifacts-engine-version', global: true);
 
     if (runId != null) {
       return FlutterpiCache.fromWorkflow(
@@ -456,6 +456,37 @@ mixin FlutterpiCommandMixin on fl.FlutterCommand {
   String? get debugLogsDirectoryPath => null;
 
   Future<T> runWithContext<T>(FutureOr<T> Function() fn) async {
+    final usesCustomArtifacts =
+        stringArg('github-artifacts-repo', global: true) != null ||
+            stringArg('github-artifacts-runid', global: true) != null ||
+            stringArg('github-artifacts-engine-version', global: true) != null;
+    if (usesCustomArtifacts) {
+      _contextOverrides.putIfAbsent(
+        fl.Cache,
+        () => () => createCustomCache(
+              fs: globals.fs,
+              shutdownHooks: globals.shutdownHooks,
+              logger: globals.logger,
+              platform: globals.platform,
+              os: globals.os as MoreOperatingSystemUtils,
+              projectFactory: globals.projectFactory,
+              processManager: globals.processManager,
+            ),
+      );
+      _contextOverrides.putIfAbsent(
+        fl.Artifacts,
+        () => () => CachedFlutterpiArtifacts(
+              inner: fl.CachedArtifacts(
+                fileSystem: globals.fs,
+                platform: globals.platform,
+                cache: globals.cache,
+                operatingSystemUtils: globals.os,
+              ),
+              cache: globals.flutterpiCache,
+            ),
+      );
+    }
+
     return fl.context.run(
       body: fn,
       overrides: _contextOverrides,

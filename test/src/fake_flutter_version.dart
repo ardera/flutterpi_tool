@@ -118,6 +118,9 @@ class FakeFlutterVersion implements fltool.FlutterVersion {
   Future<void> ensureVersionFile() async {}
 
   @override
+  void deleteVersionFile() {}
+
+  @override
   String getBranchName({bool redactUnknownBranches = false}) {
     if (!redactUnknownBranches ||
         fltool.kOfficialChannels.contains(branch) ||
