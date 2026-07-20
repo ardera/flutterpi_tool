@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutterpi_tool/src/artifacts.dart';
 import 'package:flutterpi_tool/src/build_system/extended_environment.dart';
+import 'package:flutterpi_tool/src/build_system/native_assets.dart';
 import 'package:flutterpi_tool/src/cli/flutterpi_command.dart';
 import 'package:flutterpi_tool/src/common.dart';
 import 'package:flutterpi_tool/src/fltool/common.dart';
@@ -554,6 +555,45 @@ class CopyFlutterAssets extends Target {
       },
       dartHookResult: dartHookResult,
     );
+
+    // Flutter's stock Linux embedding finishes Native Assets installation in
+    // the runner's CMake install step: libraries built under
+    // native_assets/linux/ are copied next to the executable, matching the
+    // basename paths in NativeAssetsManifest.json. flutter-pi has no runner
+    // CMake phase, so perform that final placement here. Without it, hooks run
+    // and the manifest is generated, but @Native resolution fails at runtime.
+    if (layout == FilesystemLayout.flutterPi) {
+      final nativeAssetsDirectory = environment.outputDir
+          .childDirectory('native_assets')
+          .childDirectory('linux');
+      final copiedBasenames = <String>{};
+      if (nativeAssetsDirectory.existsSync()) {
+        for (final entity in nativeAssetsDirectory.listSync()) {
+          if (entity is! File) {
+            continue;
+          }
+          final installed = outputDir.childFile(entity.basename);
+          entity.copySync(installed.path);
+          copiedBasenames.add(entity.basename);
+          depfile.inputs.add(entity);
+          depfile.outputs.add(installed);
+        }
+      }
+
+      // installCodeAssets emits Linux's stock runner representation:
+      // ["absolute", "libfoo.so"]. The stock runner has an $ORIGIN/lib
+      // RUNPATH, but flutter-pi does not. Mark only the basenames installed
+      // above relative to app.so, so the engine resolves them in this bundle.
+      final manifest = outputDir.childFile('NativeAssetsManifest.json');
+      if (manifest.existsSync() && copiedBasenames.isNotEmpty) {
+        manifest.writeAsStringSync(
+          rewriteNativeAssetsManifestForFlutterPi(
+            manifest.readAsStringSync(),
+            copiedBasenames,
+          ),
+        );
+      }
+    }
 
     environment.depFileService.writeToFile(
       depfile,
