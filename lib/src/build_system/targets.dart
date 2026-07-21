@@ -583,7 +583,9 @@ class CopyFlutterAssets extends Target {
       // installCodeAssets emits Linux's stock runner representation:
       // ["absolute", "libfoo.so"]. The stock runner has an $ORIGIN/lib
       // RUNPATH, but flutter-pi does not. Mark only the basenames installed
-      // above relative to app.so, so the engine resolves them in this bundle.
+      // above as explicit paths in the bundle working directory. The `./`
+      // prefix is significant: Linux dlopen does not search the working
+      // directory when given only a basename.
       final manifest = outputDir.childFile('NativeAssetsManifest.json');
       if (manifest.existsSync() && copiedBasenames.isNotEmpty) {
         manifest.writeAsStringSync(

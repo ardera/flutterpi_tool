@@ -6,7 +6,9 @@ import 'dart:convert';
 /// directory covered by the runner's `$ORIGIN/lib` RUNPATH. The generated
 /// manifest therefore encodes those basenames as `absolute`. flutter-pi has no
 /// runner CMake install phase or equivalent RUNPATH; [copiedBasenames] are
-/// installed beside `app.so` instead and must be resolved relative to it.
+/// installed in its bundle working directory instead. A `./` prefix is
+/// required because Linux `dlopen` does not search the working directory for a
+/// bare library basename.
 ///
 /// Only `absolute` entries whose basename was actually copied are changed.
 /// System/relative/process/executable assets and unrelated absolute paths are
@@ -36,6 +38,7 @@ String rewriteNativeAssetsManifestForFlutterPi(
           path is String &&
           copiedBasenames.contains(path)) {
         location[0] = 'relative';
+        location[1] = './$path';
       }
     }
   }
