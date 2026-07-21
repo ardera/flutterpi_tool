@@ -29,11 +29,11 @@ void main() {
 
     expect(assets['package:webcrypto/lookup.dart'], [
       'relative',
-      'libwebcrypto.so',
+      './libwebcrypto.so',
     ]);
     expect(assets['package:fllama/fllama.dart'], [
       'relative',
-      'libfllama.so',
+      './libfllama.so',
     ]);
     expect(assets['package:system/system.dart'], [
       'absolute',
