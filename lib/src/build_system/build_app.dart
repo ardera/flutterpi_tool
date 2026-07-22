@@ -177,7 +177,8 @@ class AppBuilder {
       FlutterpiTargetPlatform.genericRiscv64 => 'riscv64',
       FlutterpiTargetPlatform.genericAArch64 ||
       FlutterpiTargetPlatform.pi3_64 ||
-      FlutterpiTargetPlatform.pi4_64 =>
+      FlutterpiTargetPlatform.pi4_64 ||
+      FlutterpiTargetPlatform.pi5_64 =>
         'arm64',
       FlutterpiTargetPlatform.genericArmV7 ||
       FlutterpiTargetPlatform.pi3 ||
