@@ -87,7 +87,7 @@ class MoreOperatingSystemUtilsWrapper implements MoreOperatingSystemUtils {
       HostPlatform.linux_arm64 => FlutterpiHostPlatform.linuxARM64,
       HostPlatform.windows_x64 => FlutterpiHostPlatform.windowsX64,
       HostPlatform.windows_arm64 => FlutterpiHostPlatform.windowsARM64,
-      _ => throw UnsupportedError('Unsupported host platform: $hostPlatform'),
+      HostPlatform.linux_riscv64 => FlutterpiHostPlatform.linuxRV64,
     };
   }
 
