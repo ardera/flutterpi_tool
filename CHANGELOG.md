@@ -1,3 +1,8 @@
+## 0.12.0 - 2026-07-22
+
+- flutter 3.44.x compatibility (thanks to [@jpohhhh](https://github.com/jpohhhh))
+- fix native assets bundling (thanks to [@jpohhhh](https://github.com/jpohhhh))
+
 ## 0.11.0 - 2026-04-19
 
 - flutter 3.41.x compatibility (thanks to [@miguelzapp](https://github.com/miguelzapp)!)
