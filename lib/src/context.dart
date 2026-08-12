@@ -73,7 +73,6 @@ Future<V> runInContext<V>(
             ),
             cache: globals.flutterpiCache,
           ),
-      fl.Usage: () => fl.DisabledUsage(),
       FlutterPiToolConfig: () => FlutterPiToolConfig(
             fs: globals.fs,
             logger: globals.logger,

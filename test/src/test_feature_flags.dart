@@ -12,6 +12,7 @@ class TestFeatureFlags implements fl.FeatureFlags {
     this.areCustomDevicesEnabled = false,
     this.isCliAnimationEnabled = true,
     this.isNativeAssetsEnabled = false,
+    this.isRecordUseEnabled = false,
     this.isSwiftPackageManagerEnabled = false,
     this.isOmitLegacyVersionFileEnabled = false,
     this.isLLDBDebuggingEnabled = false,
@@ -20,6 +21,7 @@ class TestFeatureFlags implements fl.FeatureFlags {
     this.isWindowingEnabled = false,
     this.isAccessibilityEvaluationsEnabled = false,
     this.isRiscv64SupportEnabled = false,
+    this.isMacOSArm64OnlyEnabled = false,
   });
 
   @override
@@ -53,6 +55,9 @@ class TestFeatureFlags implements fl.FeatureFlags {
   final bool isNativeAssetsEnabled;
 
   @override
+  final bool isRecordUseEnabled;
+
+  @override
   final bool isSwiftPackageManagerEnabled;
 
   @override
@@ -77,6 +82,9 @@ class TestFeatureFlags implements fl.FeatureFlags {
   final bool isRiscv64SupportEnabled;
 
   @override
+  final bool isMacOSArm64OnlyEnabled;
+
+  @override
   bool isEnabled(fl.Feature feature) {
     return switch (feature) {
       fl.flutterWebFeature => isWebEnabled,
@@ -89,6 +97,7 @@ class TestFeatureFlags implements fl.FeatureFlags {
       fl.flutterCustomDevicesFeature => areCustomDevicesEnabled,
       fl.cliAnimation => isCliAnimationEnabled,
       fl.nativeAssets => isNativeAssetsEnabled,
+      fl.recordUse => isRecordUseEnabled,
       fl.swiftPackageManager => isSwiftPackageManagerEnabled,
       fl.omitLegacyVersionFile => isOmitLegacyVersionFileEnabled,
       fl.lldbDebugging => isLLDBDebuggingEnabled,
@@ -97,6 +106,7 @@ class TestFeatureFlags implements fl.FeatureFlags {
       fl.windowingFeature => isWindowingEnabled,
       fl.accessibilityEvaluationsFeature => isAccessibilityEvaluationsEnabled,
       fl.riscv64 => isRiscv64SupportEnabled,
+      fl.macOSArm64Only => isMacOSArm64OnlyEnabled,
       _ => false,
     };
   }
@@ -113,6 +123,7 @@ class TestFeatureFlags implements fl.FeatureFlags {
         fl.flutterCustomDevicesFeature,
         fl.cliAnimation,
         fl.nativeAssets,
+        fl.recordUse,
         fl.swiftPackageManager,
         fl.omitLegacyVersionFile,
         fl.lldbDebugging,
@@ -121,6 +132,7 @@ class TestFeatureFlags implements fl.FeatureFlags {
         fl.windowingFeature,
         fl.accessibilityEvaluationsFeature,
         fl.riscv64,
+        fl.macOSArm64Only,
       ];
 
   @override

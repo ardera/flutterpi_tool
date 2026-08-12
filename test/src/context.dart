@@ -90,7 +90,6 @@ Future<V> runInThrowingContext<V>(
       fltool.Stdio: () => fail(fltool.Stdio),
       fltool.SystemClock: () => fail(fltool.SystemClock),
       fltool.Signals: () => fail(fltool.Signals),
-      fltool.Usage: () => fail(fltool.Usage),
       fltool.UserMessages: () => fail(fltool.UserMessages),
       fltool.VisualStudioValidator: () => fail(fltool.VisualStudioValidator),
       fltool.WebWorkflow: () => fail(fltool.WebWorkflow),
