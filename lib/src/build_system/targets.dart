@@ -23,7 +23,7 @@ class ReleaseBundleFlutterpiAssets extends CompositeTarget {
             buildMode: BuildMode.release,
           ),
           CopyIcudtl(layout: layout),
-          const DartBuildForNative(),
+          const LinkHooks(),
           const KernelSnapshot(),
           const InstallCodeAssets(),
           CopyFlutterpiEngine(
@@ -63,7 +63,7 @@ class ProfileBundleFlutterpiAssets extends CompositeTarget {
             buildMode: BuildMode.profile,
           ),
           CopyIcudtl(layout: layout),
-          const DartBuildForNative(),
+          const LinkHooks(),
           const KernelSnapshot(),
           const InstallCodeAssets(),
           CopyFlutterpiEngine(
@@ -103,7 +103,7 @@ class DebugBundleFlutterpiAssets extends CompositeTarget {
             buildMode: BuildMode.debug,
           ),
           CopyIcudtl(layout: layout),
-          const DartBuildForNative(),
+          const LinkHooks(),
           const KernelSnapshot(),
           const InstallCodeAssets(),
           CopyFlutterpiEngine(
@@ -479,7 +479,7 @@ class CopyFlutterAssets extends Target {
 
   @override
   List<Target> get dependencies => <Target>[
-        const DartBuildForNative(),
+        const LinkHooks(),
         const KernelSnapshot(),
         const InstallCodeAssets(),
       ];
@@ -534,7 +534,7 @@ class CopyFlutterAssets extends Target {
 
     final versionInfo = getVersionInfo(environment.defines);
 
-    final dartHookResult = await DartBuild.loadHookResult(environment);
+    final dartHookResult = await LinkHooks.loadHookResult(environment);
 
     final depfile = await copyAssets(
       environment, outputDir,

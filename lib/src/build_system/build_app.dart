@@ -83,8 +83,7 @@ class AppBuilder {
         if (includeDebugSymbols) fl.kExtraGenSnapshotOptions: '--no-strip',
 
         // used by the KernelSnapshot target
-        fl.kTargetPlatform:
-            fl.getNameForTargetPlatform(fl.TargetPlatform.linux_arm64),
+        fl.kTargetPlatform: fl.TargetPlatform.linux_arm64.getName(),
         fl.kTargetFile: mainPath,
         fl.kDeferredComponents: 'false',
         ...buildInfo.toBuildSystemEnvironment(),

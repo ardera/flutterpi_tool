@@ -66,8 +66,6 @@ export 'package:flutter_tools/src/persistent_tool_state.dart';
 export 'package:flutter_tools/src/project.dart';
 export 'package:flutter_tools/src/protocol_discovery.dart';
 export 'package:flutter_tools/src/reporting/crash_reporting.dart';
-export 'package:flutter_tools/src/reporting/first_run.dart';
-export 'package:flutter_tools/src/reporting/reporting.dart';
 export 'package:flutter_tools/src/reporting/unified_analytics.dart';
 export 'package:flutter_tools/src/resident_runner.dart';
 export 'package:flutter_tools/src/run_hot.dart';
