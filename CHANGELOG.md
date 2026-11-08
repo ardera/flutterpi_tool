@@ -1,3 +1,7 @@
+## 0.13.0 - 2026-11-08
+
+- flutter 3.47.x compatibility
+
 ## 0.12.0 - 2026-07-22
 
 - flutter 3.44.x compatibility (thanks to [@jpohhhh](https://github.com/jpohhhh))
